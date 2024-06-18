@@ -9,3 +9,14 @@
 
 # Undo-tree save-files
 *.~undo-tree
+
+
+# test files
+tests.org
+/tests
+
+# secrets
+/secrets
+
+#my personal files
+/armin
