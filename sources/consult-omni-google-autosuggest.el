@@ -80,7 +80,7 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                            :group #'consult-omni--group-function
                            :enabled (lambda () (boundp consult-omni-google-autosuggest-api-url))
                            :sort t
-                           :static t
+                           :static nil
                            )
 
 ;;; provide `consult-omni-google-autosuggest' module

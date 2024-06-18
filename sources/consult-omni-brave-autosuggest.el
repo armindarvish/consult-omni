@@ -102,7 +102,7 @@ See URL `https://brave.com/search/api/' for more info"
                            :selection-history t
                            :enabled (lambda () (bound-and-true-p consult-omni-brave-autosuggest-api-key))
                            :sort t
-                           :static t
+                           :static nil
                            )
 
 ;;; provide `consult-omni-brave-autosuggest' module
