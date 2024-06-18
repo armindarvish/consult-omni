@@ -17,7 +17,7 @@ Here is the mandatory screenshot:
 #+ATTR_ORG: :width 800px
 #+ATTR_LATEX: :width 800px
 #+ATTR_HTML: :width 800px
-[[https://github.com/armindarvish/consult-omni/blob/screenshots/screenshots/dynamic-omni-screenshot.gif]]
+[[https://github.com/armindarvish/consult-web/blob/screenshots/screenshots/dynamic-omni-screenshot.gif]]
 
 
 For a detailed review of the package and comparison to other tools, see my YouTube videos here:
