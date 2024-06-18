@@ -22,6 +22,10 @@
 "
   :type '(repeat :tag "List of paths" directory))
 
+(defcustom consult-omni-apps-use-cache nil
+"Whether to use cache for getting list of apps?"
+:type 'boolean)
+
 (defcustom consult-omni-apps-open-command-args nil
   "Command line args to open an application"
   :type 'string)
@@ -29,6 +33,8 @@
 (defcustom consult-omni-apps-regexp-pattern ""
 "Regexp pattern to find system applications"
 :type 'regexp)
+
+
 
 (defcustom consult-omni-apps-default-launch-function #'consult-omni--apps-lauch-app
   "consult-omni default function to launch an app"
@@ -63,6 +69,10 @@
      (setq consult-omni-apps-open-command-args "gtk-launch")
     )
 )
+
+(defvar consult-omni-apps-cached-apps nil)
+
+(defvar consult-omni-apps-cached-items nil)
 
 (defun consult-omni--apps-cmd-args (app &optional file)
   (append (consult--build-args consult-omni-apps-open-command-args)
@@ -125,13 +135,17 @@ QUERY is the query input from the user"
 Finds all files that match `consult-omni-apps-regexp-pattern'
 in `consult-omni-apps-paths'.
 "
-  (let ((paths (if (stringp consult-omni-apps-paths)
+  (if (and consult-omni-apps-use-cache consult-omni-apps-cached-apps)
+      consult-omni-apps-cached-apps
+(let ((paths (if (stringp consult-omni-apps-paths)
                    (list consult-omni-apps-paths)
                  consult-omni-apps-paths)))
     (when (listp paths)
-      (cl-remove-duplicates (apply #'append (mapcar (lambda (path)
+      (setq consult-omni-apps-cached-apps (cl-remove-duplicates (apply #'append (mapcar (lambda (path)
                           (when (file-exists-p path)
-                          (directory-files path t consult-omni-apps-regexp-pattern t))) paths))))))
+                          (directory-files path t consult-omni-apps-regexp-pattern t))) paths))))))))
+
+(setq consult-omni-apps-cached-apps (consult-omni--apps-get-desktop-apps))
 
 (defun consult-omni--apps-parse-app-file (file)
   (pcase system-type
@@ -185,6 +199,36 @@ in `consult-omni-apps-paths'.
 
                   (list name comment exec visible)))))))
 
+(defun consult-omni-apps--cached-items (files query)
+(if (and consult-omni-apps-use-cache consult-omni-apps--cached-items)
+    consult-omni-apps-cached-items
+(setq consult-omni-apps-cached-items
+ (mapcar (lambda (file)
+             (pcase-let* ((source "Apps")
+                          (`(,name ,comment ,exec ,visible) (consult-omni--apps-parse-app-file file))
+                    (title (or name (file-name-base file) ""))
+                    (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
+                    (search-url nil)
+
+                    (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
+               (propertize decorated
+                           :source source
+                           :title title
+                           :url nil
+                           :search-url nil
+                           :query query
+                           :snippet comment
+                           :path file
+                           :exec exec
+                           :app app)))
+           (if query
+               ;; (seq-filter (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
+               (cl-remove-if-not (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
+             files)
+   ))))
+
+(setq consult-omni-apps--cached-items  (consult-omni-apps--cached-items consult-omni-apps-cached-apps ".*"))
+
 (cl-defun consult-omni--apps-list-apps (input &rest args &key callback &allow-other-keys)
   "get a list of applications from OS.
 "
@@ -195,11 +239,13 @@ in `consult-omni-apps-paths'.
                              (and count (string-to-number (format "%s" count)))
                              consult-omni-default-count))
                (files (consult-omni--apps-get-desktop-apps)))
+   (if (and consult-omni-apps-use-cache query)
+       (seq-filter (lambda (file) (string-match (concat ".*" query ".*") file nil t)) consult-omni-apps-cached-items)
    (mapcar (lambda (file)
              (pcase-let* ((source "Apps")
                           (`(,name ,comment ,exec ,visible) (consult-omni--apps-parse-app-file file))
                     (title (or name (file-name-base file) ""))
-                    (app (and (stringp file) (file-exists-p file ) (file-name-nondirectory file)))
+                    (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
                     (search-url nil)
                     (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
                (propertize decorated
@@ -213,10 +259,11 @@ in `consult-omni-apps-paths'.
                            :exec exec
                            :app app)))
            (if query
-               (seq-filter (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
+               ;; (seq-filter (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
+             (cl-remove-if-not (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
              files)
    )
- ))
+ )))
 
 (consult-omni-define-source "Apps"
                            :narrow-char ?a
