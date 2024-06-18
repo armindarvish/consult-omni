@@ -514,7 +514,7 @@ consult-omni does provide a few interactive commands. These are provided as good
 #+ATTR_ORG: :width 800px
 #+ATTR_LATEX: :width 800px
 #+ATTR_HTML: :width 800px
-[[https://github.com/armindarvish/consult-omni/blob/screenshots/screenshots/multi-screenshot.gif]]
+[[https://github.com/armindarvish/consult-web/blob/screenshots/screenshots/multi-screenshot.gif]]
 
 Note that consult-omni-multi does not provide dynamic completion but some might find using this more intuitive for narrowing down the results. The user provides one search term, and once the results are retrieved, typing in the minibuffer will narrow down the candidates. In addition, as can be seen in the screenshot above, depending on your minibuffer config for sorting, it is possible to remember the candidates you selected before by sorting them on top (by using packages like [[https://github.com/oantolin/orderless][orderless]] or [[https://github.com/radian-software/prescient.el][prescient.el]]).
 
@@ -523,14 +523,14 @@ Note that consult-omni-multi does not provide dynamic completion but some might 
 #+ATTR_ORG: :width 800px
 #+ATTR_LATEX: :width 800px
 #+ATTR_HTML: :width 800px
-[[https://github.com/armindarvish/consult-omni/blob/screenshots/screenshots/dynamic-screenshot.gif]]
+[[https://github.com/armindarvish/consult-web/blob/screenshots/screenshots/dynamic-screenshot.gif]]
 
 3. =consult-omni-scholar=: This is similar to consult-omni-dynamic, and is provided as an extra example to show how to make combination of sources for a specific purpose, in this case searching academic research literature. Here is a screenshot:
 
 #+ATTR_ORG: :width 800px
 #+ATTR_LATEX: :width 800px
 #+ATTR_HTML: :width 800px
-[[https://github.com/armindarvish/consult-omni/blob/screenshots/screenshots/scholar-screenshot.gif]]
+[[https://github.com/armindarvish/consult-web/blob/screenshots/screenshots/scholar-screenshot.gif]]
 
 
 
@@ -539,7 +539,7 @@ Note that consult-omni-multi does not provide dynamic completion but some might 
 #+ATTR_ORG: :width 800px
 #+ATTR_LATEX: :width 800px
 #+ATTR_HTML: :width 800px
-[[https://github.com/armindarvish/consult-omni/blob/screenshots/screenshots/omni-screenshot.gif]]
+[[https://github.com/armindarvish/consult-web/blob/screenshots/screenshots/omni-screenshot.gif]]
 
 
 
@@ -549,7 +549,7 @@ Note that consult-omni-multi does not provide dynamic completion but some might 
 #+ATTR_ORG: :width 800px
 #+ATTR_LATEX: :width 800px
 #+ATTR_HTML: :width 800px
-[[https://github.com/armindarvish/consult-omni/blob/screenshots/screenshots/dynamic-omni-screenshot.gif]]
+[[https://github.com/armindarvish/consult-web/blob/screenshots/screenshots/dynamic-omni-screenshot.gif]]
 
 Note that the difference between =consult-omni-multi= and =consult-omni-omni= (and similarly between =consult-omni-dynamic=, =consult-omni-scholar=, =consult-omni-dynamic-omni=) is the list of sources they use and therefore you can use them as you wish for any combination of sources. You can also define more interactive commands with various variation of sources following these examples.
 
