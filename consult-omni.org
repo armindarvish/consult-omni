@@ -3766,6 +3766,9 @@ SNIPPET is a string containing a snippet/description of candidate
 (defcustom consult-omni-calc-number-only nil
 "Only show calculator rsults when the query result in a nunmber?"
 :type 'boolean)
+
+(unless (boundp 'calc-eval-error)
+  (defvar calc-eval-error nil))
 #+end_src
 **** callback
 #+begin_src emacs-lisp
@@ -3779,15 +3782,12 @@ SNIPPET is a string containing a snippet/description of candidate
 **** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--calc-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Makes cnaidate with INPUT as placeholder for `consult-omni-gptel'.
+  "Calculate the result of possible math equations.
 
-This makes a placeholder string “ask gptel: %s” %s=INPUT with
-metadata so it can be send to `gptel'."
-  (unless (featurep 'gptel)
-    (error "consult-omni: gptel is not available. Make sure to install and load `gptel'."))
+This uses `calc-eval' to return the result of input"
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts))
                (source "calc")
+               (opts (car-safe opts))
                (calc-eval-error t)
                (result)
                (annotated-result)
@@ -3810,8 +3810,6 @@ metadata so it can be send to `gptel'."
         (list annotated-result)
        nil)
     ))
-
-
 
 (consult-omni-define-source "calc"
                            :narrow-char ?C

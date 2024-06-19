@@ -20,6 +20,9 @@
 "Only show calculator rsults when the query result in a nunmber?"
 :type 'boolean)
 
+(unless (boundp 'calc-eval-error)
+  (defvar calc-eval-error nil))
+
 (defun consult-omni--calc-callback (cand)
   (let ((equ (get-text-property 0 :query cand))
         (result  (get-text-property 0 :title cand)))
@@ -27,15 +30,12 @@
   (kill-new result)))
 
 (cl-defun consult-omni--calc-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Makes cnaidate with INPUT as placeholder for `consult-omni-gptel'.
+  "Calculate the result of possible math equations.
 
-This makes a placeholder string “ask gptel: %s” %s=INPUT with
-metadata so it can be send to `gptel'."
-  (unless (featurep 'gptel)
-    (error "consult-omni: gptel is not available. Make sure to install and load `gptel'."))
+This uses `calc-eval' to return the result of input"
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts))
                (source "calc")
+               (opts (car-safe opts))
                (calc-eval-error t)
                (result)
                (annotated-result)
@@ -58,8 +58,6 @@ metadata so it can be send to `gptel'."
         (list annotated-result)
        nil)
     ))
-
-
 
 (consult-omni-define-source "calc"
                            :narrow-char ?C
