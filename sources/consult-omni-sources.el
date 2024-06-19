@@ -22,6 +22,7 @@
             'consult-omni-brave
             'consult-omni-browser-history
             'consult-omni-buffer
+            'consult-omni-calc
             'consult-omni-chatgpt
             'consult-omni-consult-notes
             'consult-omni-doi
