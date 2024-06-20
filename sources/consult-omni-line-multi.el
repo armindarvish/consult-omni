@@ -22,26 +22,12 @@
   (let  ((buffers (or buffers (consult--buffer-query :directory (consult--normalize-directory default-directory) :sort 'alpha-current))))
     (consult--line-multi-candidates buffers input)))
 
-(cl-defun consult-omni--line-multi-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Fetches search results for INPUT from `consult-line-multi'."
-(unless (functionp 'consult-omni--line-multi-candidates)
-  (error "consult-omni: consult-omni-line-multi not available. Make sure `consult' is loaded properly"))
-(pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts))
-               (items (consult-omni--line-multi-candidates query))
-               (annotated-results (mapcar (lambda (item)
-                                            (let* ((source "buffers text search")
-                                                   (marker  (consult--get-location item))
-                                                   (title (substring-no-properties item 0 -1))
-                                                   (decorated (consult-omni--line-multi-format-candidate :source source :query query :marker marker :title title)))
-                                           (propertize decorated
-                                                       :source source
-                                                       :title title
-                                                       :url nil
-                                                       :marker marker
-                                                       :query query
-                                                       ))) items)))
-    annotated-results))
+(defun consult-omni--line-multi-preview (cand)
+"Preview function for consult-omni-line-multi."
+  (let* ((marker (car (get-text-property 0 :marker cand)))
+         (query (get-text-property 0 :query cand)))
+    (consult--jump marker)
+       ))
 
 (cl-defun consult-omni--line-multi-format-candidate (&rest args &key source query marker title face &allow-other-keys)
   "Formats the cnaiddates of `consult-omni-line-multi'.
@@ -79,12 +65,26 @@ FACE is the face to apply to TITLE"
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
 
-(defun consult-omni--line-multi-preview (cand)
-"Preview function for consult-omni-line-multi."
-  (let* ((marker (car (get-text-property 0 :marker cand)))
-         (query (get-text-property 0 :query cand)))
-    (consult--jump marker)
-       ))
+(cl-defun consult-omni--line-multi-fetch-results (input &rest args &key callback &allow-other-keys)
+  "Fetches search results for INPUT from `consult-line-multi'."
+(unless (functionp 'consult-omni--line-multi-candidates)
+  (error "consult-omni: consult-omni-line-multi not available. Make sure `consult' is loaded properly"))
+(pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts))
+               (items (consult-omni--line-multi-candidates query))
+               (annotated-results (mapcar (lambda (item)
+                                            (let* ((source "buffers text search")
+                                                   (marker  (consult--get-location item))
+                                                   (title (substring-no-properties item 0 -1))
+                                                   (decorated (consult-omni--line-multi-format-candidate :source source :query query :marker marker :title title)))
+                                           (propertize decorated
+                                                       :source source
+                                                       :title title
+                                                       :url nil
+                                                       :marker marker
+                                                       :query query
+                                                       ))) items)))
+    annotated-results))
 
 (consult-omni-define-source "buffers text search"
                            :narrow-char ?L

@@ -16,6 +16,10 @@
 
 (require 'consult-omni)
 
+(defvar consult-omni-wikipedia-search-url "https://www.wikipedia.org/search-redirect.php")
+(defvar consult-omni-wikipedia-url "https://wikipedia.org/")
+(defvar consult-omni-wikipedia-api-url "https://wikipedia.org/w/api.php")
+
 (cl-defun consult-omni--wikipedia-format-candidate (&rest args &key source query url search-url title snippet date face &allow-other-keys)
   "Returns a formatted string for Wikipedia's searches.
 
@@ -57,23 +61,17 @@ FACE is the face to apply to TITLE
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
 
-(defvar consult-omni-wikipedia-search-url "https://www.wikipedia.org/search-redirect.php")
-(defvar consult-omni-wikipedia-url "https://wikipedia.org/")
-(defvar consult-omni-wikipedia-api-url "https://wikipedia.org/w/api.php")
-
 (cl-defun consult-omni--wikipedia-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches search results from Wikipedia for INPUT.
 "
 
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
-                          consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                             consult-omni-default-count))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (max count 1))
                (params `(("action" . "query")
@@ -117,7 +115,6 @@ FACE is the face to apply to TITLE
                              raw-results)))
           (funcall callback annotated-results)
           annotated-results)))))
-
 
 (consult-omni-define-source "Wikipedia"
                            :narrow-char ?w

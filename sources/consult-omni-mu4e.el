@@ -43,33 +43,6 @@
 (when msg
   (cons str (list :msg msg :query query :type :dynamic)))))
 
-(cl-defun consult-omni--mu-fetch-results (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “mu4e”.
-"
-  (save-mark-and-excursion
-  (consult-mu--execute-all-marks)
-  )
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts))
-               (count (plist-get opts :count))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
-                          consult-omni-default-count))
-               (mu-input (format "%s -- --maxnum %s" query count))
-               (messages)
-               )
-    (consult-mu--update-headers mu-input nil nil :dynamic)
-    (with-current-buffer consult-mu-headers-buffer-name
-      (goto-char (point-min))
-     (setq messages (remove nil
-              (cl-loop until (eobp)
-                       collect (let ((msg (ignore-errors (mu4e-message-at-point))))
-                                 (consult-omni-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
-                 do (forward-line 1)))
-           ))
-    (when (and messages callback)
-      (funcall callback messages))))
-
 (defun consult-omni--mu-preview (cand)
   "Preview for mu4e candidates"
   (when-let* ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
@@ -109,6 +82,32 @@ cand
     (consult-mu-overlays-toggle consult-mu-view-buffer-name)
     )
 )
+
+(cl-defun consult-omni--mu-fetch-results (input &rest args &key callback &allow-other-keys)
+  "makes builder command line args for “mu4e”.
+"
+  (save-mark-and-excursion
+  (consult-mu--execute-all-marks)
+  )
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts))
+               (count (plist-get opts :count))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-default-count))
+               (mu-input (format "%s -- --maxnum %s" query count))
+               (messages)
+               )
+    (consult-mu--update-headers mu-input nil nil :dynamic)
+    (with-current-buffer consult-mu-headers-buffer-name
+      (goto-char (point-min))
+     (setq messages (remove nil
+              (cl-loop until (eobp)
+                       collect (let ((msg (ignore-errors (mu4e-message-at-point))))
+                                 (consult-omni-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
+                 do (forward-line 1)))
+           ))
+    (when (and messages callback)
+      (funcall callback messages))))
 
 (consult-omni-define-source "mu4e"
                            :narrow-char ?m

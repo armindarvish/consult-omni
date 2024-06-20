@@ -84,13 +84,12 @@
 (cl-defun consult-omni--grep-builder (input &rest args &key callback &allow-other-keys)
   "makes builder command line args for “grep”.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (dir (plist-get opts :dir))
                (dir (if dir (file-truename (format "%s" dir))))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
                (default-directory (or dir default-directory))
                )
@@ -103,7 +102,6 @@
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--grep-builder
                            :transform #'consult-omni--grep-transform
-                           ;; :filter nil
                            :on-preview #'consult-omni--grep-preview
                            :on-return #'identity
                            :on-callback #'consult-omni--grep-callback
@@ -111,7 +109,6 @@
                            :search-history 'consult-omni--search-history
                            :selection-history 'consult-omni--selection-history
                            :group #'consult-omni--group-function
-                           ;; :group #'consult--prefix-group
                            :sort t
                            :static 'both
                            :transform #'consult-omni--ripgrep-transform

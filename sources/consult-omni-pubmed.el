@@ -28,6 +28,61 @@ See URL `https://www.ncbi.nlm.nih.gov/books/NBK25501/' for more info"
 
 (defvar  consult-omni-pubmed-esearch-api-url "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi")
 
+(defvar consult-omni-pubmed-esummary-api-url "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi")
+
+(cl-defun consult-omni-dynamic--pubmed-format-candidate (&rest args &key source query url search-url title authors date journal doi face &allow-other-keys)
+  "Returns a formatted string for candidates of `consult-omni-pubmed'.
+
+SOURCE is the name to use (e.g. “PubMed”)
+
+QUERY is the query input from the user
+
+URL is the url of  candidate
+
+SEARCH-URL is the web search url
+(e.g. https://pubmed.ncbi.nlm.nih.gov/?term=QUERY)
+
+TITLE is the title of the result/paper (e.g. title of paper)
+
+AUTHORS are authors of the result/paper
+
+DATE is the publish date of the result/paper
+
+JOURNAL is the journal that the result/paper is published in
+
+DOI is doi of the result/paper
+
+FACE is the face to apply to TITLE
+"
+  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
+         (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
+         (date (if (stringp date) (propertize date 'face 'consult-omni-date-face) nil))
+         (journal (if (stringp journal) (propertize journal 'face 'consult-omni-domain-face) nil))
+         (authors (cond
+                   ((and authors (listp authors))
+                    (concat (first authors) ",..., " (car (last authors))))
+                   ((stringp authors)
+                    authors)
+                   (t nil)))
+         (authors (if (and authors (stringp authors)) (propertize authors 'face 'consult-omni-source-type-face)))
+         (doi (if (stringp doi) (propertize doi 'face 'link)))
+         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
+         (title-str (propertize title 'face face))
+         (title-str (consult-omni--set-string-width title-str (* 5 frame-width-percent)))
+         (str (concat title-str
+                      (if journal (format "\t%s" journal))
+                      (if date (format "\s\s%s" date))
+                      (if authors (format "\s\s%s" authors))
+                      (if source (concat "\t" source))))
+         )
+    (if consult-omni-highlight-matches
+        (cond
+         ((listp match-str)
+          (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
+         ((stringp match-str)
+          (setq str (consult-omni--highlight-match match-str str t)))))
+    str))
 
 (cl-defun consult-omni--pubmed-esearch-fetch-results (input &rest args &key db &allow-other-keys)
   "Fetches “esearch” results for INPUT from PubMed Entrez Utilities service.
@@ -37,15 +92,13 @@ DB is passed as db in query parameters. (This is the database to search.)
 Refer to URL `https://www.ncbi.nlm.nih.gov/books/NBK25501/'
 for more info."
 
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :db db))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min count 20))
                (page (* page count))
@@ -76,8 +129,6 @@ for more info."
          )))
     ))
 
-(defvar consult-omni-pubmed-esummary-api-url "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi")
-
 (cl-defun consult-omni--pubmed-esummary-fetch-results (input &rest args &key callback webenv qk db &allow-other-keys)
   "Fetches “esummary” results for INPUT from PubMed Entrez Utilities service.
 
@@ -90,15 +141,13 @@ DB is passed as db in query parameters. (This is the databes to search.)
 Refer to URL `https://www.ncbi.nlm.nih.gov/books/NBK25501/'
 for more info."
 
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback :webenv webenv :qk qk :db db))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (page (* page count))
                (webenv (if webenv (format "%s" webenv)))
@@ -157,60 +206,6 @@ for more info."
                                     )
                                 annotated-results)))))
 
-(cl-defun consult-omni-dynamic--pubmed-format-candidate (&rest args &key source query url search-url title authors date journal doi face &allow-other-keys)
-  "Returns a formatted string for candidates of `consult-omni-pubmed'.
-
-SOURCE is the name to use (e.g. “PubMed”)
-
-QUERY is the query input from the user
-
-URL is the url of  candidate
-
-SEARCH-URL is the web search url
-(e.g. https://pubmed.ncbi.nlm.nih.gov/?term=QUERY)
-
-TITLE is the title of the result/paper (e.g. title of paper)
-
-AUTHORS are authors of the result/paper
-
-DATE is the publish date of the result/paper
-
-JOURNAL is the journal that the result/paper is published in
-
-DOI is doi of the result/paper
-
-FACE is the face to apply to TITLE
-"
-  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
-         (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
-         (date (if (stringp date) (propertize date 'face 'consult-omni-date-face) nil))
-         (journal (if (stringp journal) (propertize journal 'face 'consult-omni-domain-face) nil))
-         (authors (cond
-                   ((and authors (listp authors))
-                    (concat (first authors) ",..., " (car (last authors))))
-                   ((stringp authors)
-                    authors)
-                   (t nil)))
-         (authors (if (and authors (stringp authors)) (propertize authors 'face 'consult-omni-source-type-face)))
-         (doi (if (stringp doi) (propertize doi 'face 'link)))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
-         (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
-         (title-str (propertize title 'face face))
-         (title-str (consult-omni--set-string-width title-str (* 5 frame-width-percent)))
-         (str (concat title-str
-                      (if journal (format "\t%s" journal))
-                      (if date (format "\s\s%s" date))
-                      (if authors (format "\s\s%s" authors))
-                      (if source (concat "\t" source))))
-         )
-    (if consult-omni-highlight-matches
-        (cond
-         ((listp match-str)
-          (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
-         ((stringp match-str)
-          (setq str (consult-omni--highlight-match match-str str t)))))
-    str))
-
 (cl-defun consult-omni--pubmed-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches results for INPUT from PubMed using Entrez Utilities service.
 "
@@ -219,7 +214,6 @@ FACE is the face to apply to TITLE
        (qk (plist-get esearch :qk)))
   (consult-omni--pubmed-esummary-fetch-results input :callback callback :webenv webenv :qk qk)
 ))
-
 
 (consult-omni-define-source "PubMed"
                            :narrow-char ?p

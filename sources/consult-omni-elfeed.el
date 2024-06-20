@@ -89,13 +89,27 @@ QUERY is the query input from the user"
   "Get or create buffer for `consult-omni-elfeed'"
   (get-buffer-create (or consult-omni-elfeed-search-buffer-name "*consult-omni-elfeed-search*")))
 
+(defun consult-omni--elfeed-preview (cand)
+  "Shows a preview buffer of CAND for `consult-omni-elfeed'.
+Uses `elfeed-show-entry'."
+  (if (listp cand) (setq cand (or (car-safe cand) cand)))
+  (let* ((entry (get-text-property 0 :entry cand))
+         (buff (get-buffer-create (elfeed-show--buffer-name entry))))
+    (with-current-buffer buff
+      (elfeed-show-mode)
+      (setq elfeed-show-entry entry)
+      (elfeed-show-refresh))
+    (funcall (consult--buffer-preview) 'preview
+             buff
+             )))
+
 (cl-defun consult-omni--elfeed-fetch-results (input &rest args &key callback &allow-other-keys)
   "Return entries matching INPUT in elfeed database.
 uses INPUT as filter ro find entries in elfeed databse.
 if FILTER is non-nil, it is used as additional filter parameters.
 "
 (cl-letf* (((symbol-function #'elfeed-search-buffer) #'consult-omni--elfeed-search-buffer))
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (maxcount (plist-get opts :count))
                (filter (and (plist-member opts :filter) (plist-get opts :filter)))
@@ -121,22 +135,6 @@ if FILTER is non-nil, it is used as additional filter parameters.
     (when-let ((entries (cdr head)))
       (consult-omni--elfeed-format-candidate entries query)))
       ))
-
-
-(defun consult-omni--elfeed-preview (cand)
-  "Shows a preview buffer of CAND for `consult-omni-elfeed'.
-Uses `elfeed-show-entry'."
-  (if (listp cand) (setq cand (or (car-safe cand) cand)))
-  (let* ((entry (get-text-property 0 :entry cand))
-         (buff (get-buffer-create (elfeed-show--buffer-name entry))))
-    (with-current-buffer buff
-      (elfeed-show-mode)
-      (setq elfeed-show-entry entry)
-      (elfeed-show-refresh))
-    (funcall (consult--buffer-preview) 'preview
-             buff
-             )))
-
 
 (consult-omni-define-source "elfeed"
                            :narrow-char ?e

@@ -19,6 +19,32 @@
 (defvar consult-omni-invidious-servers nil)
 (defvar consult-omni-invidious-server-url "https://api.invidious.io/instances.json")
 
+(defun consult-omni--invidious-get-servers (&optional rotate)
+  "Get list of Invidious API servers.
+"
+  (when (and consult-omni-invidious-servers rotate)
+    (setq consult-omni-invidious-servers
+          (nconc (cdr consult-omni-invidious-servers)
+                 (list (car consult-omni-invidious-servers)))))
+  (or consult-omni-invidious-servers
+      (setq consult-omni-invidious-servers
+            (let ((params `(("pretty" . "1")
+                                  ("sort_by" . "type"))))
+       (consult-omni--fetch-url
+        consult-omni-invidious-server-url
+        consult-omni-http-retrieve-backend
+        :params params
+        :sync t
+        :parser #'consult-omni--json-parse-buffer
+        :callback (lambda (attrs)
+  (delq nil (mapcar (lambda (item)
+                      (when (equal (gethash "api" (cadr item)) t)
+                                  (gethash "uri" (cadr item))
+                      )
+
+                      ) attrs))
+))))))
+
 (cl-defun consult-omni--invidious-format-candidate (&rest args &key source type query title snippet channeltitle date subcount videocount viewcount length face &allow-other-keys)
 "Formats a candidate for `consult-omni-invidious' commands.
 
@@ -91,35 +117,9 @@ FACE is the face to apply to TITLE
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
 
-(defun consult-omni--invidious-get-servers (&optional rotate)
-  "Get list of Invidious API servers.
-"
-  (when (and consult-omni-invidious-servers rotate)
-    (setq consult-omni-invidious-servers
-          (nconc (cdr consult-omni-invidious-servers)
-                 (list (car consult-omni-invidious-servers)))))
-  (or consult-omni-invidious-servers
-      (setq consult-omni-invidious-servers
-            (let ((params `(("pretty" . "1")
-                                  ("sort_by" . "type"))))
-       (consult-omni--fetch-url
-        consult-omni-invidious-server-url
-        consult-omni-http-retrieve-backend
-        :params params
-        :sync t
-        :parser #'consult-omni--json-parse-buffer
-        :callback (lambda (attrs)
-  (delq nil (mapcar (lambda (item)
-                      (when (equal (gethash "api" (cadr item)) t)
-                                  (gethash "uri" (cadr item))
-                      )
-
-                      ) attrs))
-))))))
-
 (cl-defun consult-omni--invidious-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches search results for INPUT from “Invidious” service."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
@@ -133,8 +133,7 @@ FACE is the face to apply to TITLE
                (features (if features (format "%s" features)))
                (duration (plist-get opts :dur))
                (duration (if duration (format "%s" duration)))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
                (page (or (and (integerp page) page)
                          (and page (string-to-number (format "%s" page)))

@@ -17,15 +17,6 @@
 (require 'consult-omni)
 (require 'consult-notmuch)
 
-(cl-defun consult-omni--notmuch-command-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “notmuch”.
-"
-  (setq consult-notmuch--partial-parse nil)
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts)))
-  (consult-notmuch--command query)
-  ))
-
 (defun consult-omni-notmuch--transformer (str &optional query)
   "Transforms STR to notmuch display style."
   (let ((string (if consult-notmuch-show-single-message
@@ -46,6 +37,15 @@
   "Callback function for notmuch candidates.
 "
   (consult-notmuch--show (cdr (get-text-property 0 'multi-category cand))))
+
+(cl-defun consult-omni--notmuch-command-builder (input &rest args &key callback &allow-other-keys)
+  "makes builder command line args for “notmuch”.
+"
+  (setq consult-notmuch--partial-parse nil)
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts)))
+  (consult-notmuch--command query)
+  ))
 
 (consult-omni-define-source "notmuch"
                            :narrow-char ?m

@@ -17,22 +17,6 @@
 (require 'consult-omni)
 (require 'consult-omni-grep)
 
-(cl-defun consult-omni--ripgrep-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “ripgrep”.
-"
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts))
-               (count (plist-get opts :count))
-               (dir (plist-get opts :dir))
-               (dir (if dir (file-truename (format "%s" dir))))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
-                          consult-omni-default-count))
-               (default-directory (or dir default-directory))
-               )
-   (funcall (consult-omni--grep-make-builder #'consult--ripgrep-make-builder dir) query)
-            ))
-
 (defun consult-omni--ripgrep-transform (candidates &optional query)
   "Formats candidates of `consult-omni-ripgrep'.
 "
@@ -79,6 +63,21 @@
 
 (file-relative-name "/Users/armin/projects/consult-omni/README.org" (buffer-file-name))
 
+(cl-defun consult-omni--ripgrep-builder (input &rest args &key callback &allow-other-keys)
+  "makes builder command line args for “ripgrep”.
+"
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts))
+               (count (plist-get opts :count))
+               (dir (plist-get opts :dir))
+               (dir (if dir (file-truename (format "%s" dir))))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-default-count))
+               (default-directory (or dir default-directory))
+               )
+   (funcall (consult-omni--grep-make-builder #'consult--ripgrep-make-builder dir) query)
+            ))
+
 (consult-omni-define-source "ripgrep"
                            :narrow-char ?r
                            :type 'async
@@ -92,7 +91,6 @@
                            :search-history 'consult-omni--search-history
                            :selection-history 'consult-omni--selection-history
                            :group #'consult-omni--group-function
-                           ;; :group #'consult--prefix-group
                            :enabled (lambda () (if (and (executable-find "rg")
                                                    (fboundp 'consult-ripgrep))
                                                    t nil))

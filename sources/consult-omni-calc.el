@@ -15,13 +15,15 @@
 ;;; Code:
 
 (require 'consult-omni)
+(require 'calc)
+(require 'calc-aent nil t)
 
 (defcustom consult-omni-calc-number-only nil
 "Only show calculator rsults when the query result in a nunmber?"
 :type 'boolean)
 
-(unless (boundp 'calc-eval-error)
-  (defvar calc-eval-error nil))
+;; (unless (boundp 'calc-eval-error)
+;;   (defvar calc-eval-error nil))
 
 (defun consult-omni--calc-callback (cand)
   (let ((equ (get-text-property 0 :query cand))
@@ -33,9 +35,19 @@
   "Calculate the result of possible math equations.
 
 This uses `calc-eval' to return the result of input"
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (source "calc")
                (opts (car-safe opts))
+               (extra-args (plist-get opts :$))
+               (extra-args (and extra-args (car (read-from-string extra-args))))
+               (extra-args (if (listp extra-args) extra-args (list extra-args)))
+               (extra-args (mapcar (lambda (item) (cond
+                                                   ((numberp item) (format "%s" item))
+                                                   ((and (symbolp item) (numberp (symbol-value item))) (format "%s" (symbol-value item)))
+                                                   ((and (functionp item) (numberp (funcall item))) (format "%s" (funcall item)))
+                                                   ((and (numberp (eval item))) (format "%s" (eval item)))
+                                                   (t item))
+                                     ) extra-args))
                (calc-eval-error t)
                (result)
                (annotated-result)
@@ -43,8 +55,8 @@ This uses `calc-eval' to return the result of input"
     (when (string-match "[[:digit:]\/\*\+-=%^&$\(\{\[]" query nil t)
       (condition-case err
           (if consult-omni-calc-number-only
-              (setq result (calc-eval (list query) 'num))
-            (setq result (calc-eval (list query))))
+              (setq result (apply #'calc-eval (list query) 'num extra-args))
+            (setq result (apply #'calc-eval (list query) nil extra-args)))
         ('error (message err))
         ))
 

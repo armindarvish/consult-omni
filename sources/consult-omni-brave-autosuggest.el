@@ -16,14 +16,6 @@
 
 (require 'consult-omni)
 
-(defun consult-omni--brave-autosuggest-return (cand)
-  "Return the string of CAND with no properties
-"
-(when (stringp cand)
-  (substring-no-properties (string-trim cand))))
-
-(defvar consult-omni-brave-autosuggest-api-url "https://api.search.brave.com/res/v1/suggest/search")
-
 (defcustom consult-omni-brave-autosuggest-api-key nil
   "Key for Brave Autosuggest API.
 
@@ -32,18 +24,24 @@ See URL `https://brave.com/search/api/' for more info"
   :type '(choice (const :tag "Brave Autosuggest API Key" string)
                  (function :tag "Custom Function")))
 
+(defvar consult-omni-brave-autosuggest-api-url "https://api.search.brave.com/res/v1/suggest/search")
+
+(defun consult-omni--brave-autosuggest-return (cand)
+  "Return the string of CAND with no properties
+"
+(when (stringp cand)
+  (substring-no-properties (string-trim cand))))
+
 (cl-defun consult-omni--brave-autosuggest-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results for INPUT from Brave Autosuggest API.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min (max count 1) 20))
                (params  `(("q" . ,query)

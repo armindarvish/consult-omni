@@ -30,11 +30,9 @@ for some limited documentation"
                (count (plist-get opts :count))
                (page (plist-get opts :page))
                (extra-args (seq-difference (append opts args) '(:count count :page page)))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min count 10))
                (page (+ (* page count) 1))
@@ -73,7 +71,6 @@ for some limited documentation"
                                 (when annotated-results
                                   (funcall callback annotated-results))
                                 annotated-results)))))
-
 
 (consult-omni-define-source "DuckDuckGo API"
                            :narrow-char ?d

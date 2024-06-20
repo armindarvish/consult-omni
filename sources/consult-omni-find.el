@@ -50,7 +50,7 @@ Similar to `consult-find-args' bur for consult-omni."
 (cl-defun consult-omni--find-builder (input &rest args &key callback &allow-other-keys)
   "makes builder command line args for “grep”.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (hidden (if (plist-member opts :hidden) (plist-get opts :hidden) consult-omni-find-show-hidden-files))
@@ -58,8 +58,7 @@ Similar to `consult-find-args' bur for consult-omni."
                (ignore (if ignore (format "%s" ignore)))
                (dir (plist-get opts :dir))
                (dir (if dir (file-truename (format "%s" dir))))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
                (default-directory (or dir default-directory))
                (`(_ ,paths _) (consult--directory-prompt "" dir))

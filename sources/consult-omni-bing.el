@@ -15,8 +15,6 @@
 ;;; Code:
 (require 'consult-omni)
 
-(defvar consult-omni-bing-search-api-url "https://api.bing.microsoft.com/v7.0/search")
-
 (defcustom consult-omni-bing-search-api-key nil
   "Key for Bing (Microsoft Azure) search API
 
@@ -25,20 +23,20 @@ See URL `https://www.microsoft.com/en-us/bing/apis/bing-web-search-api' and URL 
   :type '(choice (const :tag "API Key" string)
                  (function :tag "Custom Function")))
 
+(defvar consult-omni-bing-search-api-url "https://api.bing.microsoft.com/v7.0/search")
+
 (cl-defun consult-omni--bing-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches search results for INPUT from Bing web search api.
 
 Refer to URL `https://programmablesearchengine.google.com/about/' and `https://developers.google.com/custom-search/' for more info.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (max count 1))
                (page (* page count))

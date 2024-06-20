@@ -37,22 +37,6 @@
 "whether to use ripgrep when searching ntoes?"
 :type 'boolean)
 
-(cl-defun consult-omni--notes-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for `consult-omni-notes'.
-"
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts))
-               (count (plist-get opts :count))
-               (dir (plist-get opts :dir))
-               (dir (if dir (file-truename (format "%s" dir))))
-               (dir (or dir consult-omni-notes-files))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
-                          consult-omni-default-count))
-               )
-   (funcall (consult-omni--grep-make-builder (if (and consult-omni-notes-use-rg (executable-find "rg")) #'consult--ripgrep-make-builder #'consult--grep-make-builder) dir) query)
-            ))
-
 (defun consult-omni--notes-transform (candidates &optional query)
   "Formats `consult-omni-notes' candidates.
 "
@@ -104,6 +88,21 @@
                   ;;   (add-face-text-property (+ 2 file-len line-len) (length str) 'consult-grep-context 'append str))
                   (push (propertize str :source "Notes Search" :title query :file file) result)))))
           result))
+
+(cl-defun consult-omni--notes-builder (input &rest args &key callback &allow-other-keys)
+  "makes builder command line args for `consult-omni-notes'.
+"
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+               (opts (car-safe opts))
+               (count (plist-get opts :count))
+               (dir (plist-get opts :dir))
+               (dir (if dir (file-truename (format "%s" dir))))
+               (dir (or dir consult-omni-notes-files))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-default-count))
+               )
+   (funcall (consult-omni--grep-make-builder (if (and consult-omni-notes-use-rg (executable-find "rg")) #'consult--ripgrep-make-builder #'consult--grep-make-builder) dir) query)
+            ))
 
 (consult-omni-define-source "Notes Search"
                            :narrow-char ?n

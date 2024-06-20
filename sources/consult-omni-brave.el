@@ -16,10 +16,6 @@
 
 (require 'consult-omni)
 
-(defvar consult-omni-brave-search-url "https://search.brave.com/search")
-
-(defvar consult-omni-brave-url "https://api.search.brave.com/res/v1/web/search")
-
 (defcustom consult-omni-brave-api-key nil
   "Key for Brave API.
 
@@ -28,19 +24,20 @@ See URL `https://brave.com/search/api/' for more info"
   :type '(choice (const :tag "Brave API Key" string)
                  (function :tag "Custom Function")))
 
+(defvar consult-omni-brave-search-url "https://search.brave.com/search")
+
+(defvar consult-omni-brave-url "https://api.search.brave.com/res/v1/web/search")
 
 (cl-defun consult-omni--brave-fetch-results (input &rest args &key callback &allow-other-keys)
   "Retrieve search results from Brave for INPUT.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min (max count 1) 20))
                (params `(("q" . ,(replace-regexp-in-string " " "+" query))

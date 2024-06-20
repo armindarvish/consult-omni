@@ -20,6 +20,14 @@
 
 (defvar consult-omni-doiorg-search-url "https://doi.org/")
 
+(defvar consult-omni--doi-search-history (list)
+  "History variables for search terms when using
+`consult-omni-doi' commands.")
+
+(defvar consult-omni--doi-selection-history (list)
+  "History variables for selected items when using
+`consult-omni-doi' commands.")
+
 (defun consult-omni--doi-to-url (doi)
   "Converts DOI value to target url"
   (let ((out))
@@ -38,11 +46,10 @@
                                                                                    raw-results)))))
                                   result))))))
 
-
 (cl-defun consult-omni--doiorg-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch target url of DOI.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (source "doiorg")
                (url (consult-omni--doi-to-url query))
@@ -57,16 +64,6 @@
                                               :query query)))
     (list annotated-results)
           ))
-
-
-(defvar consult-omni--doi-search-history (list)
-  "History variables for search terms when using
-`consult-omni-doi' commands.")
-
-(defvar consult-omni--doi-selection-history (list)
-  "History variables for selected items when using
-`consult-omni-doi' commands.")
-
 
 (consult-omni-define-source "doiorg"
                            :narrow-char ?d

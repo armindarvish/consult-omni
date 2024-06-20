@@ -1227,8 +1227,12 @@ from command-line options in alist of strings"
                   (intern opt)
                  nil))
            (val (or (cadr (member opt opts)) "nil"))
-           (val (if (stringp val)
-                    (intern val))))
+           ;; (val (if (stringp val)
+           ;;          (cond
+           ;;           ((numberp (read val)) (string-to-number val))
+           ;;           (t (intern val)))
+           ;;        ))
+           )
     (when key
       (cons key val)))))
 
@@ -1243,8 +1247,7 @@ it also sets `consult-omni--override-group-by' if and argument
 for grouping is provided in options.
 "
   (pcase-let* ((`(,query . ,opts) (consult--command-split input))
-               (args (if (equal args '(nil)) nil args))
-               )
+               (args (if (member (flatten-list args) (list nil (list nil))) nil args)))
     (if (and opts (listp opts) (> (length opts) 0))
         (progn
           (setq opts (cl-substitute ":count" ":n" opts :test 'equal))
@@ -1252,7 +1255,7 @@ for grouping is provided in options.
           (setq opts (cl-substitute ":group" ":g" opts :test 'equal))
           (if (member ":group" opts)
               (setq consult-omni--override-group-by (cadr (member ":group" opts)))
-          (setq consult-omni--override-group-by nil))
+            (setq consult-omni--override-group-by nil))
           (cl-loop for opt in opts
                    do
                    (pcase-let* ((`(,key . ,val) (consult-omni--extract-opt-pair opt opts (list ":group"))))
@@ -3016,7 +3019,8 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
 (defvar consult-omni-apps-cached-items nil)
 
 #+end_src
-**** cmd args
+**** helper functions
+***** cmd args
 #+begin_src emacs-lisp
 (defun consult-omni--apps-cmd-args (app &optional file)
   (append (consult--build-args consult-omni-apps-open-command-args)
@@ -3024,7 +3028,7 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
           (if (and file (file-exists-p (file-truename file))) (list (format "%s" file)))))
 #+end_src
 
-**** make process
+***** make process
 #+begin_src emacs-lisp
 (defun consult-omni--apps-lauch-app (app &optional file)
   (let* ((name (concat "consult-omni-" (file-name-base app)))
@@ -3034,14 +3038,14 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
                 :command cmds
                 )))
 #+end_src
-**** preview
+***** preview
 #+begin_src emacs-lisp
 (defun consult-omni--apps-preview (cand)
   "Mdfind preview function."
 (funcall (consult--file-preview) 'preview cand))
 #+end_src
 
-**** callback
+***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--apps-callback (cand)
   "Mdfind callback function."
@@ -3050,7 +3054,7 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
   ))
 #+end_src
 
-**** format
+***** format
 #+begin_src emacs-lisp
 (cl-defun consult-omni--apps-format-candidates (&rest args &key source query title path face snippet visible &allow-other-keys)
 "Formats the cnaiddates of `consult-omni-apps.
@@ -3202,11 +3206,10 @@ in `consult-omni-apps-paths'.
 (cl-defun consult-omni--apps-list-apps (input &rest args &key callback &allow-other-keys)
   "get a list of applications from OS.
 "
- (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+ (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
-               (count (or (and (integerp count) count)
-                             (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                              consult-omni-default-count))
                (files (consult-omni--apps-get-desktop-apps)))
    (if (and consult-omni-apps-use-cache query)
@@ -3236,7 +3239,7 @@ in `consult-omni-apps-paths'.
  )))
 #+end_src
 
-**** define source main
+**** define source
 #+begin_src emacs-lisp
 
 (consult-omni-define-source "Apps"
@@ -3290,10 +3293,8 @@ in `consult-omni-apps-paths'.
 ;;; Code:
 (require 'consult-omni)
 #+end_src
-**** bing
+**** custom variables
 #+begin_src emacs-lisp
-(defvar consult-omni-bing-search-api-url "https://api.bing.microsoft.com/v7.0/search")
-
 (defcustom consult-omni-bing-search-api-key nil
   "Key for Bing (Microsoft Azure) search API
 
@@ -3302,20 +3303,24 @@ See URL `https://www.microsoft.com/en-us/bing/apis/bing-web-search-api' and URL 
   :type '(choice (const :tag "API Key" string)
                  (function :tag "Custom Function")))
 
+(defvar consult-omni-bing-search-api-url "https://api.bing.microsoft.com/v7.0/search")
+
+#+end_src
+**** items
+#+begin_src emacs-lisp
+
 (cl-defun consult-omni--bing-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches search results for INPUT from Bing web search api.
 
 Refer to URL `https://programmablesearchengine.google.com/about/' and `https://developers.google.com/custom-search/' for more info.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (max count 1))
                (page (* page count))
@@ -3353,6 +3358,10 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                                   (funcall callback annotated-results))
                                 annotated-results)))))
 
+#+end_src
+**** define source
+#+begin_src emacs-lisp
+
 (consult-omni-define-source "Bing"
                            :narrow-char ?m
                            :type 'dynamic
@@ -3367,6 +3376,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                            :static 'both
                            :annotate nil
                            )
+
 #+end_src
 **** provide and footer
 #+begin_src emacs-lisp
@@ -3405,12 +3415,8 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
 #+end_src
 
 
-**** brave
+**** custom variables
 #+begin_src emacs-lisp
-(defvar consult-omni-brave-search-url "https://search.brave.com/search")
-
-(defvar consult-omni-brave-url "https://api.search.brave.com/res/v1/web/search")
-
 (defcustom consult-omni-brave-api-key nil
   "Key for Brave API.
 
@@ -3419,19 +3425,24 @@ See URL `https://brave.com/search/api/' for more info"
   :type '(choice (const :tag "Brave API Key" string)
                  (function :tag "Custom Function")))
 
+(defvar consult-omni-brave-search-url "https://search.brave.com/search")
+
+(defvar consult-omni-brave-url "https://api.search.brave.com/res/v1/web/search")
+
+#+end_src
+**** get items
+#+begin_src emacs-lisp
 
 (cl-defun consult-omni--brave-fetch-results (input &rest args &key callback &allow-other-keys)
   "Retrieve search results from Brave for INPUT.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min (max count 1) 20))
                (params `(("q" . ,(replace-regexp-in-string " " "+" query))
@@ -3468,6 +3479,10 @@ See URL `https://brave.com/search/api/' for more info"
                              raw-results)))
           (funcall callback annotated-results)
           annotated-results)))))
+
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 
 ;; Define the Brave Source
 (consult-omni-define-source "Brave"
@@ -3518,18 +3533,8 @@ See URL `https://brave.com/search/api/' for more info"
 
 (require 'consult-omni)
 #+end_src
-**** return
+**** custom variables
 #+begin_src emacs-lisp
-(defun consult-omni--brave-autosuggest-return (cand)
-  "Return the string of CAND with no properties
-"
-(when (stringp cand)
-  (substring-no-properties (string-trim cand))))
-
-#+end_src
-**** brave autosuggest
-#+begin_src emacs-lisp
-(defvar consult-omni-brave-autosuggest-api-url "https://api.search.brave.com/res/v1/suggest/search")
 
 (defcustom consult-omni-brave-autosuggest-api-key nil
   "Key for Brave Autosuggest API.
@@ -3539,18 +3544,32 @@ See URL `https://brave.com/search/api/' for more info"
   :type '(choice (const :tag "Brave Autosuggest API Key" string)
                  (function :tag "Custom Function")))
 
+(defvar consult-omni-brave-autosuggest-api-url "https://api.search.brave.com/res/v1/suggest/search")
+
+#+end_src
+**** helper functions
+***** return
+#+begin_src emacs-lisp
+(defun consult-omni--brave-autosuggest-return (cand)
+  "Return the string of CAND with no properties
+"
+(when (stringp cand)
+  (substring-no-properties (string-trim cand))))
+
+#+end_src
+**** get items
+#+begin_src emacs-lisp
+
 (cl-defun consult-omni--brave-autosuggest-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results for INPUT from Brave Autosuggest API.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min (max count 1) 20))
                (params  `(("q" . ,query)
@@ -3595,6 +3614,10 @@ See URL `https://brave.com/search/api/' for more info"
                                                          raw-results)))
                                       (funcall callback annotated-results)
                                       annotated-results)))))
+
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 
 (consult-omni-define-source "Brave AutoSuggest"
                            :narrow-char ?B
@@ -3647,8 +3670,10 @@ See URL `https://brave.com/search/api/' for more info"
 (require 'browser-hist)
 
 #+end_src
-**** format
+**** helper functions
+***** format
 #+begin_src emacs-lisp
+
 (cl-defun consult-omni--browser-history-format-candidate (&rest args &key source query url search-url title face &allow-other-keys)
   "Returns a highlighted formatted string for candidates.
 
@@ -3691,12 +3716,12 @@ SNIPPET is a string containing a snippet/description of candidate
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
 #+end_src
-**** main
+**** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--browser-history-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results for INPUT from browser history.
 "
- (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+ (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (browser (or (plist-get opts :browser) browser-hist-default-browser))
                (browser-hist-default-browser browser)
@@ -3712,6 +3737,9 @@ SNIPPET is a string containing a snippet/description of candidate
                               :url url
                               :query query)))
               results)))
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 
 (consult-omni-define-source "Browser History"
                            :narrow-char ?h
@@ -3737,7 +3765,7 @@ SNIPPET is a string containing a snippet/description of candidate
 (add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-browser-history)
 ;;; consult-omni-browser-history.el ends here
 #+end_src
-*** calculator
+*** calc
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-calc.el
 :END:
@@ -3760,17 +3788,21 @@ SNIPPET is a string containing a snippet/description of candidate
 ;;; Code:
 
 (require 'consult-omni)
+(require 'calc)
+(require 'calc-aent nil t)
 #+end_src
-**** custom variables
+**** variables
+***** custom
 #+begin_src emacs-lisp
 (defcustom consult-omni-calc-number-only nil
 "Only show calculator rsults when the query result in a nunmber?"
 :type 'boolean)
 
-(unless (boundp 'calc-eval-error)
-  (defvar calc-eval-error nil))
+;; (unless (boundp 'calc-eval-error)
+;;   (defvar calc-eval-error nil))
 #+end_src
-**** callback
+**** helper functions
+***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--calc-callback (cand)
   (let ((equ (get-text-property 0 :query cand))
@@ -3785,9 +3817,19 @@ SNIPPET is a string containing a snippet/description of candidate
   "Calculate the result of possible math equations.
 
 This uses `calc-eval' to return the result of input"
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (source "calc")
                (opts (car-safe opts))
+               (extra-args (plist-get opts :$))
+               (extra-args (and extra-args (car (read-from-string extra-args))))
+               (extra-args (if (listp extra-args) extra-args (list extra-args)))
+               (extra-args (mapcar (lambda (item) (cond
+                                                   ((numberp item) (format "%s" item))
+                                                   ((and (symbolp item) (numberp (symbol-value item))) (format "%s" (symbol-value item)))
+                                                   ((and (functionp item) (numberp (funcall item))) (format "%s" (funcall item)))
+                                                   ((and (numberp (eval item))) (format "%s" (eval item)))
+                                                   (t item))
+                                     ) extra-args))
                (calc-eval-error t)
                (result)
                (annotated-result)
@@ -3795,8 +3837,8 @@ This uses `calc-eval' to return the result of input"
     (when (string-match "[[:digit:]\/\*\+-=%^&$\(\{\[]" query nil t)
       (condition-case err
           (if consult-omni-calc-number-only
-              (setq result (calc-eval (list query) 'num))
-            (setq result (calc-eval (list query))))
+              (setq result (apply #'calc-eval (list query) 'num extra-args))
+            (setq result (apply #'calc-eval (list query) nil extra-args)))
         ('error (message err))
         ))
 
@@ -3810,6 +3852,10 @@ This uses `calc-eval' to return the result of input"
         (list annotated-result)
        nil)
     ))
+
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 
 (consult-omni-define-source "calc"
                            :narrow-char ?C
@@ -3866,8 +3912,24 @@ This uses `calc-eval' to return the result of input"
 
 (require 'consult-omni)
 #+end_src
+**** variables
+***** custom
+#+begin_src emacs-lisp
 
-**** format
+(defcustom consult-omni-openai-api-key nil
+"Key for OpeAI API
+
+See URL `https://openai.com/product' and URL `https://platform.openai.com/docs/introduction' for details"
+:group 'consult-omni
+:type '(choice (const :tag "API Key" string)
+               (function :tag "Custom Function")))
+#+end_src
+***** other
+#+begin_src emacs-lisp
+(defvar consult-omni-chatgpt-api-url "https://api.openai.com/v1/chat/completions")
+#+end_src
+**** helper functions
+***** format
 #+begin_src emacs-lisp
 (defun consult-omni-dynamic--chatgpt-format-candidate (source query title &optional model face)
   "Returns a formatted string for candidates of `consult-omni-chatgpt'.
@@ -3900,7 +3962,7 @@ FACE is the face to apply to TITLE
     str))
 #+end_src
 
-**** preview
+***** preview
 #+begin_src emacs-lisp
 (defun consult-omni--chatgpt-response-preview (response &optional query)
   "Returns a buffer with formatted RESPONSE from chatGPT"
@@ -3930,22 +3992,12 @@ FACE is the face to apply to TITLE
     (consult--jump marker)
 ))
 #+end_src
-**** chatgpt with http-request
+
+**** items
 #+begin_src emacs-lisp
-(defvar consult-omni-chatgpt-api-url "https://api.openai.com/v1/chat/completions")
-
-(defcustom consult-omni-openai-api-key nil
-"Key for OpeAI API
-
-See URL `https://openai.com/product' and URL `https://platform.openai.com/docs/introduction' for details"
-:group 'consult-omni
-:type '(choice (const :tag "API Key" string)
-               (function :tag "Custom Function")))
-
-
 (cl-defun consult-omni--chatgpt-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches chat response for INPUT from chatGPT."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (model (or (plist-get opts :model) "gpt-3.5-turbo"))
                (headers `(("Content-Type" . "application/json")
@@ -3977,6 +4029,11 @@ See URL `https://openai.com/product' and URL `https://platform.openai.com/docs/i
           (when annotated-results
           (funcall callback (list annotated-results)))
           annotated-results)))))
+
+#+end_src
+**** define sources
+#+begin_src emacs-lisp
+
 
 (consult-omni-define-source "chatGPT"
                            :narrow-char ?G
@@ -4034,41 +4091,26 @@ See URL `https://openai.com/product' and URL `https://platform.openai.com/docs/i
 (require 'consult)
 (require 'consult-omni)
 #+end_src
-
-**** items
+**** helper functions
+***** get candidates
 #+begin_src emacs-lisp
 (defun consult-omni--line-multi-candidates (input &optional buffers)
   "Wrapper around consult--line-multi-candidates for consult-omni."
   (let  ((buffers (or buffers (consult--buffer-query :directory (consult--normalize-directory default-directory) :sort 'alpha-current))))
     (consult--line-multi-candidates buffers input)))
 #+end_src
-**** fetch-results
+***** preview
 #+begin_src emacs-lisp
 
-(cl-defun consult-omni--line-multi-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Fetches search results for INPUT from `consult-line-multi'."
-(unless (functionp 'consult-omni--line-multi-candidates)
-  (error "consult-omni: consult-omni-line-multi not available. Make sure `consult' is loaded properly"))
-(pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts))
-               (items (consult-omni--line-multi-candidates query))
-               (annotated-results (mapcar (lambda (item)
-                                            (let* ((source "buffers text search")
-                                                   (marker  (consult--get-location item))
-                                                   (title (substring-no-properties item 0 -1))
-                                                   (decorated (consult-omni--line-multi-format-candidate :source source :query query :marker marker :title title)))
-                                           (propertize decorated
-                                                       :source source
-                                                       :title title
-                                                       :url nil
-                                                       :marker marker
-                                                       :query query
-                                                       ))) items)))
-    annotated-results))
+(defun consult-omni--line-multi-preview (cand)
+"Preview function for consult-omni-line-multi."
+  (let* ((marker (car (get-text-property 0 :marker cand)))
+         (query (get-text-property 0 :query cand)))
+    (consult--jump marker)
+       ))
+
 #+end_src
-
-
-**** format
+***** format
 #+begin_src emacs-lisp
 (cl-defun consult-omni--line-multi-format-candidate (&rest args &key source query marker title face &allow-other-keys)
   "Formats the cnaiddates of `consult-omni-line-multi'.
@@ -4107,17 +4149,32 @@ FACE is the face to apply to TITLE"
     str))
 #+end_src
 
-**** preview
+**** items
 #+begin_src emacs-lisp
 
-(defun consult-omni--line-multi-preview (cand)
-"Preview function for consult-omni-line-multi."
-  (let* ((marker (car (get-text-property 0 :marker cand)))
-         (query (get-text-property 0 :query cand)))
-    (consult--jump marker)
-       ))
-
+(cl-defun consult-omni--line-multi-fetch-results (input &rest args &key callback &allow-other-keys)
+  "Fetches search results for INPUT from `consult-line-multi'."
+(unless (functionp 'consult-omni--line-multi-candidates)
+  (error "consult-omni: consult-omni-line-multi not available. Make sure `consult' is loaded properly"))
+(pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts))
+               (items (consult-omni--line-multi-candidates query))
+               (annotated-results (mapcar (lambda (item)
+                                            (let* ((source "buffers text search")
+                                                   (marker  (consult--get-location item))
+                                                   (title (substring-no-properties item 0 -1))
+                                                   (decorated (consult-omni--line-multi-format-candidate :source source :query query :marker marker :title title)))
+                                           (propertize decorated
+                                                       :source source
+                                                       :title title
+                                                       :url nil
+                                                       :marker marker
+                                                       :query query
+                                                       ))) items)))
+    annotated-results))
 #+end_src
+
+
 **** define source
 #+begin_src emacs-lisp
 
@@ -4176,8 +4233,8 @@ FACE is the face to apply to TITLE"
 
 (require 'consult-omni)
 #+end_src
-
-**** preview
+**** helper functions
+***** preview
 #+begin_src emacs-lisp
 (defun consult-omni--consult-buffer-preview (cand)
   "Preview function for `consult-omni--buffer'."
@@ -4187,7 +4244,7 @@ FACE is the face to apply to TITLE"
           (consult--buffer-action buff))
         )))
 #+end_src
-**** consult-buffer
+**** define source
 #+begin_src emacs-lisp
 ;; make consult-omni sources from `consult-buffer-sources'
 (cl-loop for source in consult-buffer-sources
@@ -4239,8 +4296,8 @@ FACE is the face to apply to TITLE"
 (require 'consult-omni)
 (require 'consult-notes nil t)
 #+end_src
-
-**** preview
+**** helper functions
+***** preview
 #+begin_src emacs-lisp
 (defun consult-omni--org-roam-note-preview (cand)
   "Preview function for org-roam files."
@@ -4260,7 +4317,7 @@ FACE is the face to apply to TITLE"
             (consult--jump marker)))))
 #+end_src
 
-**** callback
+***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--org-roam-note-callback (cand &rest args)
   "Callback function for org-roam files."
@@ -4284,7 +4341,8 @@ FACE is the face to apply to TITLE"
              ))))
 #+end_src
 
-**** consult-notes-org-headings
+**** define source
+***** consult-notes-org-headings
 #+begin_src emacs-lisp
 ;; make consult-omni sources from consult-notes sources
 (when consult-notes-org-headings-mode
@@ -4306,7 +4364,7 @@ FACE is the face to apply to TITLE"
                                                 ))
 #+end_src
 
-**** consult-notes-org-roam
+***** consult-notes-org-roam
 #+begin_src emacs-lisp
 (when consult-notes-org-roam-mode
   (cl-loop for source in '(consult-notes-org-roam--refs consult-notes-org-roam--nodes)
@@ -4366,27 +4424,9 @@ FACE is the face to apply to TITLE"
 (require 'consult-omni)
 (require 'consult-gh)
 #+end_src
-**** builder
-#+begin_src emacs-lisp
-(cl-defun consult-omni--gh-search-repos-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “GitHub CLI”.
-"
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts))
-               (count (plist-get opts :count))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
-                          consult-omni-default-count))
-               (cmd (consult--build-args '("gh" "search" "repos")))
-               (cmd-opts (list "--limit" (format "%s" count)))
-               (`(,re . ,hl) (funcall consult--regexp-compiler query 'basic t)))
-      (when re
-        (cons (append cmd
-                      (list (string-join re " "))
-                      cmd-opts)
-              hl))))
-#+end_src
-**** preview
+**** helper functions
+
+***** preview
 #+begin_src emacs-lisp
 (defun consult-omni--gh-preview (cand)
   "Preview for github repo candidates"
@@ -4411,14 +4451,33 @@ FACE is the face to apply to TITLE"
              )
     ))
 #+end_src
-**** callback
+***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--gh-callback (cand)
   "Callback for github repo candidates."
   (funcall consult-gh-repo-action (cons cand (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))))
 
 #+end_src
-**** consult-gh source
+**** items
+#+begin_src emacs-lisp
+(cl-defun consult-omni--gh-search-repos-builder (input &rest args &key callback &allow-other-keys)
+  "makes builder command line args for “GitHub CLI”.
+"
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts))
+               (count (plist-get opts :count))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-default-count))
+               (cmd (consult--build-args '("gh" "search" "repos")))
+               (cmd-opts (list "--limit" (format "%s" count)))
+               (`(,re . ,hl) (funcall consult--regexp-compiler query 'basic t)))
+      (when re
+        (cons (append cmd
+                      (list (string-join re " "))
+                      cmd-opts)
+              hl))))
+#+end_src
+**** define source
 #+begin_src emacs-lisp
 (consult-omni-define-source "GitHub"
                            :narrow-char ?G
@@ -4479,8 +4538,8 @@ FACE is the face to apply to TITLE"
 
 (require 'consult-omni)
 #+end_src
-
-**** grep-builder
+**** helper functions
+***** grep-builder
 #+begin_src emacs-lisp
 (defun consult-omni--grep-make-builder (make-builder &optional dir)
   "General builders for grep and similar process.
@@ -4496,7 +4555,7 @@ FACE is the face to apply to TITLE"
 
 
 
-**** transform
+***** transform
 #+begin_src emacs-lisp
 (defun consult-omni--grep-transform (candidates &optional query)
   "Formats consult-omni-grep candidates.
@@ -4545,7 +4604,7 @@ FACE is the face to apply to TITLE"
 
 
 
-**** preview
+***** preview
 #+begin_src emacs-lisp
 
 (defun consult-omni--grep-preview (cand)
@@ -4555,7 +4614,7 @@ FACE is the face to apply to TITLE"
 
 #+end_src
 
-**** callback
+***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--grep-callback (cand)
   "Grep callback function."
@@ -4563,18 +4622,17 @@ FACE is the face to apply to TITLE"
   )
 #+end_src
 
-**** consult-omni-grep-builder
+**** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--grep-builder (input &rest args &key callback &allow-other-keys)
   "makes builder command line args for “grep”.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (dir (plist-get opts :dir))
                (dir (if dir (file-truename (format "%s" dir))))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
                (default-directory (or dir default-directory))
                )
@@ -4583,7 +4641,7 @@ FACE is the face to apply to TITLE"
 #+end_src
 
 
-**** source
+**** define source
 #+begin_src emacs-lisp
 (consult-omni-define-source "grep"
                            :narrow-char ?r
@@ -4591,7 +4649,6 @@ FACE is the face to apply to TITLE"
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--grep-builder
                            :transform #'consult-omni--grep-transform
-                           ;; :filter nil
                            :on-preview #'consult-omni--grep-preview
                            :on-return #'identity
                            :on-callback #'consult-omni--grep-callback
@@ -4599,7 +4656,6 @@ FACE is the face to apply to TITLE"
                            :search-history 'consult-omni--search-history
                            :selection-history 'consult-omni--selection-history
                            :group #'consult-omni--group-function
-                           ;; :group #'consult--prefix-group
                            :sort t
                            :static 'both
                            :transform #'consult-omni--ripgrep-transform
@@ -4671,27 +4727,8 @@ FACE is the face to apply to TITLE"
 
 #+end_src
 
-**** consult-omni-notes-builder
-#+begin_src emacs-lisp
-(cl-defun consult-omni--notes-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for `consult-omni-notes'.
-"
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts))
-               (count (plist-get opts :count))
-               (dir (plist-get opts :dir))
-               (dir (if dir (file-truename (format "%s" dir))))
-               (dir (or dir consult-omni-notes-files))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
-                          consult-omni-default-count))
-               )
-   (funcall (consult-omni--grep-make-builder (if (and consult-omni-notes-use-rg (executable-find "rg")) #'consult--ripgrep-make-builder #'consult--grep-make-builder) dir) query)
-            ))
-#+end_src
-
-
-**** transform
+**** helper functions
+***** transform
 #+begin_src emacs-lisp
 (defun consult-omni--notes-transform (candidates &optional query)
   "Formats `consult-omni-notes' candidates.
@@ -4746,7 +4783,26 @@ FACE is the face to apply to TITLE"
           result))
 #+end_src
 
-**** source
+**** items
+#+begin_src emacs-lisp
+(cl-defun consult-omni--notes-builder (input &rest args &key callback &allow-other-keys)
+  "makes builder command line args for `consult-omni-notes'.
+"
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+               (opts (car-safe opts))
+               (count (plist-get opts :count))
+               (dir (plist-get opts :dir))
+               (dir (if dir (file-truename (format "%s" dir))))
+               (dir (or dir consult-omni-notes-files))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-default-count))
+               )
+   (funcall (consult-omni--grep-make-builder (if (and consult-omni-notes-use-rg (executable-find "rg")) #'consult--ripgrep-make-builder #'consult--grep-make-builder) dir) query)
+            ))
+#+end_src
+
+
+**** define source
 #+begin_src emacs-lisp
 (consult-omni-define-source "Notes Search"
                            :narrow-char ?n
@@ -4818,7 +4874,8 @@ Similar to `consult-find-args' bur for consult-omni."
 
 
 #+end_src
-**** transform
+**** helper functions
+***** transform
 #+begin_src emacs-lisp
 (defun consult-omni--find-transform (candidates &optional query)
   "Formats consult-omni-find candidates.
@@ -4827,7 +4884,7 @@ Similar to `consult-find-args' bur for consult-omni."
            (string-remove-prefix (file-truename default-directory) candidate))
           candidates))
 #+end_src
-**** filter
+***** filter
 #+begin_src emacs-lisp
 (defun consult-omni--find-filter (candidates &optional query)
   "Formats consult-omni-find candidates.
@@ -4835,7 +4892,7 @@ Similar to `consult-find-args' bur for consult-omni."
   (seq-filter (lambda (candidate) (not (string-match "^find:.*$" candidate nil nil))) candidates))
 
 #+end_src
-**** preview
+***** preview
 #+begin_src emacs-lisp
 
 (defun consult-omni--find-preview (cand)
@@ -4843,7 +4900,7 @@ Similar to `consult-find-args' bur for consult-omni."
 (funcall (consult--file-preview) 'preview cand))
 #+end_src
 
-**** callback
+***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--find-callback (cand)
   "Find callback function."
@@ -4851,12 +4908,12 @@ Similar to `consult-find-args' bur for consult-omni."
   )
 #+end_src
 
-**** consult-omni-find-builder
+**** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--find-builder (input &rest args &key callback &allow-other-keys)
   "makes builder command line args for “grep”.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (hidden (if (plist-member opts :hidden) (plist-get opts :hidden) consult-omni-find-show-hidden-files))
@@ -4864,8 +4921,7 @@ Similar to `consult-find-args' bur for consult-omni."
                (ignore (if ignore (format "%s" ignore)))
                (dir (plist-get opts :dir))
                (dir (if dir (file-truename (format "%s" dir))))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
                (default-directory (or dir default-directory))
                (`(_ ,paths _) (consult--directory-prompt "" dir))
@@ -4880,7 +4936,7 @@ Similar to `consult-find-args' bur for consult-omni."
             ))
 #+end_src
 
-**** source
+**** define source
 #+begin_src emacs-lisp
 (consult-omni-define-source "find"
                            :narrow-char ?f
@@ -4957,7 +5013,8 @@ Similar to `consult-locate-args' bur for consult-omni."
   :type '(choice string (repeat (choice string sexp))))
 
 #+end_src
-**** preview
+**** helper functions
+***** preview
 #+begin_src emacs-lisp
 
 (defun consult-omni--locate-preview (cand)
@@ -4965,7 +5022,7 @@ Similar to `consult-locate-args' bur for consult-omni."
 (funcall (consult--file-preview) 'preview cand))
 #+end_src
 
-**** callback
+***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--locate-callback (cand)
   "Find callback function."
@@ -4973,7 +5030,7 @@ Similar to `consult-locate-args' bur for consult-omni."
   )
 #+end_src
 
-**** transform
+***** transform
 #+begin_src emacs-lisp
 (defun consult-omni--find-transform (candidates &optional query)
   "Formats consult-omni-find candidates.
@@ -4985,7 +5042,7 @@ Similar to `consult-locate-args' bur for consult-omni."
 
 
 
-**** filter
+***** filter
 #+begin_src emacs-lisp
 (defun consult-omni--locate-filter (candidates &optional query)
   "Formats consult-omni-find candidates.
@@ -4993,12 +5050,12 @@ Similar to `consult-locate-args' bur for consult-omni."
   (seq-filter (lambda (candidate) (not (string-match "^locate:.*$" candidate nil nil))) candidates))
 
 #+end_src
-**** consult-omni-locate-builder
+**** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--locate-builder (input &rest args &key callback &allow-other-keys)
   "makes builder command line args for “locate”.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (dir (plist-get opts :dir))
@@ -5015,7 +5072,7 @@ Similar to `consult-locate-args' bur for consult-omni."
             ))
 #+end_src
 
-**** source
+**** define source
 #+begin_src emacs-lisp
 (consult-omni-define-source "locate"
                            :narrow-char ?f
@@ -5092,7 +5149,9 @@ Similar to other command line args for consult but for mdfind.
 See `consult-locate-args' for example."
   :type '(choice string (repeat (choice string sexp))))
 #+end_src
-**** preview
+
+**** helper functions
+***** preview
 #+begin_src emacs-lisp
 
 (defun consult-omni--mdfind-preview (cand)
@@ -5100,7 +5159,7 @@ See `consult-locate-args' for example."
 (funcall (consult--file-preview) 'preview cand))
 #+end_src
 
-**** callback
+***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--mdfind-callback (cand)
   "Mdfind callback function."
@@ -5108,7 +5167,7 @@ See `consult-locate-args' for example."
   )
 #+end_src
 
-**** transform
+***** transform
 #+begin_src emacs-lisp
 (defun consult-omni--find-transform (candidates &optional query)
   "Formats consult-omni-mdfind candidates.
@@ -5120,7 +5179,7 @@ See `consult-locate-args' for example."
 
 
 
-**** filter
+***** filter
 #+begin_src emacs-lisp
 (defun consult-omni--mdfind-filter (candidates &optional query)
   "Formats `consult-omni-mdfind' candidates.
@@ -5129,18 +5188,17 @@ See `consult-locate-args' for example."
 )
 
 #+end_src
-**** consult-omni-mdfind-builder
+**** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--mdfind-builder (input &rest args &key callback &allow-other-keys)
   "makes builder command line args for “mdfind”.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (dir (plist-get opts :dir))
                (dir (if dir (file-truename (format "%s" dir))))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
                (default-directory (or dir default-directory))
                (consult-locate-args (concat consult-omni-mdfind-args
@@ -5150,7 +5208,7 @@ See `consult-locate-args' for example."
             ))
 #+end_src
 
-**** source
+**** define source
 #+begin_src emacs-lisp
 (consult-omni-define-source "mdfind"
                            :narrow-char ?f
@@ -5158,8 +5216,6 @@ See `consult-locate-args' for example."
                            :type 'async
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--mdfind-builder
-                           ;; :transform nil
-                           ;; :filter #'consult-omni--mdfind-filter
                            :on-preview #'consult-omni--mdfind-preview
                            :on-return #'identity
                            :on-callback #'consult-omni--mdfind-callback
@@ -5212,7 +5268,8 @@ See `consult-locate-args' for example."
 (require 'consult-omni)
 (require 'consult-mu)
 #+end_src
-**** format
+**** helper functions
+***** format
 #+begin_src emacs-lisp
 (defun consult-omni-mu--format-candidate (cand highlight)
   "Formats candidates for `consult-omni-mu4e'
@@ -5241,36 +5298,8 @@ See `consult-locate-args' for example."
   (cons str (list :msg msg :query query :type :dynamic)))))
 
 #+end_src
-**** get mu search results
-#+begin_src emacs-lisp
-(cl-defun consult-omni--mu-fetch-results (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “mu4e”.
-"
-  (save-mark-and-excursion
-  (consult-mu--execute-all-marks)
-  )
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts))
-               (count (plist-get opts :count))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
-                          consult-omni-default-count))
-               (mu-input (format "%s -- --maxnum %s" query count))
-               (messages)
-               )
-    (consult-mu--update-headers mu-input nil nil :dynamic)
-    (with-current-buffer consult-mu-headers-buffer-name
-      (goto-char (point-min))
-     (setq messages (remove nil
-              (cl-loop until (eobp)
-                       collect (let ((msg (ignore-errors (mu4e-message-at-point))))
-                                 (consult-omni-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
-                 do (forward-line 1)))
-           ))
-    (when (and messages callback)
-      (funcall callback messages))))
-#+end_src
-**** preview
+
+***** preview
 
 #+begin_src emacs-lisp
 (defun consult-omni--mu-preview (cand)
@@ -5292,7 +5321,7 @@ See `consult-locate-args' for example."
       ))
   )
 #+end_src
-**** return
+***** return
 #+begin_src emacs-lisp
 (defun consult-omni--mu-return (cand)
   "return function for mu4e candidates"
@@ -5303,7 +5332,7 @@ See `consult-locate-args' for example."
 cand
 )
 #+end_src
-**** callback
+***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--mu-callback (cand)
   "Callback function for mu4e candidates"
@@ -5317,7 +5346,35 @@ cand
     )
 )
 #+end_src
-**** consult-mu source
+**** items
+#+begin_src emacs-lisp
+(cl-defun consult-omni--mu-fetch-results (input &rest args &key callback &allow-other-keys)
+  "makes builder command line args for “mu4e”.
+"
+  (save-mark-and-excursion
+  (consult-mu--execute-all-marks)
+  )
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts))
+               (count (plist-get opts :count))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-default-count))
+               (mu-input (format "%s -- --maxnum %s" query count))
+               (messages)
+               )
+    (consult-mu--update-headers mu-input nil nil :dynamic)
+    (with-current-buffer consult-mu-headers-buffer-name
+      (goto-char (point-min))
+     (setq messages (remove nil
+              (cl-loop until (eobp)
+                       collect (let ((msg (ignore-errors (mu4e-message-at-point))))
+                                 (consult-omni-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
+                 do (forward-line 1)))
+           ))
+    (when (and messages callback)
+      (funcall callback messages))))
+#+end_src
+**** define source
 #+begin_src emacs-lisp
 (consult-omni-define-source "mu4e"
                            :narrow-char ?m
@@ -5380,18 +5437,8 @@ cand
 (require 'consult-omni)
 (require 'consult-notmuch)
 #+end_src
-**** builder
-#+begin_src emacs-lisp
-(cl-defun consult-omni--notmuch-command-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “notmuch”.
-"
-  (setq consult-notmuch--partial-parse nil)
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts)))
-  (consult-notmuch--command query)
-  ))
-#+end_src
-**** transform/format
+**** helper functions
+***** transform/format
 #+begin_src emacs-lisp
 (defun consult-omni-notmuch--transformer (str &optional query)
   "Transforms STR to notmuch display style."
@@ -5403,7 +5450,7 @@ cand
     ))
 
 #+end_src
-**** preview
+***** preview
 #+begin_src emacs-lisp
 (defun consult-omni--notmuch--preview (cand)
   "Preview function for notmuch candidates."
@@ -5412,15 +5459,26 @@ cand
       (kill-buffer consult-notmuch--buffer-name))
     (consult-notmuch--show-id id consult-notmuch--buffer-name)))
 #+end_src
-**** return
-**** callback
+***** return
+***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--notmuch-callback (cand)
   "Callback function for notmuch candidates.
 "
   (consult-notmuch--show (cdr (get-text-property 0 'multi-category cand))))
 #+end_src
-**** consult-notmuch source
+**** items
+#+begin_src emacs-lisp
+(cl-defun consult-omni--notmuch-command-builder (input &rest args &key callback &allow-other-keys)
+  "makes builder command line args for “notmuch”.
+"
+  (setq consult-notmuch--partial-parse nil)
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts)))
+  (consult-notmuch--command query)
+  ))
+#+end_src
+**** define source
 #+begin_src emacs-lisp
 (consult-omni-define-source "notmuch"
                            :narrow-char ?m
@@ -5481,28 +5539,8 @@ cand
 (require 'consult-omni)
 (require 'consult-omni-grep)
 #+end_src
-
-**** consult-omni-ripgrep-builder
-#+begin_src emacs-lisp
-(cl-defun consult-omni--ripgrep-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “ripgrep”.
-"
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts))
-               (count (plist-get opts :count))
-               (dir (plist-get opts :dir))
-               (dir (if dir (file-truename (format "%s" dir))))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
-                          consult-omni-default-count))
-               (default-directory (or dir default-directory))
-               )
-   (funcall (consult-omni--grep-make-builder #'consult--ripgrep-make-builder dir) query)
-            ))
-#+end_src
-
-
-**** transform
+**** helper functions
+***** transform
 #+begin_src emacs-lisp
 (defun consult-omni--ripgrep-transform (candidates &optional query)
   "Formats candidates of `consult-omni-ripgrep'.
@@ -5555,7 +5593,26 @@ cand
 
 
 
-**** source
+**** items
+#+begin_src emacs-lisp
+(cl-defun consult-omni--ripgrep-builder (input &rest args &key callback &allow-other-keys)
+  "makes builder command line args for “ripgrep”.
+"
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts))
+               (count (plist-get opts :count))
+               (dir (plist-get opts :dir))
+               (dir (if dir (file-truename (format "%s" dir))))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-default-count))
+               (default-directory (or dir default-directory))
+               )
+   (funcall (consult-omni--grep-make-builder #'consult--ripgrep-make-builder dir) query)
+            ))
+#+end_src
+
+
+**** define source
 #+begin_src emacs-lisp
 (consult-omni-define-source "ripgrep"
                            :narrow-char ?r
@@ -5570,7 +5627,6 @@ cand
                            :search-history 'consult-omni--search-history
                            :selection-history 'consult-omni--selection-history
                            :group #'consult-omni--group-function
-                           ;; :group #'consult--prefix-group
                            :enabled (lambda () (if (and (executable-find "rg")
                                                    (fboundp 'consult-ripgrep))
                                                    t nil))
@@ -5616,12 +5672,27 @@ cand
 
 (require 'consult-omni)
 #+end_src
-**** doi
+**** variables
+***** others
 #+begin_src emacs-lisp
 (defvar consult-omni-doiorg-api-url "https://doi.org/api/handles/")
 
 (defvar consult-omni-doiorg-search-url "https://doi.org/")
 
+#+end_src
+***** history variables
+#+begin_src emacs-lisp
+(defvar consult-omni--doi-search-history (list)
+  "History variables for search terms when using
+`consult-omni-doi' commands.")
+
+(defvar consult-omni--doi-selection-history (list)
+  "History variables for selected items when using
+`consult-omni-doi' commands.")
+#+end_src
+**** helper functions
+***** doi to url
+#+begin_src emacs-lisp
 (defun consult-omni--doi-to-url (doi)
   "Converts DOI value to target url"
   (let ((out))
@@ -5641,10 +5712,14 @@ cand
                                   result))))))
 
 
+#+end_src
+**** items
+#+begin_src emacs-lisp
+
 (cl-defun consult-omni--doiorg-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch target url of DOI.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (source "doiorg")
                (url (consult-omni--doi-to-url query))
@@ -5660,15 +5735,9 @@ cand
     (list annotated-results)
           ))
 
-
-(defvar consult-omni--doi-search-history (list)
-  "History variables for search terms when using
-`consult-omni-doi' commands.")
-
-(defvar consult-omni--doi-selection-history (list)
-  "History variables for selected items when using
-`consult-omni-doi' commands.")
-
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 
 (consult-omni-define-source "doiorg"
                            :narrow-char ?d
@@ -5684,7 +5753,6 @@ cand
                            :static 'both
                            )
 #+end_src
-
 **** provide and footer
 #+begin_src emacs-lisp
 ;;; provide `consult-omni-doi' module
@@ -5721,13 +5789,16 @@ cand
 
 (require 'consult-omni)
 #+end_src
-
-**** duckduckgo limited API
+**** variables
+***** other
 #+begin_src emacs-lisp
 (defvar consult-omni-duckduckgo-api-url "http://api.duckduckgo.com/")
 
 (defvar consult-omni-duckduckgo-search-url "https://duckduckgo.com/")
 
+#+end_src
+**** items
+#+begin_src emacs-lisp
 (cl-defun consult-omni--duckduckgoapi-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results got INPUT from DuckDuckGo limited API.
 
@@ -5738,11 +5809,9 @@ for some limited documentation"
                (count (plist-get opts :count))
                (page (plist-get opts :page))
                (extra-args (seq-difference (append opts args) '(:count count :page page)))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min count 10))
                (page (+ (* page count) 1))
@@ -5782,6 +5851,9 @@ for some limited documentation"
                                   (funcall callback annotated-results))
                                 annotated-results)))))
 
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 
 (consult-omni-define-source "DuckDuckGo API"
                            :narrow-char ?d
@@ -5836,7 +5908,8 @@ for some limited documentation"
 (require 'consult-omni)
 #+end_src
 
-**** custom variables
+**** variables
+***** custom
 #+begin_src emacs-lisp
 ;;; Customization Variables
 (defcustom consult-omni-elfeed-search-buffer-name "*consult-omni-elfeed-search*"
@@ -5847,7 +5920,8 @@ for some limited documentation"
   "Default Filter for consult-omni-elfeed-search."
   :type 'string)
 #+end_src
-**** format
+**** helper functions
+***** format
 #+begin_src emacs-lisp
 (defun consult-omni--elfeed-format-candidate (entries query)
 "Formats the cnaiddates of `consult-omni-elfeed'.
@@ -5908,19 +5982,40 @@ QUERY is the query input from the user"
                           )
               annotated-entries)))))
 #+end_src
-**** main
-#+begin_src emacs-lisp :results verbatim drawer
+***** make dedicated search buffer
+#+begin_src emacs-lisp
 (defun consult-omni--elfeed-search-buffer ()
   "Get or create buffer for `consult-omni-elfeed'"
   (get-buffer-create (or consult-omni-elfeed-search-buffer-name "*consult-omni-elfeed-search*")))
 
+#+end_src
+***** preview
+#+begin_src emacs-lisp
+
+(defun consult-omni--elfeed-preview (cand)
+  "Shows a preview buffer of CAND for `consult-omni-elfeed'.
+Uses `elfeed-show-entry'."
+  (if (listp cand) (setq cand (or (car-safe cand) cand)))
+  (let* ((entry (get-text-property 0 :entry cand))
+         (buff (get-buffer-create (elfeed-show--buffer-name entry))))
+    (with-current-buffer buff
+      (elfeed-show-mode)
+      (setq elfeed-show-entry entry)
+      (elfeed-show-refresh))
+    (funcall (consult--buffer-preview) 'preview
+             buff
+             )))
+#+end_src
+**** items
+
+#+begin_src emacs-lisp
 (cl-defun consult-omni--elfeed-fetch-results (input &rest args &key callback &allow-other-keys)
   "Return entries matching INPUT in elfeed database.
 uses INPUT as filter ro find entries in elfeed databse.
 if FILTER is non-nil, it is used as additional filter parameters.
 "
 (cl-letf* (((symbol-function #'elfeed-search-buffer) #'consult-omni--elfeed-search-buffer))
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (maxcount (plist-get opts :count))
                (filter (and (plist-member opts :filter) (plist-get opts :filter)))
@@ -5948,20 +6043,9 @@ if FILTER is non-nil, it is used as additional filter parameters.
       ))
 
 
-(defun consult-omni--elfeed-preview (cand)
-  "Shows a preview buffer of CAND for `consult-omni-elfeed'.
-Uses `elfeed-show-entry'."
-  (if (listp cand) (setq cand (or (car-safe cand) cand)))
-  (let* ((entry (get-text-property 0 :entry cand))
-         (buff (get-buffer-create (elfeed-show--buffer-name entry))))
-    (with-current-buffer buff
-      (elfeed-show-mode)
-      (setq elfeed-show-entry entry)
-      (elfeed-show-refresh))
-    (funcall (consult--buffer-preview) 'preview
-             buff
-             )))
-
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 
 (consult-omni-define-source "elfeed"
                            :narrow-char ?e
@@ -6016,13 +6100,9 @@ Uses `elfeed-show-entry'."
 
 (require 'consult-omni)
 #+end_src
-**** custom search api
-
+**** variables
+***** custom
 #+begin_src emacs-lisp
-(defvar consult-omni-google-search-url "https://www.google.com/search")
-
-(defvar consult-omni-google-customsearch-api-url "https://www.googleapis.com/customsearch/v1")
-
 (defcustom consult-omni-google-customsearch-key nil
   "Key for Google custom search API
 
@@ -6040,21 +6120,31 @@ See URL `https://developers.google.com/custom-search/' and URL `https://develope
                  (function :tag "Custom Function")))
 
 
+#+end_src
+***** other
+#+begin_src emacs-lisp
+(defvar consult-omni-google-search-url "https://www.google.com/search")
+
+(defvar consult-omni-google-customsearch-api-url "https://www.googleapis.com/customsearch/v1")
+
+#+end_src
+**** items
+
+#+begin_src emacs-lisp
+
 (cl-defun consult-omni--google-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches search results for INPUT from “Google custom search” service.
 
 Refer to URL `https://programmablesearchengine.google.com/about/' and `https://developers.google.com/custom-search/' for more info.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
                (filter (plist-get opts :filter))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (filter (or (and (integerp filter) filter)
                            (and filter (string-to-number (format "%s" filter)))
@@ -6104,7 +6194,9 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                                   (funcall callback annotated-results))
                                 annotated-results)))))
 
-
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 (consult-omni-define-source "Google"
                            :narrow-char ?g
                            :type 'dynamic
@@ -6155,21 +6247,24 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
 
 (require 'consult-omni)
 #+end_src
-
-**** google autosuggest
+**** variables
+***** other
 #+begin_src emacs-lisp
+
 (defvar consult-omni-google-autosuggest-api-url "http://suggestqueries.google.com/complete/search")
+#+end_src
+**** items
+#+begin_src emacs-lisp
 
 (cl-defun consult-omni--google-autosuggest-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results for INPUT from Google Autosuggest.
 
 Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
                (page (or (and (integerp page) page)
                          (and page (string-to-number (format "%s" page)))
@@ -6209,6 +6304,10 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                                 (funcall callback annotated-results)
                                 annotated-results)))))
 
+#+end_src
+
+**** define source
+#+begin_src emacs-lisp
 (consult-omni-define-source "Google AutoSuggest"
                            :narrow-char ?G
                            :type 'dynamic
@@ -6261,7 +6360,8 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
 (require 'gptel)
 (require 'consult-omni)
 #+end_src
-**** custom variables
+**** variables
+***** custom
 #+begin_src emacs-lisp
 ;;; Customization Variables
 (defcustom consult-omni-gptel-buffer-name  "*consult-omni-gptel*"
@@ -6271,8 +6371,7 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
 
 #+end_src
 
-**** gptel buffer
-
+**** helper function
 ***** format
 #+begin_src emacs-lisp
 (cl-defun consult-omni--gptel-format-candidate (&rest args &key source query model backend stream face &allow-other-keys)
@@ -6376,7 +6475,7 @@ The preview buffer is from `consult-omni--gptel-response-preview'."
                  buff
                  ))))
 #+end_src
-***** main
+**** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--gptel-fetch-results (input &rest args &key callback &allow-other-keys)
   "Makes cnaidate with INPUT as placeholder for `consult-omni-gptel'.
@@ -6385,7 +6484,7 @@ This makes a placeholder string “ask gptel: %s” %s=INPUT with
 metadata so it can be send to `gptel'."
   (unless (featurep 'gptel)
     (error "consult-omni: gptel is not available. Make sure to install and load `gptel'."))
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (source "gptel")
                (backend (and (plist-member opts :backend) (format "%s" (plist-get opts :backend))))
@@ -6409,6 +6508,9 @@ metadata so it can be send to `gptel'."
     ))
 
 
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 
 (consult-omni-define-source "gptel"
                            :narrow-char ?G
@@ -6465,13 +6567,43 @@ metadata so it can be send to `gptel'."
 
 (require 'consult-omni)
 #+end_src
-**** custom variabels
+**** variabels
+***** other
 #+begin_src emacs-lisp
 (defvar consult-omni-invidious-servers nil)
 (defvar consult-omni-invidious-server-url "https://api.invidious.io/instances.json")
 #+end_src
+**** helper functions
+***** get servers
+#+begin_src emacs-lisp
+(defun consult-omni--invidious-get-servers (&optional rotate)
+  "Get list of Invidious API servers.
+"
+  (when (and consult-omni-invidious-servers rotate)
+    (setq consult-omni-invidious-servers
+          (nconc (cdr consult-omni-invidious-servers)
+                 (list (car consult-omni-invidious-servers)))))
+  (or consult-omni-invidious-servers
+      (setq consult-omni-invidious-servers
+            (let ((params `(("pretty" . "1")
+                                  ("sort_by" . "type"))))
+       (consult-omni--fetch-url
+        consult-omni-invidious-server-url
+        consult-omni-http-retrieve-backend
+        :params params
+        :sync t
+        :parser #'consult-omni--json-parse-buffer
+        :callback (lambda (attrs)
+  (delq nil (mapcar (lambda (item)
+                      (when (equal (gethash "api" (cadr item)) t)
+                                  (gethash "uri" (cadr item))
+                      )
 
-**** format
+                      ) attrs))
+))))))
+#+end_src
+
+***** format
 #+begin_src emacs-lisp
 (cl-defun consult-omni--invidious-format-candidate (&rest args &key source type query title snippet channeltitle date subcount videocount viewcount length face &allow-other-keys)
 "Formats a candidate for `consult-omni-invidious' commands.
@@ -6546,40 +6678,11 @@ FACE is the face to apply to TITLE
     str))
 #+end_src
 
-**** get servers
-#+begin_src emacs-lisp
-(defun consult-omni--invidious-get-servers (&optional rotate)
-  "Get list of Invidious API servers.
-"
-  (when (and consult-omni-invidious-servers rotate)
-    (setq consult-omni-invidious-servers
-          (nconc (cdr consult-omni-invidious-servers)
-                 (list (car consult-omni-invidious-servers)))))
-  (or consult-omni-invidious-servers
-      (setq consult-omni-invidious-servers
-            (let ((params `(("pretty" . "1")
-                                  ("sort_by" . "type"))))
-       (consult-omni--fetch-url
-        consult-omni-invidious-server-url
-        consult-omni-http-retrieve-backend
-        :params params
-        :sync t
-        :parser #'consult-omni--json-parse-buffer
-        :callback (lambda (attrs)
-  (delq nil (mapcar (lambda (item)
-                      (when (equal (gethash "api" (cadr item)) t)
-                                  (gethash "uri" (cadr item))
-                      )
-
-                      ) attrs))
-))))))
-#+end_src
-
-**** invidious
+**** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--invidious-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches search results for INPUT from “Invidious” service."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
@@ -6593,8 +6696,7 @@ FACE is the face to apply to TITLE
                (features (if features (format "%s" features)))
                (duration (plist-get opts :dur))
                (duration (if duration (format "%s" duration)))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
                (page (or (and (integerp page) page)
                          (and page (string-to-number (format "%s" page)))
@@ -6673,6 +6775,9 @@ FACE is the face to apply to TITLE
                               annotated-results)
                               ))))
 
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 (consult-omni-define-source "Invidious"
                            :narrow-char ?I
                            :type 'dynamic
@@ -6725,9 +6830,8 @@ FACE is the face to apply to TITLE
 
 (require 'consult-omni)
 #+end_src
-
-**** entrez utils api
-***** key
+**** variables
+***** custom
 #+begin_src emacs-lisp
 (defcustom consult-omni-pubmed-api-key nil
   "Key for Pubmed Entrez API.
@@ -6737,12 +6841,76 @@ See URL `https://www.ncbi.nlm.nih.gov/books/NBK25501/' for more info"
   :type '(choice (const :tag "API Key" string)
                  (function :tag "Custom Function")))
 #+end_src
-***** esearch
+***** other
 #+begin_src emacs-lisp
 (defvar consult-omni-pubmed-search-url "https://pubmed.ncbi.nlm.nih.gov/")
 
 (defvar  consult-omni-pubmed-esearch-api-url "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi")
 
+(defvar consult-omni-pubmed-esummary-api-url "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi")
+
+
+#+end_src
+**** helper functions
+***** format
+#+begin_src emacs-lisp
+(cl-defun consult-omni-dynamic--pubmed-format-candidate (&rest args &key source query url search-url title authors date journal doi face &allow-other-keys)
+  "Returns a formatted string for candidates of `consult-omni-pubmed'.
+
+SOURCE is the name to use (e.g. “PubMed”)
+
+QUERY is the query input from the user
+
+URL is the url of  candidate
+
+SEARCH-URL is the web search url
+(e.g. https://pubmed.ncbi.nlm.nih.gov/?term=QUERY)
+
+TITLE is the title of the result/paper (e.g. title of paper)
+
+AUTHORS are authors of the result/paper
+
+DATE is the publish date of the result/paper
+
+JOURNAL is the journal that the result/paper is published in
+
+DOI is doi of the result/paper
+
+FACE is the face to apply to TITLE
+"
+  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
+         (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
+         (date (if (stringp date) (propertize date 'face 'consult-omni-date-face) nil))
+         (journal (if (stringp journal) (propertize journal 'face 'consult-omni-domain-face) nil))
+         (authors (cond
+                   ((and authors (listp authors))
+                    (concat (first authors) ",..., " (car (last authors))))
+                   ((stringp authors)
+                    authors)
+                   (t nil)))
+         (authors (if (and authors (stringp authors)) (propertize authors 'face 'consult-omni-source-type-face)))
+         (doi (if (stringp doi) (propertize doi 'face 'link)))
+         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
+         (title-str (propertize title 'face face))
+         (title-str (consult-omni--set-string-width title-str (* 5 frame-width-percent)))
+         (str (concat title-str
+                      (if journal (format "\t%s" journal))
+                      (if date (format "\s\s%s" date))
+                      (if authors (format "\s\s%s" authors))
+                      (if source (concat "\t" source))))
+         )
+    (if consult-omni-highlight-matches
+        (cond
+         ((listp match-str)
+          (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
+         ((stringp match-str)
+          (setq str (consult-omni--highlight-match match-str str t)))))
+    str))
+#+end_src
+**** items
+***** esearch
+#+begin_src emacs-lisp
 
 (cl-defun consult-omni--pubmed-esearch-fetch-results (input &rest args &key db &allow-other-keys)
   "Fetches “esearch” results for INPUT from PubMed Entrez Utilities service.
@@ -6752,15 +6920,13 @@ DB is passed as db in query parameters. (This is the database to search.)
 Refer to URL `https://www.ncbi.nlm.nih.gov/books/NBK25501/'
 for more info."
 
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :db db))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min count 20))
                (page (* page count))
@@ -6795,7 +6961,6 @@ for more info."
 #+end_src
 ***** esummary
 #+begin_src emacs-lisp
-(defvar consult-omni-pubmed-esummary-api-url "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi")
 
 (cl-defun consult-omni--pubmed-esummary-fetch-results (input &rest args &key callback webenv qk db &allow-other-keys)
   "Fetches “esummary” results for INPUT from PubMed Entrez Utilities service.
@@ -6809,15 +6974,13 @@ DB is passed as db in query parameters. (This is the databes to search.)
 Refer to URL `https://www.ncbi.nlm.nih.gov/books/NBK25501/'
 for more info."
 
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback :webenv webenv :qk qk :db db))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (page (* page count))
                (webenv (if webenv (format "%s" webenv)))
@@ -6877,62 +7040,6 @@ for more info."
                                 annotated-results)))))
 
 #+end_src
-***** format
-#+begin_src emacs-lisp
-(cl-defun consult-omni-dynamic--pubmed-format-candidate (&rest args &key source query url search-url title authors date journal doi face &allow-other-keys)
-  "Returns a formatted string for candidates of `consult-omni-pubmed'.
-
-SOURCE is the name to use (e.g. “PubMed”)
-
-QUERY is the query input from the user
-
-URL is the url of  candidate
-
-SEARCH-URL is the web search url
-(e.g. https://pubmed.ncbi.nlm.nih.gov/?term=QUERY)
-
-TITLE is the title of the result/paper (e.g. title of paper)
-
-AUTHORS are authors of the result/paper
-
-DATE is the publish date of the result/paper
-
-JOURNAL is the journal that the result/paper is published in
-
-DOI is doi of the result/paper
-
-FACE is the face to apply to TITLE
-"
-  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
-         (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
-         (date (if (stringp date) (propertize date 'face 'consult-omni-date-face) nil))
-         (journal (if (stringp journal) (propertize journal 'face 'consult-omni-domain-face) nil))
-         (authors (cond
-                   ((and authors (listp authors))
-                    (concat (first authors) ",..., " (car (last authors))))
-                   ((stringp authors)
-                    authors)
-                   (t nil)))
-         (authors (if (and authors (stringp authors)) (propertize authors 'face 'consult-omni-source-type-face)))
-         (doi (if (stringp doi) (propertize doi 'face 'link)))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
-         (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
-         (title-str (propertize title 'face face))
-         (title-str (consult-omni--set-string-width title-str (* 5 frame-width-percent)))
-         (str (concat title-str
-                      (if journal (format "\t%s" journal))
-                      (if date (format "\s\s%s" date))
-                      (if authors (format "\s\s%s" authors))
-                      (if source (concat "\t" source))))
-         )
-    (if consult-omni-highlight-matches
-        (cond
-         ((listp match-str)
-          (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
-         ((stringp match-str)
-          (setq str (consult-omni--highlight-match match-str str t)))))
-    str))
-#+end_src
 ***** main
 #+begin_src emacs-lisp
 (cl-defun consult-omni--pubmed-fetch-results (input &rest args &key callback &allow-other-keys)
@@ -6944,6 +7051,9 @@ FACE is the face to apply to TITLE
   (consult-omni--pubmed-esummary-fetch-results input :callback callback :webenv webenv :qk qk)
 ))
 
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 
 (consult-omni-define-source "PubMed"
                            :narrow-char ?p
@@ -6996,8 +7106,28 @@ FACE is the face to apply to TITLE
 
 (require 'consult-omni)
 #+end_src
+**** variables
+***** custom
+#+begin_src emacs-lisp
 
-**** format
+(defcustom consult-omni-scopus-api-key nil
+  "Key for Scopus API.
+
+See URL `https://dev.elsevier.com/documentation/SCOPUSSearchAPI.wadl' for more info"
+  :group 'consult-omni
+  :type '(choice (const :tag "Scopus API Key" string)
+                 (function :tag "Custom Function")))
+#+end_src
+***** other
+#+begin_src emacs-lisp
+
+(defvar consult-omni-scopus-search-url "https://www.scopus.com/record/display.uri?")
+
+(defvar consult-omni-scopus-api-url "https://api.elsevier.com/content/search/scopus")
+
+#+end_src
+**** helper functions
+***** format
 #+begin_src emacs-lisp
 (cl-defun consult-omni--scopus-format-candidate (&rest args &key source query url search-url title authors date journal doi face &allow-other-keys)
   "Returns a formatted string for candidates of `consult-omni-scopus'.
@@ -7053,7 +7183,7 @@ FACE is the face to apply to TITLE
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
 #+end_src
-**** callback
+***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--scopus-callback (cand)
   "Callback function for `consult-omni-scopus'."
@@ -7062,7 +7192,7 @@ FACE is the face to apply to TITLE
                 (get-text-property 0 :url cand))))
          (funcall consult-omni-default-browse-function url)))
 #+end_src
-**** preview
+***** preview
 #+begin_src emacs-lisp
 (defun consult-omni--scopus-preview (cand)
    "Preview function for `consult-omni-scopus'."
@@ -7071,32 +7201,18 @@ FACE is the face to apply to TITLE
                 (get-text-property 0 :url cand))))
          (funcall consult-omni-default-preview-function url)))
 #+end_src
-**** main
+**** items
 #+begin_src emacs-lisp
-(defvar consult-omni-scopus-search-url "https://www.scopus.com/record/display.uri?")
-
-(defvar consult-omni-scopus-api-url "https://api.elsevier.com/content/search/scopus")
-
-(defcustom consult-omni-scopus-api-key nil
-  "Key for Scopus API.
-
-See URL `https://dev.elsevier.com/documentation/SCOPUSSearchAPI.wadl' for more info"
-  :group 'consult-omni
-  :type '(choice (const :tag "Scopus API Key" string)
-                 (function :tag "Custom Function")))
-
 (cl-defun consult-omni--scopus-fetch-results (input &rest args &key callback &allow-other-keys)
   "Retrieve search results from SCOPUS for INPUT.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min (max count 1) 25))
                (page (* count page))
@@ -7150,7 +7266,9 @@ See URL `https://dev.elsevier.com/documentation/SCOPUSSearchAPI.wadl' for more i
 
                                                    raw-results)))
                                 (funcall callback annotated-results))))))
-
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 
 (consult-omni-define-source "Scopus"
                            :narrow-char ?s
@@ -7207,8 +7325,26 @@ See URL `https://dev.elsevier.com/documentation/SCOPUSSearchAPI.wadl' for more i
 
 (require 'consult-omni)
 #+end_src
+**** variables
+***** custom
+#+begin_src emacs-lisp
+(defcustom consult-omni-stackexchange-api-key nil
+  "Key for Stack Exchange API.
 
-**** format
+See URL `https://api.stackexchange.com/', and URL `https://stackapps.com/' for more info"
+  :group 'consult-omni
+  :type '(choice (const :tag "API Key" string)
+                 (function :tag "Custom Function")))
+#+end_src
+***** other
+#+begin_src emacs-lisp
+(defvar consult-omni-stackoverflow-search-url "https://stackoverflow.com/search")
+(defvar consult-omni-stackoverflow-api-url "https://api.stackexchange.com/2.3/search/advanced")
+(defvar consult-omni-stackoverflow-answered-mark "+")
+(defvar consult-omni-stackoverflow-unanswered-mark "x")
+#+end_src
+**** helper functions
+***** format
 #+begin_src emacs-lisp
 (cl-defun consult-omni--stackoverflow-format-candidate (&rest args &key source query url search-url title snippet date answered score face &allow-other-keys)
   "Returns a formatted string for Wikipedia's searches.
@@ -7249,37 +7385,21 @@ SNIPPET is a string containing a snippet/description of candidate
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
 #+end_src
-**** stackoverflow
+**** items
 #+begin_src emacs-lisp
-(defvar consult-omni-stackoverflow-search-url "https://stackoverflow.com/search")
-(defvar consult-omni-stackoverflow-api-url "https://api.stackexchange.com/2.3/search/advanced")
-(defvar consult-omni-stackoverflow-answered-mark "+")
-(defvar consult-omni-stackoverflow-unanswered-mark "x")
-
-(defcustom consult-omni-stackexchange-api-key nil
-  "Key for Stack Exchange API.
-
-See URL `https://api.stackexchange.com/', and URL `https://stackapps.com/' for more info"
-  :group 'consult-omni
-  :type '(choice (const :tag "API Key" string)
-                 (function :tag "Custom Function")))
-
-
 (cl-defun consult-omni--stackoverflow-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results for INPUT from StackOverflow.
 See URL `https://api.stackexchange.com/' for more info.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
                (order (plist-get opts :order))
                (sort (plist-get opts :sort))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min count 25))
                (page (max page 1))
@@ -7328,6 +7448,9 @@ See URL `https://api.stackexchange.com/' for more info.
                                 (when annotated-results
                                   (funcall callback annotated-results))
                                 annotated-results)))))
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 
 (consult-omni-define-source "StackOverflow"
                            :narrow-char ?s
@@ -7380,7 +7503,15 @@ See URL `https://api.stackexchange.com/' for more info.
 
 (require 'consult-omni)
 #+end_src
-**** format
+**** variables
+***** other
+#+begin_src emacs-lisp
+(defvar consult-omni-wikipedia-search-url "https://www.wikipedia.org/search-redirect.php")
+(defvar consult-omni-wikipedia-url "https://wikipedia.org/")
+(defvar consult-omni-wikipedia-api-url "https://wikipedia.org/w/api.php")
+#+end_src
+**** helper functions
+***** format
 #+begin_src emacs-lisp
 (cl-defun consult-omni--wikipedia-format-candidate (&rest args &key source query url search-url title snippet date face &allow-other-keys)
   "Returns a formatted string for Wikipedia's searches.
@@ -7423,25 +7554,19 @@ FACE is the face to apply to TITLE
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
 #+end_src
-**** wikipedia
+**** items
 #+begin_src emacs-lisp
-(defvar consult-omni-wikipedia-search-url "https://www.wikipedia.org/search-redirect.php")
-(defvar consult-omni-wikipedia-url "https://wikipedia.org/")
-(defvar consult-omni-wikipedia-api-url "https://wikipedia.org/w/api.php")
-
 (cl-defun consult-omni--wikipedia-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches search results from Wikipedia for INPUT.
 "
 
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
-                          consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                             consult-omni-default-count))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (max count 1))
                (params `(("action" . "query")
@@ -7486,6 +7611,9 @@ FACE is the face to apply to TITLE
           (funcall callback annotated-results)
           annotated-results)))))
 
+#+end_src
+**** define source
+#+begin_src emacs-lisp
 
 (consult-omni-define-source "Wikipedia"
                            :narrow-char ?w
@@ -7536,7 +7664,39 @@ FACE is the face to apply to TITLE
 
 (require 'consult-omni)
 #+end_src
-**** format
+**** variables
+***** custom
+#+begin_src emacs-lisp
+(defcustom consult-omni-youtube-search-key nil
+  "Key for “YouTube Data API”
+
+See URL `https://developers.google.com/youtube/v3/getting-started'
+for details"
+  :group 'consult-omni
+  :type '(choice (const :tag "API Key" string)
+                 (function :tag "Custom Function")))
+
+(defcustom consult-omni-youtube-search-command #'consult-omni--youtube-fetch-results-details
+  "Command to use to get results from “YouTube Data API”
+"
+  :group 'consult-omni
+  :type '(choice (function :tag "(Default) Detailed Results with stats" #'consult-omni--youtube-fetch-results-details)
+                 (function :tag "Simple Results without stats"  #'consult-omni--youtube-fetch-results-simple)
+                 (function :tag "Custom Function")))
+#+end_src
+***** other
+#+begin_src emacs-lisp
+(defvar consult-omni-youtube-base-url "https://www.youtube.com/")
+(defvar consult-omni-youtube-watch-url "https://www.youtube.com/watch")
+(defvar consult-omni-youtube-channel-url "https://www.youtube.com/channel/")
+(defvar consult-omni-youtube-search-results-url "https://www.youtube.com/results")
+(defvar consult-omni-youtube-search-api-url "https://www.googleapis.com/youtube/v3/search")
+(defvar consult-omni-youtube-videos-api-url "https://www.googleapis.com/youtube/v3/videos")
+(defvar consult-omni-youtube-playlists-api-url "https://www.googleapis.com/youtube/v3/playlists")
+(defvar consult-omni-youtube-channels-api-url "https://www.googleapis.com/youtube/v3/channels")
+#+end_src
+**** helper functions
+***** format
 #+begin_src emacs-lisp
 (cl-defun consult-omni--youtube-format-candidate (&rest args &key source type query title snippet channeltitle date length subcount videocount viewcount face &allow-other-keys)
 "Formats a candidate for `consult-omni-youtube' commands.
@@ -7610,35 +7770,8 @@ FACE is the face to apply to TITLE
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
 #+end_src
-**** variables
-#+begin_src emacs-lisp
-(defvar consult-omni-youtube-base-url "https://www.youtube.com/")
-(defvar consult-omni-youtube-watch-url "https://www.youtube.com/watch")
-(defvar consult-omni-youtube-channel-url "https://www.youtube.com/channel/")
-(defvar consult-omni-youtube-search-results-url "https://www.youtube.com/results")
-(defvar consult-omni-youtube-search-api-url "https://www.googleapis.com/youtube/v3/search")
-(defvar consult-omni-youtube-videos-api-url "https://www.googleapis.com/youtube/v3/videos")
-(defvar consult-omni-youtube-playlists-api-url "https://www.googleapis.com/youtube/v3/playlists")
-(defvar consult-omni-youtube-channels-api-url "https://www.googleapis.com/youtube/v3/channels")
-
-(defcustom consult-omni-youtube-search-key nil
-  "Key for “YouTube Data API”
-
-See URL `https://developers.google.com/youtube/v3/getting-started'
-for details"
-  :group 'consult-omni
-  :type '(choice (const :tag "API Key" string)
-                 (function :tag "Custom Function")))
-
-(defcustom consult-omni-youtube-search-command #'consult-omni--youtube-fetch-results-details
-  "Command to use to get results from “YouTube Data API”
-"
-  :group 'consult-omni
-  :type '(choice (function :tag "(Default) Detailed Results with stats" #'consult-omni--youtube-fetch-results-details)
-                 (function :tag "Simple Results without stats"  #'consult-omni--youtube-fetch-results-simple)
-                 (function :tag "Custom Function")))
-#+end_src
-**** youtube search simple
+**** items
+***** youtube search simple
 #+begin_src emacs-lisp
 (cl-defun consult-omni--youtube-fetch-results-simple (input &rest args &key callback &allow-other-keys)
   "Fetches search results for INPUT from “YouTube Data API” service.
@@ -7646,7 +7779,7 @@ for details"
 This is a simpler version that does not show details
 such as viw counts and duration, ... of videos/playlists, etc.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
@@ -7654,12 +7787,10 @@ such as viw counts and duration, ... of videos/playlists, etc.
                (type (plist-get opts :type))
                (vidtype (plist-get opts :vidtype))
                (order (or (plist-get opts :order) (plist-get opts :sort)))
-               (count (or (and (integerp count) count)
-                    (and count (string-to-number (format "%s" count)))
-                    consult-omni-default-count))
-         (page (or (and (integerp page) page)
-                   (and page (string-to-number (format "%s" page)))
-                   consult-omni-default-count))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-default-count))
+               (page (or (and page (integerp (read page)) (string-to-number page))
+                         consult-omni-default-count))
                (def (if (and def (member (format "%s" def) '("any" "standard" "high"))) (format "%s" def) "any"))
                (type (if (and type (member (format "%s" type) '("channel" "playlist" "video"))) (format "%s" type) "video"))
                (vidtype (if (and vidtype (member (format "%s" vidtype) '("any" "episode" "movie"))) (format "%s" vidtype) "any"))
@@ -7680,49 +7811,49 @@ such as viw counts and duration, ... of videos/playlists, etc.
                           ("User-Agent" . "consult-omni (gzip)")
                           ("X-Goog-Api-Key" . ,(consult-omni-expand-variable-function consult-omni-youtube-search-key)))))
     (consult-omni--fetch-url consult-omni-youtube-search-api-url consult-omni-http-retrieve-backend
-                            :encoding 'utf-8
-                            :params params
-                            :headers headers
-                            :parser #'consult-omni--json-parse-buffer
-                            :callback
-                            (lambda (attrs)
-                              (let* ((raw-results (gethash "items" attrs))
-                                     (annotated-results
-                                      (mapcar (lambda (item)
-                                                (let*
-                                                    ((source "YouTube")
-                                                     (videoid (gethash "videoId" (gethash "id" item)))
-                                                     (snippet (gethash "snippet" item))
-                                                     (channeltitle (gethash "channelTitle" snippet))
-                                                     (channelid (gethash "channelId" snippet))
-                                                     (title (gethash "title" snippet))
-                                                     (date (gethash "publishedAt" snippet))
-                                                     (date (format-time-string "%Y-%m-%d" (date-to-time date)))
-                                                     (url (cond
-                                                           (videoid (consult-omni--make-url-string consult-omni-youtube-watch-url `(("v" . ,videoid))))
-                                                           (channelid (concat consult-omni-youtube-channel-url channelid))))
-                                                     (search-url (consult-omni--make-url-string consult-omni-youtube-search-results-url `(("search_query" . ,query))))
-                                                     (description (gethash "description" snippet))
+                             :encoding 'utf-8
+                             :params params
+                             :headers headers
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (let* ((raw-results (gethash "items" attrs))
+                                      (annotated-results
+                                       (mapcar (lambda (item)
+                                                 (let*
+                                                     ((source "YouTube")
+                                                      (videoid (gethash "videoId" (gethash "id" item)))
+                                                      (snippet (gethash "snippet" item))
+                                                      (channeltitle (gethash "channelTitle" snippet))
+                                                      (channelid (gethash "channelId" snippet))
+                                                      (title (gethash "title" snippet))
+                                                      (date (gethash "publishedAt" snippet))
+                                                      (date (format-time-string "%Y-%m-%d" (date-to-time date)))
+                                                      (url (cond
+                                                            (videoid (consult-omni--make-url-string consult-omni-youtube-watch-url `(("v" . ,videoid))))
+                                                            (channelid (concat consult-omni-youtube-channel-url channelid))))
+                                                      (search-url (consult-omni--make-url-string consult-omni-youtube-search-results-url `(("search_query" . ,query))))
+                                                      (description (gethash "description" snippet))
 
-                                                     (decorated (consult-omni--youtube-format-candidate :source source :query query :title title :snippet description :channeltitle channeltitle :date date)))
-                                                (propertize decorated
-                                                            :source source
-                                                            :title title
-                                                            :url url
-                                                            :search-url search-url
-                                                            :query query
-                                                            :snippet description
-                                                            :videoid videoid
-                                                            :channeltitle channeltitle
-                                                            :channelid channelid)))
+                                                      (decorated (consult-omni--youtube-format-candidate :source source :query query :title title :snippet description :channeltitle channeltitle :date date)))
+                                                   (propertize decorated
+                                                               :source source
+                                                               :title title
+                                                               :url url
+                                                               :search-url search-url
+                                                               :query query
+                                                               :snippet description
+                                                               :videoid videoid
+                                                               :channeltitle channeltitle
+                                                               :channelid channelid)))
 
-                                      raw-results)))
-                              (when annotated-results
-                                (funcall callback annotated-results))
-                              annotated-results)))))
+                                               raw-results)))
+                                 (when annotated-results
+                                   (funcall callback annotated-results))
+                                 annotated-results)))))
 #+end_src
-**** youtube search details
-***** youtube videos
+***** youtube search details
+****** youtube videos
 #+begin_src emacs-lisp
 (cl-defun consult-omni--youtube-fetch-video-details (videoids &rest args &key callback query &allow-other-keys)
   "Fetches details with VIDEOIDS from “YouTube Data API” service.
@@ -7783,7 +7914,7 @@ such as viw counts and duration, ... of videos/playlists, etc.
 
 #+end_src
 
-***** youtube playlists
+****** youtube playlists
 #+begin_src emacs-lisp
 (cl-defun consult-omni--youtube-fetch-playlist-details (playlistids &rest args &key callback query candidates &allow-other-keys)
   "Fetches details with PLAYLISTIDS from “YouTube Data API” service.
@@ -7841,7 +7972,7 @@ such as viw counts and duration, ... of videos/playlists, etc.
 #+end_src
 
 
-***** youtube channels
+****** youtube channels
 #+begin_src emacs-lisp
 (cl-defun consult-omni--youtube-fetch-channel-details (channelids &rest args &key callback query candidates &allow-other-keys)
   "Fetches  details with CHANNELIDS from “YouTube Data API” service.
@@ -7899,7 +8030,7 @@ such as viw counts and duration, ... of videos/playlists, etc.
 #+end_src
 
 
-***** youtube search with details
+****** youtube search with details
 #+begin_src emacs-lisp
 (cl-defun consult-omni--youtube-fetch-results-details (input &rest args &key callback &allow-other-keys)
   "Fetches search results for INPUT from “YouTube Data API” service.
@@ -7907,7 +8038,7 @@ such as viw counts and duration, ... of videos/playlists, etc.
 This is a version with  statistics (e.g. view counts)
  and more details on videos, playlsits, etc.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (videos (make-vector 1 (list)))
                (playlists (make-vector 1 (list)))
@@ -7917,12 +8048,10 @@ This is a version with  statistics (e.g. view counts)
                (search-type (plist-get opts :type))
                (vidtype (plist-get opts :vidtype))
                (order (or (plist-get opts :order) (plist-get opts :sort)))
-               (count (or (and (integerp count) count)
-                    (and count (string-to-number (format "%s" count)))
-                    consult-omni-default-count))
-         (page (or (and (integerp page) page)
-                   (and page (string-to-number (format "%s" page)))
-                   consult-omni-default-count))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-default-count))
+               (page (or (and page (integerp (read page)) (string-to-number page))
+                         consult-omni-default-count))
                (def (if (and def (member (format "%s" def) '("any" "standard" "high"))) (format "%s" def)))
                (vidtype (if (and vidtype (member (format "%s" vidtype) '("any" "episode" "movie"))) (format "%s" vidtype)))
                (search-type (cond
@@ -7932,53 +8061,53 @@ This is a version with  statistics (e.g. view counts)
                (page (+ (* page count) 1))
                (order  (if (and order (member (format "%s" order) '("date" "rating" "relevance" "title" "videoCount" "viewCount"))) (format "%s" order) "relevance"))
                (params (delq nil `(("q" . ,(replace-regexp-in-string " " "+" query))
-                         ("part" . "snippet")
-                         ("order" . ,order)
-                         ("maxResults" . ,(format "%s" count))
-                         ,(when search-type `("type" . ,(format "%s" search-type)))
-                         ,(when def `("videoDefinition" . ,def))
-                         ,(when vidtype `("videoType" . ,vidtype))
-                         ("key" . ,(consult-omni-expand-variable-function consult-omni-youtube-search-key))
-                         )))
+                                   ("part" . "snippet")
+                                   ("order" . ,order)
+                                   ("maxResults" . ,(format "%s" count))
+                                   ,(when search-type `("type" . ,(format "%s" search-type)))
+                                   ,(when def `("videoDefinition" . ,def))
+                                   ,(when vidtype `("videoType" . ,vidtype))
+                                   ("key" . ,(consult-omni-expand-variable-function consult-omni-youtube-search-key))
+                                   )))
                (headers `(("Accept" . "application/json")
                           ("Accept-Encoding" . "gzip")
                           ("User-Agent" . "consult-omni (gzip)")
                           ("X-Goog-Api-Key" . ,(consult-omni-expand-variable-function consult-omni-youtube-search-key)))))
     (consult-omni--fetch-url consult-omni-youtube-search-api-url consult-omni-http-retrieve-backend
-                            :encoding 'utf-8
-                            :params params
-                            :headers headers
-                            :parser #'consult-omni--json-parse-buffer
-                            :callback
-                            (lambda (attrs)
-                              (let* ((raw-results (gethash "items" attrs))
-                                     (videoids (list))
-                                     (playlistids (list))
-                                     (channelids (list)))
-                                (mapcar (lambda (item)
-                                          (let* ((kind (gethash "kind" (gethash "id" item)))
-                                                 (type (string-trim-left kind "youtube#")))
-                                            (pcase type
-                                              ("video"
-                                               (push (gethash "videoId" (gethash "id" item)) videoids))
-                                              ("playlist"
-                                               (push (gethash "playlistId" (gethash "id" item)) playlistids))
-                                              ("channel"
-                                               (push (gethash "channelId" (gethash "id" item)) channelids)))
-             )) raw-results)
+                             :encoding 'utf-8
+                             :params params
+                             :headers headers
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (let* ((raw-results (gethash "items" attrs))
+                                      (videoids (list))
+                                      (playlistids (list))
+                                      (channelids (list)))
+                                 (mapcar (lambda (item)
+                                           (let* ((kind (gethash "kind" (gethash "id" item)))
+                                                  (type (string-trim-left kind "youtube#")))
+                                             (pcase type
+                                               ("video"
+                                                (push (gethash "videoId" (gethash "id" item)) videoids))
+                                               ("playlist"
+                                                (push (gethash "playlistId" (gethash "id" item)) playlistids))
+                                               ("channel"
+                                                (push (gethash "channelId" (gethash "id" item)) channelids)))
+                                             )) raw-results)
 
-(when videoids
-  (consult-omni--youtube-fetch-video-details videoids :callback callback :query query))
+                                 (when videoids
+                                   (consult-omni--youtube-fetch-video-details videoids :callback callback :query query))
 
-(when playlistids
-  (consult-omni--youtube-fetch-playlist-details playlistids :callback callback :query query))
+                                 (when playlistids
+                                   (consult-omni--youtube-fetch-playlist-details playlistids :callback callback :query query))
 
-(when channelids
-  (consult-omni--youtube-fetch-channel-details channelids :callback callback :query query))
-                                    )))))
+                                 (when channelids
+                                   (consult-omni--youtube-fetch-channel-details channelids :callback callback :query query))
+                                 )))))
 #+end_src
 
-**** source
+**** define source
 #+begin_src emacs-lisp
 (consult-omni-define-source "YouTube"
                            :narrow-char ?y

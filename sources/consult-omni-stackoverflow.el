@@ -16,6 +16,19 @@
 
 (require 'consult-omni)
 
+(defcustom consult-omni-stackexchange-api-key nil
+  "Key for Stack Exchange API.
+
+See URL `https://api.stackexchange.com/', and URL `https://stackapps.com/' for more info"
+  :group 'consult-omni
+  :type '(choice (const :tag "API Key" string)
+                 (function :tag "Custom Function")))
+
+(defvar consult-omni-stackoverflow-search-url "https://stackoverflow.com/search")
+(defvar consult-omni-stackoverflow-api-url "https://api.stackexchange.com/2.3/search/advanced")
+(defvar consult-omni-stackoverflow-answered-mark "+")
+(defvar consult-omni-stackoverflow-unanswered-mark "x")
+
 (cl-defun consult-omni--stackoverflow-format-candidate (&rest args &key source query url search-url title snippet date answered score face &allow-other-keys)
   "Returns a formatted string for Wikipedia's searches.
 
@@ -55,35 +68,19 @@ SNIPPET is a string containing a snippet/description of candidate
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
 
-(defvar consult-omni-stackoverflow-search-url "https://stackoverflow.com/search")
-(defvar consult-omni-stackoverflow-api-url "https://api.stackexchange.com/2.3/search/advanced")
-(defvar consult-omni-stackoverflow-answered-mark "+")
-(defvar consult-omni-stackoverflow-unanswered-mark "x")
-
-(defcustom consult-omni-stackexchange-api-key nil
-  "Key for Stack Exchange API.
-
-See URL `https://api.stackexchange.com/', and URL `https://stackapps.com/' for more info"
-  :group 'consult-omni
-  :type '(choice (const :tag "API Key" string)
-                 (function :tag "Custom Function")))
-
-
 (cl-defun consult-omni--stackoverflow-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results for INPUT from StackOverflow.
 See URL `https://api.stackexchange.com/' for more info.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
                (order (plist-get opts :order))
                (sort (plist-get opts :sort))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min count 25))
                (page (max page 1))

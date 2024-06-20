@@ -17,24 +17,6 @@
 (require 'consult-omni)
 (require 'consult-gh)
 
-(cl-defun consult-omni--gh-search-repos-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “GitHub CLI”.
-"
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
-               (opts (car-safe opts))
-               (count (plist-get opts :count))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
-                          consult-omni-default-count))
-               (cmd (consult--build-args '("gh" "search" "repos")))
-               (cmd-opts (list "--limit" (format "%s" count)))
-               (`(,re . ,hl) (funcall consult--regexp-compiler query 'basic t)))
-      (when re
-        (cons (append cmd
-                      (list (string-join re " "))
-                      cmd-opts)
-              hl))))
-
 (defun consult-omni--gh-preview (cand)
   "Preview for github repo candidates"
   (when-let ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
@@ -61,6 +43,23 @@
 (defun consult-omni--gh-callback (cand)
   "Callback for github repo candidates."
   (funcall consult-gh-repo-action (cons cand (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))))
+
+(cl-defun consult-omni--gh-search-repos-builder (input &rest args &key callback &allow-other-keys)
+  "makes builder command line args for “GitHub CLI”.
+"
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts))
+               (count (plist-get opts :count))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-default-count))
+               (cmd (consult--build-args '("gh" "search" "repos")))
+               (cmd-opts (list "--limit" (format "%s" count)))
+               (`(,re . ,hl) (funcall consult--regexp-compiler query 'basic t)))
+      (when re
+        (cons (append cmd
+                      (list (string-join re " "))
+                      cmd-opts)
+              hl))))
 
 (consult-omni-define-source "GitHub"
                            :narrow-char ?G

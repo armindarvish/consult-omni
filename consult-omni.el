@@ -1081,8 +1081,12 @@ from command-line options in alist of strings"
                   (intern opt)
                  nil))
            (val (or (cadr (member opt opts)) "nil"))
-           (val (if (stringp val)
-                    (intern val))))
+           ;; (val (if (stringp val)
+           ;;          (cond
+           ;;           ((numberp (read val)) (string-to-number val))
+           ;;           (t (intern val)))
+           ;;        ))
+           )
     (when key
       (cons key val)))))
 
@@ -1094,8 +1098,7 @@ it also sets `consult-omni--override-group-by' if and argument
 for grouping is provided in options.
 "
   (pcase-let* ((`(,query . ,opts) (consult--command-split input))
-               (args (if (equal args '(nil)) nil args))
-               )
+               (args (if (member (flatten-list args) (list nil (list nil))) nil args)))
     (if (and opts (listp opts) (> (length opts) 0))
         (progn
           (setq opts (cl-substitute ":count" ":n" opts :test 'equal))
@@ -1103,7 +1106,7 @@ for grouping is provided in options.
           (setq opts (cl-substitute ":group" ":g" opts :test 'equal))
           (if (member ":group" opts)
               (setq consult-omni--override-group-by (cadr (member ":group" opts)))
-          (setq consult-omni--override-group-by nil))
+            (setq consult-omni--override-group-by nil))
           (cl-loop for opt in opts
                    do
                    (pcase-let* ((`(,key . ,val) (consult-omni--extract-opt-pair opt opts (list ":group"))))

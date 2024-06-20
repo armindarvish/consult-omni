@@ -53,7 +53,7 @@ Similar to `consult-locate-args' bur for consult-omni."
 (cl-defun consult-omni--locate-builder (input &rest args &key callback &allow-other-keys)
   "makes builder command line args for “locate”.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (dir (plist-get opts :dir))
@@ -153,13 +153,12 @@ See `consult-locate-args' for example."
 (cl-defun consult-omni--mdfind-builder (input &rest args &key callback &allow-other-keys)
   "makes builder command line args for “mdfind”.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (dir (plist-get opts :dir))
                (dir (if dir (file-truename (format "%s" dir))))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
                (default-directory (or dir default-directory))
                (consult-locate-args (concat consult-omni-mdfind-args
@@ -174,8 +173,6 @@ See `consult-locate-args' for example."
                            :type 'async
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--mdfind-builder
-                           ;; :transform nil
-                           ;; :filter #'consult-omni--mdfind-filter
                            :on-preview #'consult-omni--mdfind-preview
                            :on-return #'identity
                            :on-callback #'consult-omni--mdfind-callback

@@ -22,12 +22,11 @@
   "Fetch search results for INPUT from Google Autosuggest.
 
 Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
                (page (or (and (integerp page) page)
                          (and page (string-to-number (format "%s" page)))

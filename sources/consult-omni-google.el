@@ -16,10 +16,6 @@
 
 (require 'consult-omni)
 
-(defvar consult-omni-google-search-url "https://www.google.com/search")
-
-(defvar consult-omni-google-customsearch-api-url "https://www.googleapis.com/customsearch/v1")
-
 (defcustom consult-omni-google-customsearch-key nil
   "Key for Google custom search API
 
@@ -36,22 +32,23 @@ See URL `https://developers.google.com/custom-search/' and URL `https://develope
   :type '(choice (const :tag "CX String" string)
                  (function :tag "Custom Function")))
 
+(defvar consult-omni-google-search-url "https://www.google.com/search")
+
+(defvar consult-omni-google-customsearch-api-url "https://www.googleapis.com/customsearch/v1")
 
 (cl-defun consult-omni--google-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches search results for INPUT from “Google custom search” service.
 
 Refer to URL `https://programmablesearchengine.google.com/about/' and `https://developers.google.com/custom-search/' for more info.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
                (filter (plist-get opts :filter))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (filter (or (and (integerp filter) filter)
                            (and filter (string-to-number (format "%s" filter)))
@@ -100,7 +97,6 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                                 (when annotated-results
                                   (funcall callback annotated-results))
                                 annotated-results)))))
-
 
 (consult-omni-define-source "Google"
                            :narrow-char ?g

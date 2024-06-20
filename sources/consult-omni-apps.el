@@ -232,11 +232,10 @@ in `consult-omni-apps-paths'.
 (cl-defun consult-omni--apps-list-apps (input &rest args &key callback &allow-other-keys)
   "get a list of applications from OS.
 "
- (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+ (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
-               (count (or (and (integerp count) count)
-                             (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                              consult-omni-default-count))
                (files (consult-omni--apps-get-desktop-apps)))
    (if (and consult-omni-apps-use-cache query)

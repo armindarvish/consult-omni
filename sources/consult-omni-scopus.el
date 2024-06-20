@@ -16,6 +16,18 @@
 
 (require 'consult-omni)
 
+(defcustom consult-omni-scopus-api-key nil
+  "Key for Scopus API.
+
+See URL `https://dev.elsevier.com/documentation/SCOPUSSearchAPI.wadl' for more info"
+  :group 'consult-omni
+  :type '(choice (const :tag "Scopus API Key" string)
+                 (function :tag "Custom Function")))
+
+(defvar consult-omni-scopus-search-url "https://www.scopus.com/record/display.uri?")
+
+(defvar consult-omni-scopus-api-url "https://api.elsevier.com/content/search/scopus")
+
 (cl-defun consult-omni--scopus-format-candidate (&rest args &key source query url search-url title authors date journal doi face &allow-other-keys)
   "Returns a formatted string for candidates of `consult-omni-scopus'.
 
@@ -84,30 +96,16 @@ FACE is the face to apply to TITLE
                 (get-text-property 0 :url cand))))
          (funcall consult-omni-default-preview-function url)))
 
-(defvar consult-omni-scopus-search-url "https://www.scopus.com/record/display.uri?")
-
-(defvar consult-omni-scopus-api-url "https://api.elsevier.com/content/search/scopus")
-
-(defcustom consult-omni-scopus-api-key nil
-  "Key for Scopus API.
-
-See URL `https://dev.elsevier.com/documentation/SCOPUSSearchAPI.wadl' for more info"
-  :group 'consult-omni
-  :type '(choice (const :tag "Scopus API Key" string)
-                 (function :tag "Custom Function")))
-
 (cl-defun consult-omni--scopus-fetch-results (input &rest args &key callback &allow-other-keys)
   "Retrieve search results from SCOPUS for INPUT.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (page (plist-get opts :page))
-               (count (or (and (integerp count) count)
-                          (and count (string-to-number (format "%s" count)))
+               (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
+               (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min (max count 1) 25))
                (page (* count page))
@@ -161,7 +159,6 @@ See URL `https://dev.elsevier.com/documentation/SCOPUSSearchAPI.wadl' for more i
 
                                                    raw-results)))
                                 (funcall callback annotated-results))))))
-
 
 (consult-omni-define-source "Scopus"
                            :narrow-char ?s

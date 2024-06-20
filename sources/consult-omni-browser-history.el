@@ -62,7 +62,7 @@ SNIPPET is a string containing a snippet/description of candidate
 (cl-defun consult-omni--browser-history-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results for INPUT from browser history.
 "
- (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+ (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (browser (or (plist-get opts :browser) browser-hist-default-browser))
                (browser-hist-default-browser browser)

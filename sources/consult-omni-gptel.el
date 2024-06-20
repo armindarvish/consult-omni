@@ -125,7 +125,7 @@ This makes a placeholder string “ask gptel: %s” %s=INPUT with
 metadata so it can be send to `gptel'."
   (unless (featurep 'gptel)
     (error "consult-omni: gptel is not available. Make sure to install and load `gptel'."))
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (source "gptel")
                (backend (and (plist-member opts :backend) (format "%s" (plist-get opts :backend))))
@@ -147,8 +147,6 @@ metadata so it can be send to `gptel'."
                                               :backend backend)))
     (list annotated-results)
     ))
-
-
 
 (consult-omni-define-source "gptel"
                            :narrow-char ?G

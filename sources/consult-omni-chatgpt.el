@@ -16,6 +16,16 @@
 
 (require 'consult-omni)
 
+(defcustom consult-omni-openai-api-key nil
+"Key for OpeAI API
+
+See URL `https://openai.com/product' and URL `https://platform.openai.com/docs/introduction' for details"
+:group 'consult-omni
+:type '(choice (const :tag "API Key" string)
+               (function :tag "Custom Function")))
+
+(defvar consult-omni-chatgpt-api-url "https://api.openai.com/v1/chat/completions")
+
 (defun consult-omni-dynamic--chatgpt-format-candidate (source query title &optional model face)
   "Returns a formatted string for candidates of `consult-omni-chatgpt'.
 
@@ -74,20 +84,9 @@ FACE is the face to apply to TITLE
     (consult--jump marker)
 ))
 
-(defvar consult-omni-chatgpt-api-url "https://api.openai.com/v1/chat/completions")
-
-(defcustom consult-omni-openai-api-key nil
-"Key for OpeAI API
-
-See URL `https://openai.com/product' and URL `https://platform.openai.com/docs/introduction' for details"
-:group 'consult-omni
-:type '(choice (const :tag "API Key" string)
-               (function :tag "Custom Function")))
-
-
 (cl-defun consult-omni--chatgpt-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches chat response for INPUT from chatGPT."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (model (or (plist-get opts :model) "gpt-3.5-turbo"))
                (headers `(("Content-Type" . "application/json")
