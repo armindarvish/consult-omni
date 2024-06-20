@@ -53,7 +53,7 @@ for some limited documentation"
                                                          ((source "DuckDuckGo API")
                                                           (url (gethash "FirstURL" item))
                                                           (title (gethash "Result" item))
-                                                          (title (if (string-match "<a href=.*>\\(?1:.*\\)</a>.*" title) (match-string 1 title) ""))
+                                                          (title (if (and title (stringp title) (string-match "<a href=.*>\\(?1:.*\\)</a>.*" title)) (match-string 1 title) nil))
                                                           (snippet (format "%s" (gethash "Text" item)))
 
                                                           (search-url (consult-omni--make-url-string consult-omni-duckduckgo-search-url params '("format")))
