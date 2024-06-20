@@ -3798,6 +3798,14 @@ SNIPPET is a string containing a snippet/description of candidate
 "Only show calculator rsults when the query result in a nunmber?"
 :type 'boolean)
 
+(defcustom consult-omni-calc-message-errors nil
+"whether to message errors for calc?
+
+Setting this to non-nil will show messages
+when the calcultor cannot find results
+"
+:type 'boolean)
+
 ;; (unless (boundp 'calc-eval-error)
 ;;   (defvar calc-eval-error nil))
 #+end_src
@@ -3820,6 +3828,8 @@ This uses `calc-eval' to return the result of input"
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (source "calc")
                (opts (car-safe opts))
+               (opts (cl-substitute :convert :c opts :test 'equal))
+               (convert (plist-get opts :convert))
                (extra-args (plist-get opts :$))
                (extra-args (and extra-args (car (read-from-string extra-args))))
                (extra-args (if (listp extra-args) extra-args (list extra-args)))
@@ -3836,10 +3846,17 @@ This uses `calc-eval' to return the result of input"
                )
     (when (string-match "[[:digit:]\/\*\+-=%^&$\(\{\[]" query nil t)
       (condition-case err
+          (if convert
+              (cl-letf* (((symbol-function 'calc-convert-units)
+                          (symbol-function 'calc-convert-exact-units)))
+                (setq result (cond
+                              ((string-match-p ".*deg.*" convert)
+                               (setq result (calc-eval (math-convert-temperature (apply #'calc-eval (list query) 'raw extra-args) (apply #'calc-eval (list (replace-regexp-in-string "[[:digit:]\s$]+" "" query extra-args)) 'raw extra-args) (calc-eval (list convert) 'raw)))))
+                              (t (calc-eval (math-convert-units (apply #'calc-eval (list query) 'raw extra-args) (calc-eval (list convert) 'raw)))))))
           (if consult-omni-calc-number-only
               (setq result (apply #'calc-eval (list query) 'num extra-args))
-            (setq result (apply #'calc-eval (list query) nil extra-args)))
-        ('error (message err))
+            (setq result (apply #'calc-eval (list query) nil extra-args))))
+        ('error (and consult-omni-calc-message-errors (message (error-message-string err))))
         ))
 
      (when result (setq annotated-result (propertize result
