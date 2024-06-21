@@ -267,6 +267,7 @@ in `consult-omni-apps-paths'.
 (consult-omni-define-source "Apps"
                            :narrow-char ?a
                            :type 'sync
+                           :require-match t
                            :request #'consult-omni--apps-list-apps
                            :on-preview #'ignore
                            :on-return #'identity

@@ -2002,7 +2002,7 @@ This is used to make docstring for function made by `consult-omni-define-source'
 #+end_src
 *** make a consult--read source list
 #+begin_src emacs-lisp
-(defun consult-omni--make-source-list (source-name request annotate face narrow-char state preview-key category lookup group sort enabled predicate selection-history)
+(defun consult-omni--make-source-list (source-name request annotate face narrow-char state preview-key category lookup group require-match sort enabled predicate selection-history)
   "Internal function to make a source for `consult-omni--multi'.
 
 Do not use this function directly, use `consult-omni-define-source' macro
@@ -2038,6 +2038,7 @@ instead."
           :sort ,sort
           ,(when predicate ':predicate)
           ,(when predicate predicate)
+          :require-match ,require-match
           ))
 #+end_src
 *** make a static interactive command
@@ -2103,6 +2104,7 @@ Do not use this function directly, use `consult-omni-define-source' macro
          (callback-func (or (and match source (consult-omni--get-source-prop source :on-callback))
                             (and source (consult-omni--get-source-prop source :on-new)))))
     (add-to-history selection-history-var title)
+    ;; (setq my:test callback-func)
     (unless no-callback
       (and callback-func (funcall callback-func selected))
       )
@@ -2114,7 +2116,7 @@ Do not use this function directly, use `consult-omni-define-source' macro
 #+begin_src emacs-lisp
 ;;; Macros
 ;;;###autoload
-(cl-defmacro consult-omni-define-source (source-name &rest args &key type request transform filter on-setup on-preview on-return on-exit state on-callback on-new lookup static group narrow-char category search-history selection-history face annotate preview-key docstring enabled sort predicate &allow-other-keys)
+(cl-defmacro consult-omni-define-source (source-name &rest args &key type request transform filter on-setup on-preview on-return on-exit state on-callback on-new require-match lookup static group narrow-char category search-history selection-history face annotate preview-key docstring enabled sort predicate &allow-other-keys)
   "Macro to make a consult-omni-source for SOURCE-NAME.
 
 \* Makes
@@ -2315,7 +2317,7 @@ variable that this macro creates for %s=SOURCE-NAME.
 
      ;; make a variable called consult-omni--source-%s (%s=source-name)
      (defvar ,(consult-omni--source-name source-name) nil)
-     (setq ,(consult-omni--source-name source-name) (consult-omni--make-source-list ,source-name ,request ,annotate ,face ,narrow-char ,state ,preview-key ,category ,lookup ,group ,sort ,enabled ,predicate ,selection-history))
+     (setq ,(consult-omni--source-name source-name) (consult-omni--make-source-list ,source-name ,request ,annotate ,face ,narrow-char ,state ,preview-key ,category ,lookup ,group ,require-match ,sort ,enabled ,predicate ,selection-history))
       ;; make a dynamic interactive command consult-omni-dynamic-%s (%s=source-name)
      (unless (eq ,static t)
          (defun ,(consult-omni--func-name source-name) (&optional initial no-callback &rest args)
@@ -2336,6 +2338,7 @@ variable that this macro creates for %s=SOURCE-NAME.
      (add-to-list 'consult-omni-sources-alist (cons ,source-name
                                                           (list :name ,source-name
                                                                 :type ,type
+                                                                :require-match ,require-match
                                                                 :source (consult-omni--source-name ,source-name)
                                                                 :face ,face
                                                                 :request-func ,request
@@ -3267,6 +3270,7 @@ in `consult-omni-apps-paths'.
 (consult-omni-define-source "Apps"
                            :narrow-char ?a
                            :type 'sync
+                           :require-match t
                            :request #'consult-omni--apps-list-apps
                            :on-preview #'ignore
                            :on-return #'identity
@@ -7657,6 +7661,7 @@ FACE is the face to apply to TITLE
 (consult-omni-define-source "Wikipedia"
                            :narrow-char ?w
                            :type 'dynamic
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--wikipedia-fetch-results
                            :preview-key consult-omni-preview-key

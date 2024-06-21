@@ -119,6 +119,7 @@ FACE is the face to apply to TITLE
 (consult-omni-define-source "Wikipedia"
                            :narrow-char ?w
                            :type 'dynamic
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--wikipedia-fetch-results
                            :preview-key consult-omni-preview-key
