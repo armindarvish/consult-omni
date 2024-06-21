@@ -6886,7 +6886,7 @@ FACE is the face to apply to TITLE
 
 *** numi
 :PROPERTIES:
-:header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-muni.el
+:header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-numi.el
 :END:
 **** header
 #+begin_src emacs-lisp
