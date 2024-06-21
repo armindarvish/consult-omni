@@ -233,7 +233,7 @@ metadata so it can be send to `gptel'."
     (cond
      ((stringp consult-omni-gptel-cand-title) (setq results (list consult-omni-gptel-cand-title)))
      ((functionp consult-omni-gptel-cand-title)
-           (setq results (funcall consult-omni-gptel-cand-title input :callback callback args))))
+           (setq results (apply consult-omni-gptel-cand-title input :callback callback args))))
     results
     ))
 
