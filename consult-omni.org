@@ -6587,10 +6587,10 @@ The preview buffer is from `consult-omni--gptel-response-preview'."
                  buff
                  ))))
 #+end_src
-***** make placeholder
+***** title with placeholder
 #+begin_src emacs-lisp
 (cl-defun consult-omni--gptel-make-title-placeholder (input &rest args &key callback &allow-other-keys)
-(pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (if callback (seq-difference args (list :callback callback)) args)))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (if callback (seq-difference args (list :callback callback)) args)))
                (opts (car-safe opts))
                (source "gptel")
                (backend (and (plist-member opts :backend) (format "%s" (plist-get opts :backend))))
@@ -6602,17 +6602,23 @@ The preview buffer is from `consult-omni--gptel-response-preview'."
                           (and backend-struct (car (cl-struct-slot-value (type-of backend-struct) 'models backend-struct)))))
                (stream (or (and (plist-member opts :stream) (plist-get opts :stream)) gptel-stream))
                (placeholder (format "ask gptel: %s" (if query (string-trim-right query) "")))
-               (decorated (consult-omni--gptel-format-candidate placeholder :source source :query query :model model :backend backend :stream stream)))
-  (propertize decorated
-              :source source
-              :title query
-              :url nil
-              :query query
-              :model model
-              :stream stream
-              :backend backend)))
+               (decorated (consult-omni--gptel-format-candidate placeholder :source source :query query :model model :backend backend :stream stream))
+               (annotated-results
+                (propertize decorated
+                            :source source
+                            :title query
+                            :url nil
+                            :query query
+                            :model model
+                            :stream stream
+                            :backend backend)))
+    (setq my:test annotated-results)
+    (when annotated-results
+      (when callback
+        (funcall callback (list annotated-results)))
+      (list annotated-results))))
 #+end_src
-***** get short answer
+***** title with  short answer
 #+begin_src emacs-lisp
 (cl-defun consult-omni--gptel-make-title-short-answer (input &rest args &key callback &allow-other-keys)
 "Get a short answer preview from gptel."
@@ -6631,23 +6637,27 @@ The preview buffer is from `consult-omni--gptel-response-preview'."
                (gptel-backend backend-struct)
                (gptel-model model)
                (gptel-stream (if stream t nil))
-               (output nil))
+               (output))
     (gptel-request query
       :system (format "Respond in %s words or less." consult-omni-gptel-short-answer-wordcount)
       :callback
       (lambda (response _)
         (when response
-          (let ((decorated
-                (consult-omni--gptel-format-candidate (string-trim-right response) :source source :query query :model model :backend backend :stream stream)))
-            (setq output (propertize decorated
+          (let* ((decorated
+                (consult-omni--gptel-format-candidate (string-trim-right response) :source source :query query :model model :backend backend :stream stream))
+                 (annotated-result (propertize decorated
                         :title response
                         :source "gptel"
                         :url nil
                         :query query
                         :model model
                         :stream stream
-                        :backend backend))))))
-output))
+                        :backend backend)))
+        (when annotated-result
+          (when callback
+            (funcall callback (list annotated-result)))
+          (setq output (list annotated-result)))))))
+    output))
 #+end_src
 **** items
 #+begin_src emacs-lisp
@@ -6658,12 +6668,12 @@ This makes a placeholder string “ask gptel: %s” %s=INPUT with
 metadata so it can be send to `gptel'."
   (unless (featurep 'gptel)
     (error "consult-omni: gptel is not available. Make sure to install and load `gptel'."))
-  (when-let ((title (or (and (stringp consult-omni-gptel-cand-title) consult-omni-gptel-cand-title)
-                   (and (functionp consult-omni-gptel-cand-title)
-                        (funcall consult-omni-gptel-cand-title input args)))))
-    (when callback
-      (funcall callback (list title)))
-    (list title)
+  (let ((results))
+    (cond
+     ((stringp consult-omni-gptel-cand-title) (setq results (list consult-omni-gptel-cand-title)))
+     ((functionp consult-omni-gptel-cand-title)
+           (setq results (funcall consult-omni-gptel-cand-title input :callback callback args))))
+    results
     ))
 #+end_src
 **** define source
@@ -6671,7 +6681,7 @@ metadata so it can be send to `gptel'."
 
 (consult-omni-define-source "gptel"
                            :narrow-char ?G
-                           :type 'sync
+                           :type 'dynamic
                            :require-match t
                            :face 'consult-omni-ai-source-face
                            :request #'consult-omni--gptel-fetch-results
