@@ -82,6 +82,7 @@ SNIPPET is a string containing a snippet/description of candidate
 (consult-omni-define-source "Browser History"
                            :narrow-char ?h
                            :type 'sync
+                           :require-match nil
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--browser-history-fetch-results
                            :preview-key consult-omni-preview-key

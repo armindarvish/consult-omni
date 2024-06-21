@@ -81,6 +81,7 @@
 (consult-omni-define-source "ripgrep"
                            :narrow-char ?r
                            :type 'async
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--ripgrep-builder
                            :transform #'consult-omni--ripgrep-transform

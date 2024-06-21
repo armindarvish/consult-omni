@@ -64,6 +64,7 @@
 (consult-omni-define-source "GitHub"
                            :narrow-char ?G
                            :type 'async
+                           :require-match nil
                            :category 'consult-gh-repos
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--gh-search-repos-builder

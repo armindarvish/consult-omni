@@ -1144,6 +1144,14 @@ the candidates for the sync source
     (if (minibuffer-window-active-p win)
         (string-match (concat ".*" (string-trim (car-safe (consult-omni--split-command (minibuffer-contents-no-properties))) split-char "\n") ".*") (substring-no-properties cand))))))
 
+(defun consult-omni--async-builder (input command-args)
+  "Build command line from INPUT."
+  (pcase-let ((`(,arg . ,opts) (consult--command-split input)))
+    (unless (string-blank-p arg)
+      (cons (append (consult--build-args command-args)
+                    (consult--split-escaped arg) opts)
+            (cdr (consult--default-regexp-compiler input 'basic t))))))
+
 (defun consult-omni--multi-static-sync-candidates (source idx input &rest args)
   "Synchronously collects and returns candidates of a “sync” SOURCE
 
@@ -1556,6 +1564,7 @@ for use in a dynamically updated multi-source command
                (process-adaptive-read-buffering nil))
           (funcall async 'indicator 'running)
           (consult-omni--async-log "consult--async-process started %S\n" args)
+          (setq my:test args)
           (setq count 0
                 proc-buf (generate-new-buffer (concat " *consult-omni-async-stderr-" name "*"))
                 proc (apply #'make-process
@@ -1715,13 +1724,13 @@ collection function.
                    :preview-key (consult--multi-preview-key sources)
                    :narrow      (consult--multi-narrow sources)
                    :state       (consult--multi-state sources))))))
-    ;; (if (plist-member (cdr selected) :match)
-    ;;     (when-let (fun (plist-get (cdr selected) :new))
-    ;;       (funcall fun (car selected))
-    ;;       (plist-put (cdr selected) :match 'new))
-    ;;   (when-let (fun (plist-get (cdr selected) :action))
-    ;;     (funcall fun (car selected)))
-    ;;   (setq selected `(,(car selected) :match t ,@(cdr selected))))
+    (if (plist-member (cdr selected) :match)
+        (when-let (fun (plist-get (cdr selected) :new))
+          (funcall fun (car selected))
+          (plist-put (cdr selected) :match 'new))
+      (when-let (fun (plist-get (cdr selected) :action))
+        (funcall fun (car selected)))
+      (setq selected `(,(car selected) :match t ,@(cdr selected))))
     selected))
 
 (defun consult-omni--source-name (source-name &optional suffix)
@@ -1841,7 +1850,6 @@ Do not use this function directly, use `consult-omni-define-source' macro
                                       :sort sort
                                       ))
          (match (plist-get (cdr selected) :match))
-         (_ (setq my:test selected))
          (source  (plist-get (cdr selected) :name))
          (selected (cond
                     ((consp selected) (car selected))

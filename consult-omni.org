@@ -1297,6 +1297,17 @@ the candidates for the sync source
     (if (minibuffer-window-active-p win)
         (string-match (concat ".*" (string-trim (car-safe (consult-omni--split-command (minibuffer-contents-no-properties))) split-char "\n") ".*") (substring-no-properties cand))))))
 #+end_src
+**** async builders
+#+begin_src emacs-lisp
+(defun consult-omni--async-builder (input command-args)
+  "Build command line from INPUT."
+  (pcase-let ((`(,arg . ,opts) (consult--command-split input)))
+    (unless (string-blank-p arg)
+      (cons (append (consult--build-args command-args)
+                    (consult--split-escaped arg) opts)
+            (cdr (consult--default-regexp-compiler input 'basic t))))))
+
+#+end_src
 **** consult-omni-multi-static
 ***** static collect synchronous candidates
 #+begin_src emacs-lisp
@@ -1766,6 +1777,7 @@ for use in a dynamically updated multi-source command
                (process-adaptive-read-buffering nil))
           (funcall async 'indicator 'running)
           (consult-omni--async-log "consult--async-process started %S\n" args)
+          (setq my:test args)
           (setq count 0
                 proc-buf (generate-new-buffer (concat " *consult-omni-async-stderr-" name "*"))
                 proc (apply #'make-process
@@ -2924,6 +2936,7 @@ Gets the preview function from `consult-omni-sources-alist'."
             'consult-omni-mu4e
             'consult-omni-notes
             'consult-omni-notmuch
+            'consult-omni-numi
             'consult-omni-pubmed
             'consult-omni-scopus
             'consult-omni-stackoverflow
@@ -3391,6 +3404,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
 (consult-omni-define-source "Bing"
                            :narrow-char ?m
                            :type 'dynamic
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--bing-fetch-results
                            :preview-key consult-omni-preview-key
@@ -3514,6 +3528,7 @@ See URL `https://brave.com/search/api/' for more info"
 (consult-omni-define-source "Brave"
                            :narrow-char ?b
                            :type 'dynamic
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--brave-fetch-results
                            :preview-key consult-omni-preview-key
@@ -3648,6 +3663,7 @@ See URL `https://brave.com/search/api/' for more info"
 (consult-omni-define-source "Brave AutoSuggest"
                            :narrow-char ?B
                            :type 'dynamic
+                           :require-match nil
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--brave-autosuggest-fetch-results
                            :group #'consult-omni--group-function
@@ -3770,6 +3786,7 @@ SNIPPET is a string containing a snippet/description of candidate
 (consult-omni-define-source "Browser History"
                            :narrow-char ?h
                            :type 'sync
+                           :require-match nil
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--browser-history-fetch-results
                            :preview-key consult-omni-preview-key
@@ -3903,6 +3920,7 @@ This uses `calc-eval' to return the result of input"
 (consult-omni-define-source "calc"
                            :narrow-char ?C
                            :type 'sync
+                           :require-match t
                            :face 'consult-omni-date-face
                            :request #'consult-omni--calc-fetch-results
                            :on-preview #'ignore
@@ -4077,10 +4095,10 @@ FACE is the face to apply to TITLE
 **** define sources
 #+begin_src emacs-lisp
 
-
 (consult-omni-define-source "chatGPT"
                            :narrow-char ?G
                            :type 'dynamic
+                           :require-match t
                            :face 'consult-omni-ai-source-face
                            :request #'consult-omni--chatgpt-fetch-results
                            :preview-key consult-omni-preview-key
@@ -4224,6 +4242,7 @@ FACE is the face to apply to TITLE"
 (consult-omni-define-source "buffers text search"
                            :narrow-char ?L
                            :type 'sync
+                           :require-match t
                            :category 'consult-location
                            :face 'default
                            :request #'consult-omni--line-multi-fetch-results
@@ -4525,6 +4544,7 @@ FACE is the face to apply to TITLE"
 (consult-omni-define-source "GitHub"
                            :narrow-char ?G
                            :type 'async
+                           :require-match nil
                            :category 'consult-gh-repos
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--gh-search-repos-builder
@@ -4689,6 +4709,7 @@ FACE is the face to apply to TITLE"
 (consult-omni-define-source "grep"
                            :narrow-char ?r
                            :type 'async
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--grep-builder
                            :transform #'consult-omni--grep-transform
@@ -4850,6 +4871,7 @@ FACE is the face to apply to TITLE"
 (consult-omni-define-source "Notes Search"
                            :narrow-char ?n
                            :type 'async
+                           :require-match nil
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--notes-builder
                            :transform #'consult-omni--notes-transform
@@ -4985,6 +5007,7 @@ Similar to `consult-find-args' bur for consult-omni."
                            :narrow-char ?f
                            :category 'file
                            :type 'async
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--find-builder
                            :transform #'consult-omni--find-transform
@@ -5121,6 +5144,7 @@ Similar to `consult-locate-args' bur for consult-omni."
                            :narrow-char ?f
                            :category 'file
                            :type 'async
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--locate-builder
                            ;; :transform nil
@@ -5257,6 +5281,7 @@ See `consult-locate-args' for example."
                            :narrow-char ?f
                            :category 'file
                            :type 'async
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--mdfind-builder
                            :on-preview #'consult-omni--mdfind-preview
@@ -5422,6 +5447,7 @@ cand
 (consult-omni-define-source "mu4e"
                            :narrow-char ?m
                            :type 'dynamic
+                           :require-match nil
                            :category 'consult-mu-messages
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--mu-fetch-results
@@ -5526,6 +5552,7 @@ cand
 (consult-omni-define-source "notmuch"
                            :narrow-char ?m
                            :type 'async
+                           :require-match nil
                            :category 'notmuch-result
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--notmuch-command-builder
@@ -5660,6 +5687,7 @@ cand
 (consult-omni-define-source "ripgrep"
                            :narrow-char ?r
                            :type 'async
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--ripgrep-builder
                            :transform #'consult-omni--ripgrep-transform
@@ -5785,6 +5813,7 @@ cand
 (consult-omni-define-source "doiorg"
                            :narrow-char ?d
                            :type 'sync
+                           :require-match t
                            :face 'link
                            :request #'consult-omni--doiorg-fetch-results
                            :preview-key consult-omni-preview-key
@@ -5901,6 +5930,7 @@ for some limited documentation"
 (consult-omni-define-source "DuckDuckGo API"
                            :narrow-char ?d
                            :type 'dynamic
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--duckduckgoapi-fetch-results
                            :preview-key consult-omni-preview-key
@@ -6093,6 +6123,7 @@ if FILTER is non-nil, it is used as additional filter parameters.
 (consult-omni-define-source "elfeed"
                            :narrow-char ?e
                            :type 'sync
+                           :require-match t
                            :face 'elfeed-search-unread-title-face
                            :request #'consult-omni--elfeed-fetch-results
                            :on-preview #'consult-omni--elfeed-preview
@@ -6243,6 +6274,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
 (consult-omni-define-source "Google"
                            :narrow-char ?g
                            :type 'dynamic
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--google-fetch-results
                            :preview-key consult-omni-preview-key
@@ -6354,6 +6386,7 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
 (consult-omni-define-source "Google AutoSuggest"
                            :narrow-char ?G
                            :type 'dynamic
+                           :require-match nil
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--google-autosuggest-fetch-results
                            :on-preview #'ignore
@@ -6558,6 +6591,7 @@ metadata so it can be send to `gptel'."
 (consult-omni-define-source "gptel"
                            :narrow-char ?G
                            :type 'sync
+                           :require-match t
                            :face 'consult-omni-ai-source-face
                            :request #'consult-omni--gptel-fetch-results
                            :on-preview #'consult-omni--gptelbuffer-preview
@@ -6824,6 +6858,7 @@ FACE is the face to apply to TITLE
 (consult-omni-define-source "Invidious"
                            :narrow-char ?I
                            :type 'dynamic
+                           :require-match t
                            :category 'consult-omni-video
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--invidious-fetch-results
@@ -6847,6 +6882,117 @@ FACE is the face to apply to TITLE
 (add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-invidious)
 ;;; consult-omni-invidious.el ends here
 #+end_src
+
+
+*** numi
+:PROPERTIES:
+:header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-muni.el
+:END:
+**** header
+#+begin_src emacs-lisp
+;;; consult-omni-numi.el --- Consulting numi Command -*- lexical-binding: t -*-
+
+;; Copyright (C) 2024 Armin Darvish
+
+;; Author: Armin Darvish
+;; Maintainer: Armin Darvish
+;; Created: 2024
+;; Version: 0.1
+;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Homepage: https://github.com/armindarvish/consult-omni
+;; Keywords: convenience
+
+;;; Commentary:
+
+;;; Code:
+
+(require 'consult-omni)
+#+end_src
+
+**** custom variables
+#+begin_src emacs-lisp
+(defcustom consult-omni-numi-args "numi-cli"
+"Command line arguments for mdfind.
+
+Similar to other command line args for consult but for mdfind.
+See `consult-locate-args' for example."
+  :type '(choice string (repeat (choice string sexp))))
+#+end_src
+
+**** helper functions
+***** preview
+#+begin_src emacs-lisp
+
+(defun consult-omni--numi-preview (cand)
+  "Mdfind preview function.")
+#+end_src
+
+***** callback
+#+begin_src emacs-lisp
+(defun consult-omni--numi-callback (cand)
+  "Muni callback function."
+  (let ((result  (get-text-property 0 :title cand)))
+  (kill-new result))
+  )
+#+end_src
+
+
+***** filter
+#+begin_src emacs-lisp
+(defun consult-omni--numi-filter (candidates &optional query)
+  "Formats `consult-omni-mdfind' candidates.
+"
+  (cl-loop for candidate in candidates
+           when (not (equal candidate "?"))
+           collect candidate))
+
+#+end_src
+**** items
+#+begin_src emacs-lisp
+(cl-defun consult-omni--numi-builder (input &rest args &key callback &allow-other-keys)
+  "makes builder command line args for “mdfind”.
+"
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts)))
+    (funcall #'consult-omni--async-builder (shell-quote-argument query) consult-omni-numi-args)
+   ;; (funcall #'consult--locate-builder (shell-quote-argument query))
+   ;; (list consult-omni-numi-args query)
+            ))
+#+end_src
+
+**** define source
+#+begin_src emacs-lisp
+(consult-omni-define-source "Numi"
+                           :narrow-char ?N
+                           :type 'async
+                           :require-match t
+                           :face 'consult-omni-engine-source-face
+                           :request #'consult-omni--numi-builder
+                           :filter #'consult-omni--numi-filter
+                           :on-preview #'ignore
+                           :on-return #'identity
+                           :on-callback #'consult-omni--numi-callback
+                           :preview-key consult-omni-preview-key
+                           :search-history 'consult-omni--search-history
+                           :selection-history 'consult-omni--selection-history
+                           :group #'consult-omni--group-function
+                           :enabled (lambda () (if (executable-find "numi-cli") t nil))
+                           :sort t
+                           :static 'both
+                           :annotate nil
+                           )
+#+end_src
+
+**** provide and footer
+#+begin_src emacs-lisp
+;;; provide `consult-omni-numi module
+
+(provide 'consult-omni-numi)
+
+(add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-numi)
+;;; consult-omni-numi.el ends here
+#+end_src
+
 
 
 *** PubMed
@@ -7101,6 +7247,7 @@ for more info."
 (consult-omni-define-source "PubMed"
                            :narrow-char ?p
                            :type 'dynamic
+                           :require-match t
                            :category 'consult-omni-scholar
                            :face 'consult-omni-scholar-source-face
                            :request #'consult-omni--pubmed-fetch-results
@@ -7315,9 +7462,10 @@ FACE is the face to apply to TITLE
 
 (consult-omni-define-source "Scopus"
                            :narrow-char ?s
+                           :type 'dynamic
+                           :require-match t
                            :category 'consult-omni-scholar
                            :face 'consult-omni-scholar-source-face
-                           :type 'dynamic
                            :request #'consult-omni--scopus-fetch-results
                            :preview-key consult-omni-preview-key
                            :on-preview #'consult-omni--scopus-preview
@@ -7498,6 +7646,7 @@ See URL `https://api.stackexchange.com/' for more info.
 (consult-omni-define-source "StackOverflow"
                            :narrow-char ?s
                            :type 'dynamic
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--stackoverflow-fetch-results
                            :preview-key consult-omni-preview-key
@@ -8156,6 +8305,7 @@ This is a version with  statistics (e.g. view counts)
 (consult-omni-define-source "YouTube"
                            :narrow-char ?y
                            :type 'dynamic
+                           :require-match t
                            :category 'consult-omni-video
                            :face 'consult-omni-engine-source-face
                            :request consult-omni-youtube-search-command

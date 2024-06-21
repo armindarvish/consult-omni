@@ -107,6 +107,7 @@
 (consult-omni-define-source "Notes Search"
                            :narrow-char ?n
                            :type 'async
+                           :require-match nil
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--notes-builder
                            :transform #'consult-omni--notes-transform

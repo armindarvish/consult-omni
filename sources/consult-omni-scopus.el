@@ -162,9 +162,10 @@ FACE is the face to apply to TITLE
 
 (consult-omni-define-source "Scopus"
                            :narrow-char ?s
+                           :type 'dynamic
+                           :require-match t
                            :category 'consult-omni-scholar
                            :face 'consult-omni-scholar-source-face
-                           :type 'dynamic
                            :request #'consult-omni--scopus-fetch-results
                            :preview-key consult-omni-preview-key
                            :on-preview #'consult-omni--scopus-preview

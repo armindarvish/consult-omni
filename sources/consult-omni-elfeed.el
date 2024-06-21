@@ -139,6 +139,7 @@ if FILTER is non-nil, it is used as additional filter parameters.
 (consult-omni-define-source "elfeed"
                            :narrow-char ?e
                            :type 'sync
+                           :require-match t
                            :face 'elfeed-search-unread-title-face
                            :request #'consult-omni--elfeed-fetch-results
                            :on-preview #'consult-omni--elfeed-preview

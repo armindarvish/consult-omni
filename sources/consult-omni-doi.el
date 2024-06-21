@@ -68,6 +68,7 @@
 (consult-omni-define-source "doiorg"
                            :narrow-char ?d
                            :type 'sync
+                           :require-match t
                            :face 'link
                            :request #'consult-omni--doiorg-fetch-results
                            :preview-key consult-omni-preview-key

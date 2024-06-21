@@ -89,6 +89,7 @@ FACE is the face to apply to TITLE"
 (consult-omni-define-source "buffers text search"
                            :narrow-char ?L
                            :type 'sync
+                           :require-match t
                            :category 'consult-location
                            :face 'default
                            :request #'consult-omni--line-multi-fetch-results

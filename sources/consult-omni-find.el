@@ -76,6 +76,7 @@ Similar to `consult-find-args' bur for consult-omni."
                            :narrow-char ?f
                            :category 'file
                            :type 'async
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--find-builder
                            :transform #'consult-omni--find-transform

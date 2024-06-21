@@ -215,6 +215,7 @@ FACE is the face to apply to TITLE
 (consult-omni-define-source "Invidious"
                            :narrow-char ?I
                            :type 'dynamic
+                           :require-match t
                            :category 'consult-omni-video
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--invidious-fetch-results

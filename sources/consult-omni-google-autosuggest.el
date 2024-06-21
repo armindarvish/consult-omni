@@ -69,6 +69,7 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
 (consult-omni-define-source "Google AutoSuggest"
                            :narrow-char ?G
                            :type 'dynamic
+                           :require-match nil
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--google-autosuggest-fetch-results
                            :on-preview #'ignore

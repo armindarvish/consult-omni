@@ -79,6 +79,7 @@ See URL `https://brave.com/search/api/' for more info"
 (consult-omni-define-source "Brave"
                            :narrow-char ?b
                            :type 'dynamic
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--brave-fetch-results
                            :preview-key consult-omni-preview-key

@@ -112,6 +112,7 @@ cand
 (consult-omni-define-source "mu4e"
                            :narrow-char ?m
                            :type 'dynamic
+                           :require-match nil
                            :category 'consult-mu-messages
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--mu-fetch-results

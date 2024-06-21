@@ -91,6 +91,7 @@ This uses `calc-eval' to return the result of input"
 (consult-omni-define-source "calc"
                            :narrow-char ?C
                            :type 'sync
+                           :require-match t
                            :face 'consult-omni-date-face
                            :request #'consult-omni--calc-fetch-results
                            :on-preview #'ignore

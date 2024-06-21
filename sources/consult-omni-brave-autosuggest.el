@@ -90,6 +90,7 @@ See URL `https://brave.com/search/api/' for more info"
 (consult-omni-define-source "Brave AutoSuggest"
                            :narrow-char ?B
                            :type 'dynamic
+                           :require-match nil
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--brave-autosuggest-fetch-results
                            :group #'consult-omni--group-function

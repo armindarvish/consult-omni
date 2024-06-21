@@ -435,6 +435,7 @@ This is a version with  statistics (e.g. view counts)
 (consult-omni-define-source "YouTube"
                            :narrow-char ?y
                            :type 'dynamic
+                           :require-match t
                            :category 'consult-omni-video
                            :face 'consult-omni-engine-source-face
                            :request consult-omni-youtube-search-command

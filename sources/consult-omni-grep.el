@@ -99,6 +99,7 @@
 (consult-omni-define-source "grep"
                            :narrow-char ?r
                            :type 'async
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--grep-builder
                            :transform #'consult-omni--grep-transform

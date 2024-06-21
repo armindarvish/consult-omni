@@ -122,6 +122,7 @@ FACE is the face to apply to TITLE
 (consult-omni-define-source "chatGPT"
                            :narrow-char ?G
                            :type 'dynamic
+                           :require-match t
                            :face 'consult-omni-ai-source-face
                            :request #'consult-omni--chatgpt-fetch-results
                            :preview-key consult-omni-preview-key

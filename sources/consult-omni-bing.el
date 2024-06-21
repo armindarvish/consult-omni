@@ -77,6 +77,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
 (consult-omni-define-source "Bing"
                            :narrow-char ?m
                            :type 'dynamic
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--bing-fetch-results
                            :preview-key consult-omni-preview-key

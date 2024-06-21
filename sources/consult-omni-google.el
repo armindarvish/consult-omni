@@ -101,6 +101,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
 (consult-omni-define-source "Google"
                            :narrow-char ?g
                            :type 'dynamic
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--google-fetch-results
                            :preview-key consult-omni-preview-key

@@ -42,6 +42,7 @@
             'consult-omni-mu4e
             'consult-omni-notes
             'consult-omni-notmuch
+            'consult-omni-numi
             'consult-omni-pubmed
             'consult-omni-scopus
             'consult-omni-stackoverflow

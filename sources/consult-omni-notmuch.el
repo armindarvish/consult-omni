@@ -50,6 +50,7 @@
 (consult-omni-define-source "notmuch"
                            :narrow-char ?m
                            :type 'async
+                           :require-match nil
                            :category 'notmuch-result
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--notmuch-command-builder

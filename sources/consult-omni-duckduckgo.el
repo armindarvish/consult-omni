@@ -75,6 +75,7 @@ for some limited documentation"
 (consult-omni-define-source "DuckDuckGo API"
                            :narrow-char ?d
                            :type 'dynamic
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--duckduckgoapi-fetch-results
                            :preview-key consult-omni-preview-key

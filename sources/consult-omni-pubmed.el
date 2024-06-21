@@ -218,6 +218,7 @@ for more info."
 (consult-omni-define-source "PubMed"
                            :narrow-char ?p
                            :type 'dynamic
+                           :require-match t
                            :category 'consult-omni-scholar
                            :face 'consult-omni-scholar-source-face
                            :request #'consult-omni--pubmed-fetch-results

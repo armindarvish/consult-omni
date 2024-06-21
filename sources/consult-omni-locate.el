@@ -73,6 +73,7 @@ Similar to `consult-locate-args' bur for consult-omni."
                            :narrow-char ?f
                            :category 'file
                            :type 'async
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--locate-builder
                            ;; :transform nil
@@ -171,6 +172,7 @@ See `consult-locate-args' for example."
                            :narrow-char ?f
                            :category 'file
                            :type 'async
+                           :require-match t
                            :face 'consult-omni-engine-source-face
                            :request #'consult-omni--mdfind-builder
                            :on-preview #'consult-omni--mdfind-preview

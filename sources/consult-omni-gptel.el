@@ -151,6 +151,7 @@ metadata so it can be send to `gptel'."
 (consult-omni-define-source "gptel"
                            :narrow-char ?G
                            :type 'sync
+                           :require-match t
                            :face 'consult-omni-ai-source-face
                            :request #'consult-omni--gptel-fetch-results
                            :on-preview #'consult-omni--gptelbuffer-preview
