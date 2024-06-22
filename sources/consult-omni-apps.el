@@ -89,6 +89,14 @@
                 )
     nil))
 
+(defun consult-omni-open-with-app (&optional file app)
+  (interactive)
+  (if-let* ((file (or file (read-file-name "select file:")))
+            (file (file-truename file))
+            (app (or app (get-text-property 0 :app (consult-omni-apps-static ".*" "  " t)))))
+      (consult-omni--apps-lauch-app (format "%s" app)
+                                    (format "%s" (and (file-exists-p file) file)))))
+
 (defun consult-omni--apps-preview (cand)
   "Mdfind preview function."
 (ignore))
