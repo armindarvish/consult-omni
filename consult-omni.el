@@ -1825,11 +1825,11 @@ instead."
                     (t selected)))
          (selected (if match selected (string-trim selected (consult--async-split-initial nil))))
          ;; (source (get-text-property 0 :source selected))
-         (callback-func (or (and match source (consult-omni--get-source-prop source :on-callback))
-                            (and source (consult-omni--get-source-prop source :on-new))))
-         )
-    (unless no-callback
-      (and callback-func (funcall callback-func selected)))
+         (callback-func (and (not no-callback)
+                             (or (and match source (consult-omni--get-source-prop source :on-callback))
+                            (and source (consult-omni--get-source-prop source :on-new))))))
+    (when (functionp callback-func)
+      (funcall callback-func selected))
     selected)
   )
 
@@ -1856,13 +1856,14 @@ Do not use this function directly, use `consult-omni-define-source' macro
                     (t selected)))
          (selected (if match selected (string-trim selected (consult--async-split-initial nil))))
          (title (get-text-property 0 :title selected))
-         (callback-func (or (and match source (consult-omni--get-source-prop source :on-callback))
-                            (and source (consult-omni--get-source-prop source :on-new)))))
+         (callback-func (and (not no-callback)
+                             (or (and match source (consult-omni--get-source-prop source :on-callback))
+                            (and source (consult-omni--get-source-prop source :on-new)))
+                             )))
     (add-to-history selection-history-var title)
     ;; (setq my:test callback-func)
-    (unless no-callback
-      (and callback-func (funcall callback-func selected))
-      )
+    (when (functionp callback-func)
+      (funcall callback-func selected))
     selected
     ))
 
@@ -2273,16 +2274,28 @@ here: URL `https://github.com/minad/consult'."
          (sources (remove nil (mapcar (lambda (source) (plist-get (cdr (assoc source consult-omni-sources-alist)) :source)) sources)))
          (prompt (or prompt (concat "[" (propertize "consult-omni-multi" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
          (selected
-          (car-safe (consult-omni--multi-dynamic
+          (consult-omni--multi-dynamic
                      sources
                      args
                      :prompt prompt
                      :sort t
                      :history '(:input consult-omni--search-history)
                      :initial (consult--async-split-initial initial)
-                     )))
-         (source (get-text-property 0 :source selected)))
-    (funcall (plist-get (cdr (assoc source consult-omni-sources-alist)) :on-callback) selected)
+                     ))
+         (match (plist-get (cdr selected) :match))
+         (source  (plist-get (cdr selected) :name))
+         (selected (cond
+                    ((consp selected) (car-safe selected))
+                    (t selected)))
+         (selected (if match selected (string-trim selected (consult--async-split-initial nil))))
+         (callback-func (and (not no-callback)
+                             (or (and match source (consult-omni--get-source-prop source :on-callback))
+                                 (and source (consult-omni--get-source-prop source :on-new)))
+                             )))
+
+    (when (functionp callback-func)
+      (funcall callback-func selected))
+
     selected
     ))
 
@@ -2303,17 +2316,26 @@ without any callback action.
          (sources (or sources consult-omni-static-sources))
          (sources (remove nil (mapcar (lambda (source) (consult-omni--get-source-prop source :source))  sources)))
          (prompt (or prompt (concat "[" (propertize "consult-omni-static" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
-         (selected
-          (car-safe (consult-omni--multi-static sources
+         (selected (consult-omni--multi-static sources
                                                input
                                                args
                                                :prompt prompt
                                                :history 'consult-omni--selection-history
                                                :sort t
-                                               )))
-         (source (get-text-property 0 :source selected)))
-        (unless no-callback
-          (funcall (plist-get (cdr (assoc source consult-omni-sources-alist)) :on-callback) selected))
+                                               ))
+         (match (plist-get (cdr selected) :match))
+         (source  (plist-get (cdr selected) :name))
+         (selected (cond
+                    ((consp selected) (car-safe selected))
+                    (t selected)))
+         (selected (if match selected (string-trim selected (consult--async-split-initial nil))))
+         (callback-func (and (not no-callback)
+                             (or (and match source (consult-omni--get-source-prop source :on-callback))
+                                 (and source (consult-omni--get-source-prop source :on-new)))
+                             )))
+
+    (when (functionp callback-func)
+      (funcall callback-func selected))
     selected
     ))
 
@@ -2336,16 +2358,27 @@ Refer to `consult-omni-multi' for more details."
          (sources (remove nil (mapcar (lambda (source) (plist-get (cdr (assoc source consult-omni-sources-alist)) :source)) sources)))
          (prompt (or prompt (concat "[" (propertize "consult-omni-scholar" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
          (selected
-          (car-safe (consult-omni--multi-dynamic
+          (consult-omni--multi-dynamic
                      sources
                      args
                      :prompt prompt
                      :sort t
                      :history '(:input consult-omni--search-history)
                      :initial (consult--async-split-initial initial)
-                     )))
-         (source (get-text-property 0 :source selected)))
-    (funcall (plist-get (cdr (assoc source consult-omni-sources-alist)) :on-callback) selected)
+                     ))
+         (match (plist-get (cdr selected) :match))
+         (source  (plist-get (cdr selected) :name))
+         (selected (cond
+                    ((consp selected) (car-safe selected))
+                    (t selected)))
+         (selected (if match selected (string-trim selected (consult--async-split-initial nil))))
+         (callback-func (and (not no-callback)
+                             (or (and match source (consult-omni--get-source-prop source :on-callback))
+                                 (and source (consult-omni--get-source-prop source :on-new)))
+                             )))
+    (when (functionp callback-func)
+      (funcall callback-func selected))
+
     selected
     ))
 
@@ -2370,17 +2403,28 @@ the minibuffer. See `consult-omni-multi' for more details."
          (sources (or sources consult-omni-omni-sources))
          (sources (remove nil (mapcar (lambda (source) (plist-get (cdr (assoc source consult-omni-sources-alist)) :source)) sources)))
          (prompt (or prompt (concat "[" (propertize "consult-omni-omni" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
-         (selected
-          (car-safe (consult-omni--multi-dynamic
+         (selected (consult-omni--multi-dynamic
                      sources
                      args
                      :prompt prompt
                      :sort t
                      :history '(:input consult-omni--search-history)
                      :initial (consult--async-split-initial initial)
-                     )))
-         (source (get-text-property 0 :source selected)))
-    (funcall (plist-get (cdr (assoc source consult-omni-sources-alist)) :on-callback) selected)
+                     ))
+         (match (plist-get (cdr selected) :match))
+         (source  (plist-get (cdr selected) :name))
+         (selected (cond
+                    ((consp selected) (car-safe selected))
+                    (t selected)))
+         (selected (if match selected (string-trim selected (consult--async-split-initial nil))))
+         (callback-func (and (not no-callback)
+                             (or (and match source (consult-omni--get-source-prop source :on-callback))
+                                 (and source (consult-omni--get-source-prop source :on-new)))
+                             )))
+
+    (when (functionp callback-func)
+      (funcall callback-func selected))
+
     selected
     ))
 

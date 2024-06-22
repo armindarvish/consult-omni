@@ -27,7 +27,7 @@
 
 Gets the default callback function from `consult-omni-sources-alist'."
   (let* ((source (and (stringp cand) (get-text-property 0 :source cand))))
-    (funcall (plist-get (cdr (assoc source consult-omni-sources-alist)) :on-callback) cand))
+    (funcall (consult-omni--get-source-prop source :on-callback) cand))
   )
 
 (add-to-list 'embark-default-action-overrides '(consult-omni . consult-omni-embark-default-action))
@@ -95,7 +95,7 @@ Gets the default callback function from `consult-omni-sources-alist'."
 
 Gets the preview function from `consult-omni-sources-alist'."
   (let* ((source (and (stringp cand) (get-text-property 0 :source cand))))
-    (funcall (plist-get (cdr (assoc source consult-omni-sources-alist)) :on-preview) cand))
+    (funcall (consult-omni--get-source-prop source :on-preview) cand))
   )
 
 ;;; Define Embark Keymaps

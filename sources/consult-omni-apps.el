@@ -85,11 +85,13 @@
     (make-process :name name
                 :connection-type 'pipe
                 :command cmds
-                )))
+                :buffer nil
+                )
+    nil))
 
 (defun consult-omni--apps-preview (cand)
   "Mdfind preview function."
-(funcall (consult--file-preview) 'preview cand))
+(ignore))
 
 (defun consult-omni--apps-callback (cand)
   "Mdfind callback function."
@@ -272,7 +274,7 @@ in `consult-omni-apps-paths'.
                            :on-preview #'ignore
                            :on-return #'identity
                            :on-callback #'consult-omni--apps-callback
-                           :preview-key consult-omni-preview-key
+                           :preview-key nil
                            :search-history 'consult-omni--search-history
                            :selection-history 'consult-omni--selection-history
                            :enabled (lambda () (boundp 'consult-omni-apps-paths))
