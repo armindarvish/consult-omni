@@ -120,7 +120,7 @@ FACE is the face to apply to TITLE
           annotated-results)))))
 
 (consult-omni-define-source "chatGPT"
-                           :narrow-char ?G
+                           :narrow-char ?a
                            :type 'dynamic
                            :require-match t
                            :face 'consult-omni-ai-source-face

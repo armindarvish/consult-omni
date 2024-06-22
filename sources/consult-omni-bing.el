@@ -75,7 +75,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                                 annotated-results)))))
 
 (consult-omni-define-source "Bing"
-                           :narrow-char ?m
+                           :narrow-char ?i
                            :type 'dynamic
                            :require-match t
                            :face 'consult-omni-engine-source-face

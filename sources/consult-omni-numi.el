@@ -51,6 +51,7 @@ See `consult-locate-args' for example."
 
 (consult-omni-define-source "Numi"
                            :narrow-char ?N
+                           :category 'consult-omni-calc
                            :type 'async
                            :require-match t
                            :face 'consult-omni-engine-source-face

@@ -62,7 +62,7 @@
               hl))))
 
 (consult-omni-define-source "GitHub"
-                           :narrow-char ?G
+                           :narrow-char ?h
                            :type 'async
                            :require-match nil
                            :category 'consult-gh-repos

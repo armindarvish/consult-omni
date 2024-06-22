@@ -213,7 +213,7 @@ FACE is the face to apply to TITLE
                               ))))
 
 (consult-omni-define-source "Invidious"
-                           :narrow-char ?I
+                           :narrow-char ?y
                            :type 'dynamic
                            :require-match t
                            :category 'consult-omni-video

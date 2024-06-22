@@ -66,7 +66,7 @@
           ))
 
 (consult-omni-define-source "doiorg"
-                           :narrow-char ?d
+                           :narrow-char ?D
                            :type 'sync
                            :require-match t
                            :face 'link

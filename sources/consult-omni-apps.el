@@ -267,7 +267,8 @@ in `consult-omni-apps-paths'.
  )))
 
 (consult-omni-define-source "Apps"
-                           :narrow-char ?a
+                           :narrow-char ?A
+                           :category 'consult-omni-apps
                            :type 'sync
                            :require-match t
                            :request #'consult-omni--apps-list-apps
@@ -276,7 +277,7 @@ in `consult-omni-apps-paths'.
                            :on-callback #'consult-omni--apps-callback
                            :preview-key nil
                            :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :selection-history 'consult-omni--apps-select-history
                            :enabled (lambda () (boundp 'consult-omni-apps-paths))
                            :group #'consult-omni--group-function
                            :sort t

@@ -87,7 +87,7 @@ FACE is the face to apply to TITLE"
     annotated-results))
 
 (consult-omni-define-source "buffers text search"
-                           :narrow-char ?L
+                           :narrow-char ?s
                            :type 'sync
                            :require-match t
                            :category 'consult-location

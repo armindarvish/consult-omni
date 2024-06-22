@@ -80,7 +80,7 @@ SNIPPET is a string containing a snippet/description of candidate
               results)))
 
 (consult-omni-define-source "Browser History"
-                           :narrow-char ?h
+                           :narrow-char ?H
                            :type 'sync
                            :require-match nil
                            :face 'consult-omni-engine-source-face

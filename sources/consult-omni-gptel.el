@@ -177,7 +177,6 @@ The preview buffer is from `consult-omni--gptel-response-preview'."
                             :model model
                             :stream stream
                             :backend backend)))
-    (setq my:test annotated-results)
     (when annotated-results
       (when callback
         (funcall callback (list annotated-results)))
@@ -238,7 +237,7 @@ metadata so it can be send to `gptel'."
     ))
 
 (consult-omni-define-source "gptel"
-                           :narrow-char ?G
+                           :narrow-char ?a
                            :type 'dynamic
                            :require-match t
                            :face 'consult-omni-ai-source-face
