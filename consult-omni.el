@@ -265,6 +265,12 @@ By default inherits from `consult-async-refresh-delay'. "
 (defvar consult-omni-scholar-category 'consult-omni-scholar
   "Category symbol for scholar search")
 
+(defvar consult-omni-apps-category 'consult-omni-apps
+  "Category symbol for app launcher")
+
+(defvar consult-omni-calc-category 'consult-omni-calc
+  "Category symbol for calculator")
+
 (defvar consult-omni-video-category 'consult-omni-video
   "Category symbol for video search")
 
@@ -273,6 +279,12 @@ By default inherits from `consult-async-refresh-delay'. "
 
 (defvar consult-omni--search-history (list)
   "History variable that keeps search terms.")
+
+(defvar consult-omni--calc-select-history (list)
+  "History variable that keeps selected calc result.")
+
+(defvar consult-omni--apps-select-history (list)
+  "History variable that keeps list of selected.")
 
 (defvar consult-omni-sources-alist (list)
   "Alist of all sources.
@@ -1564,14 +1576,12 @@ for use in a dynamically updated multi-source command
                (process-adaptive-read-buffering nil))
           (funcall async 'indicator 'running)
           (consult-omni--async-log "consult--async-process started %S\n" args)
-          (setq my:test args)
           (setq count 0
                 proc-buf (generate-new-buffer (concat " *consult-omni-async-stderr-" name "*"))
                 proc (apply #'make-process
                             `(,@props
                               :connection-type pipe
                               :name ,(car args)
-                              ;; :stderr ,proc-buf
                               :process-buffer ,proc-buf
                               :noquery t
                               :command ,args
@@ -1861,7 +1871,6 @@ Do not use this function directly, use `consult-omni-define-source' macro
                             (and source (consult-omni--get-source-prop source :on-new)))
                              )))
     (add-to-history selection-history-var title)
-    ;; (setq my:test callback-func)
     (when (functionp callback-func)
       (funcall callback-func selected))
     selected

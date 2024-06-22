@@ -277,6 +277,7 @@ By default inherits from `consult-async-refresh-delay'. "
 #+end_src
 
 *** other variables
+**** categories
 #+begin_src emacs-lisp
 ;;; Other Variables
 
@@ -289,14 +290,33 @@ By default inherits from `consult-async-refresh-delay'. "
 (defvar consult-omni-scholar-category 'consult-omni-scholar
   "Category symbol for scholar search")
 
+(defvar consult-omni-apps-category 'consult-omni-apps
+  "Category symbol for app launcher")
+
+(defvar consult-omni-calc-category 'consult-omni-calc
+  "Category symbol for calculator")
+
 (defvar consult-omni-video-category 'consult-omni-video
   "Category symbol for video search")
 
+#+end_src
+
+**** history variables
+#+begin_src emacs-lisp
 (defvar consult-omni--selection-history (list)
   "History variable that keeps selected items.")
 
 (defvar consult-omni--search-history (list)
   "History variable that keeps search terms.")
+
+(defvar consult-omni--calc-select-history (list)
+  "History variable that keeps selected calc result.")
+
+(defvar consult-omni--apps-select-history (list)
+  "History variable that keeps list of selected.")
+#+end_src
+**** others
+#+begin_src emacs-lisp
 
 (defvar consult-omni-sources-alist (list)
   "Alist of all sources.
@@ -1777,14 +1797,12 @@ for use in a dynamically updated multi-source command
                (process-adaptive-read-buffering nil))
           (funcall async 'indicator 'running)
           (consult-omni--async-log "consult--async-process started %S\n" args)
-          (setq my:test args)
           (setq count 0
                 proc-buf (generate-new-buffer (concat " *consult-omni-async-stderr-" name "*"))
                 proc (apply #'make-process
                             `(,@props
                               :connection-type pipe
                               :name ,(car args)
-                              ;; :stderr ,proc-buf
                               :process-buffer ,proc-buf
                               :noquery t
                               :command ,args
@@ -2118,7 +2136,6 @@ Do not use this function directly, use `consult-omni-define-source' macro
                             (and source (consult-omni--get-source-prop source :on-new)))
                              )))
     (add-to-history selection-history-var title)
-    ;; (setq my:test callback-func)
     (when (functionp callback-func)
       (funcall callback-func selected))
     selected
@@ -2759,6 +2776,25 @@ This is for conviniece to call the favorite consult-omni interactive command."
 (require 'consult-omni)
 
 #+end_src
+** Define Group, Customs, Vars, Etc.
+*** customization variables
+#+begin_src emacs-lisp
+;;; Customization Variables
+(defcustom consult-omni-embark-default-term  #'eshell
+  "consult-omni default terminal to use in embark actions"
+  :type '(choice (function :tag "(Default) eshell" #'eshell)
+                 (function :tag "shell" #'shell)
+                 (function :tag "term" #'term)
+                 (function :tag "ansi-term" #'ansi-term)
+                 (function :tag "vterm" #'vterm)
+                 (function :tag "vterm" #'eat)
+                 (function :tag "Custom Function" function)))
+
+#+end_src
+
+*** other variables
+*** define faces
+
 ** General
 *** actions
 #+begin_src emacs-lisp
@@ -2864,6 +2900,13 @@ Gets the preview function from `consult-omni-sources-alist'."
 
 #+end_src
 ** Scholar
+*** variables
+#+begin_src emacs-lisp
+(defcustom consult-omni-embark-scholar-make-note-func  #'consult-omni-embark-scholar-default-note
+  "consult-omni default terminal to use in embark actions"
+  :type '(choice (function :tag "(Default) Make Note with Title, Link, Journal, Authors... " #'consult-omni-embark-scholar-default-note)
+                 (function :tag "Custom Function" function)))
+#+end_src
 *** actions
 #+begin_src emacs-lisp
 (defun consult-omni-embark-scholar-external-browse-doi (cand)
@@ -2882,6 +2925,72 @@ Gets the preview function from `consult-omni-sources-alist'."
   (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
       (insert (string-trim (mapconcat #'identity authors ", ")))
     ))
+
+(defun consult-omni-embark-scholar-default-note (cand)
+  "insert note snippet for article"
+  (let* ((url (and (stringp cand) (get-text-property 0 :url cand)))
+         (url (and (stringp url) (string-trim url)))
+         (doi (and (stringp cand) (get-text-property 0 :doi cand)))
+         (doi (if (and doi (stringp doi)) (concat "https://doi.org/" doi)))
+         (source (and (stringp cand) (get-text-property 0 :source cand)))
+         (url (if (and (equal source "Scopus") doi)
+                doi
+                url))
+         (title (and (stringp cand) (get-text-property 0 :title cand)))
+         (authors (and (stringp cand) (get-text-property 0 :authors cand)))
+         (authors (cond
+                  ((and (listp authors) (= (length authors) 1))
+                   (car authors))
+                  ((listp authors)
+                   (mapconcat #'identity authors ", "))
+                  (t authors)))
+
+         (journal  (and (stringp cand) (get-text-property 0 :journal cand)))
+        (date (and (stringp cand) (get-text-property 0 :date cand))))
+
+    (cond
+      ((derived-mode-p 'org-mode)
+       (concat
+                "\n"
+                (cond
+                 ((and url title) (format "** [[%s][%s]]\n" url title))
+                 (url (format "** [[%s]]\n" url))
+                 (title (format "** %s\n" title)))
+                (if authors (format "\n%s" authors))
+                (if journal (format "\nin =%s= " journal))
+                (if date (format "published on [%s]\n" date) "\n")
+                "\n*** Notes\n"
+                ))
+      ((derived-mode-p 'markdown-mode)
+       (concat
+                "\n"
+                (cond
+                 ((and url title) (format "## [%s](%s)\n" url title))
+                 (url (format "## <%s>\n" url))
+                 (title (format "## %s\n" title)))
+                (if authors (format "\n%s" authors))
+                (if journal (format "\nin **%s** " journal))
+                (if date (format "published on %s\n" date) "\n")
+                "\n### Notes\n"
+                ))
+      (t
+       (concat
+                "\n"
+                (cond
+                 ((and url title) (format "** %s (%s)\n" title  url))
+                 (url (format "** %s\n" url))
+                 (title (format "** %s\n" title)))
+                (if authors (format "\n%s" authors))
+                (if journal (format "\nin %s " journal))
+                (if date (format "published on %s\n" date) "\n")
+                "\n*** Notes\n"
+                ))
+
+      )))
+
+(defun consult-omni-embark-scholar-insert-note (cand)
+  (insert (funcall consult-omni-embark-scholar-make-note-func cand)))
+
 #+end_src
 *** keymap
 #+begin_src emacs-lisp
@@ -2892,6 +3001,7 @@ Gets the preview function from `consult-omni-sources-alist'."
   "o d" #'consult-omni-embark-scholar-external-browse-doi
   "w a" #'consult-omni-embark-scholar-copy-authors-as-kill
   "i a" #'consult-omni-embark-scholar-insert-authors
+  "i n" #'consult-omni-embark-scholar-insert-note
   )
 
 (add-to-list 'embark-keymap-alist '(consult-omni-scholar . consult-omni-embark-scholar-actions-map))
@@ -2899,17 +3009,175 @@ Gets the preview function from `consult-omni-sources-alist'."
 (add-to-list 'embark-default-action-overrides '(consult-omni-scholar . consult-omni-embark-default-action))
 
 #+end_src
-** Video
+
+
+
+
+
+** Apps
 *** actions
 #+begin_src emacs-lisp
+;;; Define Embark Action Functions
+
+(defun consult-omni-embark-apps-open-finder (cand)
+  "Insert the file location in finder"
+  (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand))))
+      (pcase system-type
+        ('darwin (call-process "open" nil 0 nil path "-R"))
+        ('cygwin (call-process "cygstart" nil 0 nil path))
+        ('windows-nt (and (fboundp 'w32-shell-execute) (w32-shell-execute "open" path)))
+        (_ (call-process "xdg-open" nil 0 nil path))
+        )))
+
+(defun consult-omni-embark-apps-find-file (cand)
+  "Insert the file location in finder"
+  (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand)))
+            (directory (and (file-exists-p (file-truename path)) (file-truename path)))
+            (default-directory directory))
+      (call-interactively #'find-file)))
+
+(defun consult-omni-embark-apps-open-externally (cand)
+  "Open FILE or url using system's default application."
+  (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
+    (pcase system-type
+      ('darwin (call-process "open" nil 0 nil path))
+      ('cygwin (call-process "cygstart" nil 0 nil path))
+      ('windows-nt (and (fboundp 'w32-shell-execute) (w32-shell-execute "open" path)))
+      (_ (call-process "xdg-open" nil 0 nil path))
+        )
+    nil))
+
+(defun consult-omni-embark-apps-open-term (cand)
+  "Open FILE or url using system's default application."
+  (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand)))
+            (directory (and (file-exists-p (file-truename path)) (file-truename path)))
+            (default-directory directory))
+      (funcall consult-omni-embark-default-term)))
+
+(defun consult-omni-embark-apps-insert-path (cand)
+  "Insert the title oif the candidate at point"
+  (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
+      (insert (format " %s " path))))
+
+(defun consult-omni-embark-apps-copy-path-as-kill (cand)
+  "Insert the title oif the candidate at point"
+  (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
+       (kill-new (format " %s " path))))
+#+end_src
+*** keymap
+#+begin_src emacs-lisp
+
+;;; Define Embark Keymaps
+
+(defvar-keymap consult-omni-embark-apps-actions-map
+  :doc "Keymap for consult-omni-embark"
+  :parent consult-omni-embark-general-actions-map
+  "x"  #'consult-omni-embark-apps-open-externally
+  "f"  #'consult-omni-embark-apps-find-file
+  "o f"  #'consult-omni-embark-apps-find-file
+  "o o" #'consult-omni-embark-apps-open-finder
+  "o t" #'consult-omni-embark-apps-open-term
+  "w p" #'consult-omni-embark-apps-copy-path-as-kil
+  )
+
+(add-to-list 'embark-keymap-alist '(consult-omni-apps . consult-omni-embark-apps-actions-map))
+(add-to-list 'embark-default-action-overrides '(consult-omni-apps . consult-omni-embark-default-action))
 
 #+end_src
+** Calc
+*** actions
+#+begin_src emacs-lisp
+;;; Define Embark Action Functions
+
+(defun consult-omni-embark-calc-copy-results-as-kill (cand)
+  "Copy the results of the calculator to `kill-ring'."
+  (if-let ((results (and (stringp cand) (get-text-property 0 :title cand))))
+      (kill-new (format " %s " results))
+    ))
+
+(defun consult-omni-embark-calc-insert-results (cand)
+  "Insert the title oif the candidate at point"
+  (if-let (results (and (stringp cand) (get-text-property 0 :title cand)))
+      (insert (format " %s " results))))
+
+(defun consult-omni-embark-calc-copy-formula-as-kill (cand)
+  "Copy the results of the calculator to `kill-ring'."
+  (if-let ((formula (and (stringp cand) (get-text-property 0 :query cand))))
+      (kill-new (format " %s " formula))
+    ))
+
+(defun consult-omni-embark-calc-insert-formula (cand)
+  "Insert the title oif the candidate at point"
+  (if-let (formula (and (stringp cand) (get-text-property 0 :query cand)))
+      (insert (format " %s " formula))))
+
+#+end_src
+*** keymap
+#+begin_src emacs-lisp
+
+;;; Define Embark Keymaps
+
+(defvar-keymap consult-omni-embark-calc-actions-map
+  :doc "Keymap for consult-omni-embark"
+  :parent embark-general-map
+  "w r"  #'consult-omni-embark-calc-copy-results-as-kill
+  "w f"  #'consult-omni-embark-calc-copy-formula-as-kill
+  "i r"  #'consult-omni-embark-calc-insert-results
+  "i f"  #'consult-omni-embark-calc-insert-formula
+  )
+
+(add-to-list 'embark-keymap-alist '(consult-omni-calc . consult-omni-embark-calc-actions-map))
+(add-to-list 'embark-default-action-overrides '(consult-omni-calc . consult-omni-embark-default-action))
+
+#+end_src
+** Video
+*** variables
+#+begin_src emacs-lisp
+(defcustom consult-omni-embark-video-default-player  (executable-find "mpv")
+  "consult-omni default terminal to use in embark actions"
+  :type '(choice (string :tag "(Default) mpv executable command" (executable-find "mpv"))
+                 (function :tag "play with mpv package" mpv-play-url)
+                 (function :tag "Custom Function" function)
+                 (string :tag "Custom Executable Command" string)))
+#+end_src
+
+*** actions
+#+begin_src emacs-lisp :lexical t
+(defun consult-omni-play-url-with-app (url)
+  (interactive (let* ((cand (consult-omni-youtube nil "Search Youtube:  " t))
+                      (link (get-text-property 0 :url cand)))
+                 (list link)))
+  (cond
+   ((stringp consult-omni-embark-video-default-player)
+    (if-let ((cmd (executable-find consult-omni-embark-video-default-player)))
+        (progn
+          (start-process "consult-omni-mpv" nil cmd url)
+          (message "Opening with %s ..." consult-omni-embark-video-default-player))
+      (message "executable %s not found")
+      ))
+   ((symbolp consult-omni-embark-video-default-player)
+    (if (functionp consult-omni-embark-video-default-player)
+        (progn (funcall consult-omni-embark-video-default-player url)
+               (message "Opening with %s ..." consult-omni-embark-video-default-player))
+      (message "Symbol function definition is void: %s"  consult-omni-embark-video-default-player)))
+   ))
+
+(defun consult-omni-embark-video-play-with-app (cand)
+  "Open FILE or url using system's default application."
+  (if-let* ((url (and (stringp cand) (get-text-property 0 :url cand))))
+      (consult-omni-play-url-with-app url)
+    ))
+
+#+end_src
+
+
 *** keymap
 #+begin_src emacs-lisp
 
 (defvar-keymap consult-omni-embark-video-actions-map
   :doc "Keymap for consult-omni-embark-video"
   :parent consult-omni-embark-general-actions-map
+  "o x" #'consult-omni-embark-video-play-with-app
   )
 
 (add-to-list 'embark-keymap-alist '(consult-omni-video . consult-omni-embark-video-actions-map))
@@ -2917,6 +3185,7 @@ Gets the preview function from `consult-omni-sources-alist'."
 (add-to-list 'embark-default-action-overrides '(consult-omni-video . consult-omni-embark-default-action))
 
 #+end_src
+
 
 ** Provide and Footer
 #+begin_src emacs-lisp
@@ -3327,7 +3596,8 @@ in `consult-omni-apps-paths'.
 #+begin_src emacs-lisp
 
 (consult-omni-define-source "Apps"
-                           :narrow-char ?a
+                           :narrow-char ?A
+                           :category 'consult-omni-apps
                            :type 'sync
                            :require-match t
                            :request #'consult-omni--apps-list-apps
@@ -3336,7 +3606,7 @@ in `consult-omni-apps-paths'.
                            :on-callback #'consult-omni--apps-callback
                            :preview-key nil
                            :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :selection-history 'consult-omni--apps-select-history
                            :enabled (lambda () (boundp 'consult-omni-apps-paths))
                            :group #'consult-omni--group-function
                            :sort t
@@ -3448,7 +3718,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
 #+begin_src emacs-lisp
 
 (consult-omni-define-source "Bing"
-                           :narrow-char ?m
+                           :narrow-char ?i
                            :type 'dynamic
                            :require-match t
                            :face 'consult-omni-engine-source-face
@@ -3830,7 +4100,7 @@ SNIPPET is a string containing a snippet/description of candidate
 #+begin_src emacs-lisp
 
 (consult-omni-define-source "Browser History"
-                           :narrow-char ?h
+                           :narrow-char ?H
                            :type 'sync
                            :require-match nil
                            :face 'consult-omni-engine-source-face
@@ -3964,7 +4234,8 @@ This uses `calc-eval' to return the result of input"
 #+begin_src emacs-lisp
 
 (consult-omni-define-source "calc"
-                           :narrow-char ?C
+                           :narrow-char ?c
+                           :category 'consult-omni-calc
                            :type 'sync
                            :require-match t
                            :face 'consult-omni-date-face
@@ -3981,7 +4252,6 @@ This uses `calc-eval' to return the result of input"
                            :static 'both
                            :annotate nil
                            )
-
 #+end_src
 
 **** provide and footer
@@ -4142,7 +4412,7 @@ FACE is the face to apply to TITLE
 #+begin_src emacs-lisp
 
 (consult-omni-define-source "chatGPT"
-                           :narrow-char ?G
+                           :narrow-char ?a
                            :type 'dynamic
                            :require-match t
                            :face 'consult-omni-ai-source-face
@@ -4286,7 +4556,7 @@ FACE is the face to apply to TITLE"
 #+begin_src emacs-lisp
 
 (consult-omni-define-source "buffers text search"
-                           :narrow-char ?L
+                           :narrow-char ?s
                            :type 'sync
                            :require-match t
                            :category 'consult-location
@@ -4588,7 +4858,7 @@ FACE is the face to apply to TITLE"
 **** define source
 #+begin_src emacs-lisp
 (consult-omni-define-source "GitHub"
-                           :narrow-char ?G
+                           :narrow-char ?h
                            :type 'async
                            :require-match nil
                            :category 'consult-gh-repos
@@ -5857,7 +6127,7 @@ cand
 #+begin_src emacs-lisp
 
 (consult-omni-define-source "doiorg"
-                           :narrow-char ?d
+                           :narrow-char ?D
                            :type 'sync
                            :require-match t
                            :face 'link
@@ -6658,7 +6928,6 @@ The preview buffer is from `consult-omni--gptel-response-preview'."
                             :model model
                             :stream stream
                             :backend backend)))
-    (setq my:test annotated-results)
     (when annotated-results
       (when callback
         (funcall callback (list annotated-results)))
@@ -6726,7 +6995,7 @@ metadata so it can be send to `gptel'."
 #+begin_src emacs-lisp
 
 (consult-omni-define-source "gptel"
-                           :narrow-char ?G
+                           :narrow-char ?a
                            :type 'dynamic
                            :require-match t
                            :face 'consult-omni-ai-source-face
@@ -6993,7 +7262,7 @@ FACE is the face to apply to TITLE
 **** define source
 #+begin_src emacs-lisp
 (consult-omni-define-source "Invidious"
-                           :narrow-char ?I
+                           :narrow-char ?y
                            :type 'dynamic
                            :require-match t
                            :category 'consult-omni-video
@@ -7021,7 +7290,7 @@ FACE is the face to apply to TITLE
 #+end_src
 
 
-*** numi
+*** Numi
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-numi.el
 :END:
@@ -7101,6 +7370,7 @@ See `consult-locate-args' for example."
 #+begin_src emacs-lisp
 (consult-omni-define-source "Numi"
                            :narrow-char ?N
+                           :category 'consult-omni-calc
                            :type 'async
                            :require-match t
                            :face 'consult-omni-engine-source-face
