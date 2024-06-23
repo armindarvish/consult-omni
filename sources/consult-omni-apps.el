@@ -121,7 +121,7 @@ QUERY is the query input from the user"
          (snippet (and (stringp snippet) (consult-omni--set-string-width snippet (* 3 frame-width-percent))))
          (snippet (and (stringp snippet) (propertize snippet 'face 'consult-omni-snippet-face)))
          (match-str (and (stringp query) (consult--split-escaped query) nil))
-         (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-files-source-face))
+         (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-files-title-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 4 frame-width-percent)))
          (str (concat title-str
@@ -284,8 +284,8 @@ in `consult-omni-apps-paths'.
                            :on-return #'identity
                            :on-callback #'consult-omni--apps-callback
                            :preview-key nil
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--apps-select-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--apps-select-history
                            :enabled (lambda () (boundp 'consult-omni-apps-paths))
                            :group #'consult-omni--group-function
                            :sort t

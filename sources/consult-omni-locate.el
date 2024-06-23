@@ -74,7 +74,7 @@ Similar to `consult-locate-args' bur for consult-omni."
                            :category 'file
                            :type 'async
                            :require-match t
-                           :face 'consult-omni-engine-source-face
+                           :face 'consult-omni-engine-title-face
                            :request #'consult-omni--locate-builder
                            ;; :transform nil
                            :filter #'consult-omni--locate-filter
@@ -82,8 +82,8 @@ Similar to `consult-locate-args' bur for consult-omni."
                            :on-return #'identity
                            :on-callback #'consult-omni--locate-callback
                            :preview-key consult-omni-preview-key
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :group #'consult-omni--group-function
                            :enabled (lambda () (if (executable-find "locate") t nil))
                            :sort t
@@ -173,14 +173,14 @@ See `consult-locate-args' for example."
                            :category 'file
                            :type 'async
                            :require-match t
-                           :face 'consult-omni-engine-source-face
+                           :face 'consult-omni-engine-title-face
                            :request #'consult-omni--mdfind-builder
                            :on-preview #'consult-omni--mdfind-preview
                            :on-return #'identity
                            :on-callback #'consult-omni--mdfind-callback
                            :preview-key consult-omni-preview-key
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :group #'consult-omni--group-function
                            :enabled (lambda () (if (executable-find "mdfind") t nil))
                            :sort t

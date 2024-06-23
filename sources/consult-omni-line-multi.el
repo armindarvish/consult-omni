@@ -94,8 +94,8 @@ FACE is the face to apply to TITLE"
                            :face 'default
                            :request #'consult-omni--line-multi-fetch-results
                            :preview-key consult-preview-key
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :on-preview #'consult-omni--line-multi-preview
                            :on-return #'identity
                            :on-callback #'consult-omni--line-multi-preview

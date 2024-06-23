@@ -102,11 +102,11 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                            :narrow-char ?g
                            :type 'dynamic
                            :require-match t
-                           :face 'consult-omni-engine-source-face
+                           :face 'consult-omni-engine-title-face
                            :request #'consult-omni--google-fetch-results
                            :preview-key consult-omni-preview-key
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :enabled (lambda () (bound-and-true-p consult-omni-google-customsearch-key))
                            :group #'consult-omni--group-function
                            :sort t

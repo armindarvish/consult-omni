@@ -31,8 +31,8 @@
                                               :on-preview #'consult-omni--consult-buffer-preview
                                               :on-return #'identity
                                               :on-callback #'consult--buffer-action
-                                              :search-history 'consult-omni--search-history
-                                              :selection-history 'consult-omni--selection-history
+                                              :search-hist 'consult-omni--search-history
+                                              :select-hist 'consult-omni--selection-history
                                               :static 'both
                                               :preview-key 'consult-omni-preview-key
                                               :group #'consult-omni--group-function

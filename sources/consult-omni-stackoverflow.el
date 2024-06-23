@@ -134,11 +134,11 @@ See URL `https://api.stackexchange.com/' for more info.
                            :narrow-char ?s
                            :type 'dynamic
                            :require-match t
-                           :face 'consult-omni-engine-source-face
+                           :face 'consult-omni-engine-title-face
                            :request #'consult-omni--stackoverflow-fetch-results
                            :preview-key consult-omni-preview-key
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :enabled (lambda () (bound-and-true-p consult-omni-stackexchange-api-key))
                            :group #'consult-omni--group-function
                            :sort t

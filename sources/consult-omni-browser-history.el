@@ -83,11 +83,11 @@ SNIPPET is a string containing a snippet/description of candidate
                            :narrow-char ?H
                            :type 'sync
                            :require-match nil
-                           :face 'consult-omni-engine-source-face
+                           :face 'consult-omni-engine-title-face
                            :request #'consult-omni--browser-history-fetch-results
                            :preview-key consult-omni-preview-key
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :enabled (lambda () (fboundp 'browser-hist-search))
                            :group #'consult-omni--group-function
                            :sort t

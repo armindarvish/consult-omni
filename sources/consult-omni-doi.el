@@ -72,8 +72,8 @@
                            :face 'link
                            :request #'consult-omni--doiorg-fetch-results
                            :preview-key consult-omni-preview-key
-                           :search-history 'consult-omni--doi-search-history
-                           :selection-history 'consult-omni--doi-selection-history
+                           :search-hist 'consult-omni--doi-search-history
+                           :select-hist 'consult-omni--doi-selection-history
                            :enabled (lambda () (bound-and-true-p consult-omni-doiorg-search-url))
                            :group #'consult-omni--group-function
                            :sort t

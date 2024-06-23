@@ -41,7 +41,7 @@ FACE is the face to apply to TITLE
 "
   (let* ((source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (title-str (consult-omni--set-string-width title (floor (* (frame-width) 0.4))))
-         (title-str (propertize title-str 'face (or face 'consult-omni-ai-source-face)))
+         (title-str (propertize title-str 'face (or face 'consult-omni-ai-title-face)))
          (str (concat title-str "\t"
                       (propertize " " 'display '(space :align-to center))
                       (if model (propertize (format "model: %s" model) 'face 'consult-omni-path-face))
@@ -123,14 +123,14 @@ FACE is the face to apply to TITLE
                            :narrow-char ?a
                            :type 'dynamic
                            :require-match t
-                           :face 'consult-omni-ai-source-face
+                           :face 'consult-omni-ai-title-face
                            :request #'consult-omni--chatgpt-fetch-results
                            :preview-key consult-omni-preview-key
                            :on-preview #'consult-omni--chatgpt-preview
                            :on-return #'identity
                            :on-callback #'consult-omni--chatgpt-preview
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :enabled (lambda () (bound-and-true-p consult-omni-openai-api-key))
                            :group #'consult-omni--group-function
                            :sort t

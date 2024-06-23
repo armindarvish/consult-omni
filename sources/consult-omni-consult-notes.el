@@ -60,14 +60,14 @@
   (consult-omni--make-source-from-consult-source 'consult-notes-org-headings--source
                                                 :category 'file
                                                 :type 'sync
-                                                :face 'consult-omni-notes-source-face
-                                                :search-history 'consult-omni--search-history
-                                                :selection-history 'consult-omni--selection-history
+                                                :face 'consult-omni-notes-title-face
+                                                :search-hist 'consult-omni--search-history
+                                                :select-hist 'consult-omni--selection-history
                                                 :on-preview #'consult-omni--org-headings-preview
                                                 :on-return #'identity
                                                 :on-callback #'consult-omni--org-headings-callback
-                                                :search-history 'consult-omni--search-history
-                                                :selection-history 'consult-omni--selection-history
+                                                :search-hist 'consult-omni--search-history
+                                                :select-hist 'consult-omni--selection-history
                                                 :preview-key 'consult-preview-key
                                                 :group #'consult-omni--group-function
                                                 :enabled (lambda () consult-notes-org-headings-mode)
@@ -79,9 +79,9 @@
            do (consult-omni--make-source-from-consult-source source
                                                             :category 'file
                                                             :type 'sync
-                                                            :face 'consult-omni-notes-source-face
-                                                            :search-history 'consult-omni--search-history
-                                                            :selection-history 'consult-omni--selection-history
+                                                            :face 'consult-omni-notes-title-face
+                                                            :search-hist 'consult-omni--search-history
+                                                            :select-hist 'consult-omni--selection-history
                                                             :on-preview #'consult-omni--org-roam-note-preview
                                                             :on-return #'identity
                                                             :on-callback #'consult-omni--org-roam-note-callback

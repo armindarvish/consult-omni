@@ -54,15 +54,15 @@ See `consult-locate-args' for example."
                            :category 'consult-omni-calc
                            :type 'async
                            :require-match t
-                           :face 'consult-omni-engine-source-face
+                           :face 'consult-omni-engine-title-face
                            :request #'consult-omni--numi-builder
                            :filter #'consult-omni--numi-filter
                            :on-preview #'ignore
                            :on-return #'identity
                            :on-callback #'consult-omni--numi-callback
                            :preview-key consult-omni-preview-key
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :group #'consult-omni--group-function
                            :enabled (lambda () (if (executable-find "numi-cli") t nil))
                            :sort t

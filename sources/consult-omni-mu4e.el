@@ -114,15 +114,15 @@ cand
                            :type 'dynamic
                            :require-match nil
                            :category 'consult-mu-messages
-                           :face 'consult-omni-engine-source-face
+                           :face 'consult-omni-engine-title-face
                            :request #'consult-omni--mu-fetch-results
                            :lookup #'consult-mu--lookup
                            :on-preview #'consult-omni--mu-preview
                            :on-return #'consult-omni--mu-return
                            :on-callback #'consult-omni--mu-callback
                            :preview-key consult-omni-preview-key
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :enabled (lambda () (if (and (executable-find "mu")
                                                    (fboundp 'consult-mu))
                                                    t nil))

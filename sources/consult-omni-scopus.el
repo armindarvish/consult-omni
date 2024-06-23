@@ -165,14 +165,14 @@ FACE is the face to apply to TITLE
                            :type 'dynamic
                            :require-match t
                            :category 'consult-omni-scholar
-                           :face 'consult-omni-scholar-source-face
+                           :face 'consult-omni-scholar-title-face
                            :request #'consult-omni--scopus-fetch-results
                            :preview-key consult-omni-preview-key
                            :on-preview #'consult-omni--scopus-preview
                            :on-return #'identity
                            :on-callback #'consult-omni--scopus-callback
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :enabled (lambda () (bound-and-true-p consult-omni-scopus-api-key))
                            :group #'consult-omni--group-function
                            :sort t

@@ -91,14 +91,14 @@ See URL `https://brave.com/search/api/' for more info"
                            :narrow-char ?B
                            :type 'dynamic
                            :require-match nil
-                           :face 'consult-omni-engine-source-face
+                           :face 'consult-omni-engine-title-face
                            :request #'consult-omni--brave-autosuggest-fetch-results
                            :group #'consult-omni--group-function
                            :on-preview #'ignore
                            :on-return #'consult-omni--brave-autosuggest-return
                            :on-callback #'string-trim
-                           :search-history 'consult-omni--search-history
-                           :selection-history t
+                           :search-hist 'consult-omni--search-history
+                           :select-hist t
                            :enabled (lambda () (bound-and-true-p consult-omni-brave-autosuggest-api-key))
                            :sort t
                            :static nil

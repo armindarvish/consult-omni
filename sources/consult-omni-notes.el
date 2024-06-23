@@ -108,15 +108,15 @@
                            :narrow-char ?n
                            :type 'async
                            :require-match nil
-                           :face 'consult-omni-engine-source-face
+                           :face 'consult-omni-engine-title-face
                            :request #'consult-omni--notes-builder
                            :transform #'consult-omni--notes-transform
                            :on-preview #'consult-omni--grep-preview
                            :on-return #'identity
                            :on-callback #'consult-omni--grep-callback
                            :preview-key 'any
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :group #'consult-omni--group-function
                            ;;:group #'consult--prefix-group
                            :sort t

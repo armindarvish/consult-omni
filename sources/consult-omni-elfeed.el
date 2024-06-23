@@ -146,8 +146,8 @@ if FILTER is non-nil, it is used as additional filter parameters.
                            :on-return #'identity
                            :on-callback #'consult-omni--elfeed-preview
                            :preview-key consult-omni-preview-key
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :enabled (lambda () (boundp 'elfeed-db))
                            :group #'consult-omni--group-function
                            :sort t

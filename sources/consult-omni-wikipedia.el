@@ -120,11 +120,11 @@ FACE is the face to apply to TITLE
                            :narrow-char ?w
                            :type 'dynamic
                            :require-match t
-                           :face 'consult-omni-engine-source-face
+                           :face 'consult-omni-engine-title-face
                            :request #'consult-omni--wikipedia-fetch-results
                            :preview-key consult-omni-preview-key
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :enabled (lambda () (boundp  'consult-omni-wikipedia-api-url))
                            :group #'consult-omni--group-function
                            :sort t

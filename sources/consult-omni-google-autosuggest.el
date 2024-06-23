@@ -70,13 +70,13 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                            :narrow-char ?G
                            :type 'dynamic
                            :require-match nil
-                           :face 'consult-omni-engine-source-face
+                           :face 'consult-omni-engine-title-face
                            :request #'consult-omni--google-autosuggest-fetch-results
                            :on-preview #'ignore
                            :on-return #'identity
                            :on-callback #'string-trim
-                           :search-history 'consult-omni--search-history
-                           :selection-history t
+                           :search-hist 'consult-omni--search-history
+                           :select-hist t
                            :group #'consult-omni--group-function
                            :enabled (lambda () (boundp consult-omni-google-autosuggest-api-url))
                            :sort t

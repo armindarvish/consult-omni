@@ -66,14 +66,14 @@
                            :type 'async
                            :require-match nil
                            :category 'consult-gh-repos
-                           :face 'consult-omni-engine-source-face
+                           :face 'consult-omni-engine-title-face
                            :request #'consult-omni--gh-search-repos-builder
                            :on-preview #'consult-omni--gh-preview
                            :on-return #'identity
                            :on-callback #'consult-omni--gh-callback
                            :preview-key consult-omni-preview-key
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :group #'consult-omni--group-function
                            :sort t
                            :static 'both

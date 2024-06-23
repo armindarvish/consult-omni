@@ -77,7 +77,7 @@ Similar to `consult-find-args' bur for consult-omni."
                            :category 'file
                            :type 'async
                            :require-match t
-                           :face 'consult-omni-engine-source-face
+                           :face 'consult-omni-engine-title-face
                            :request #'consult-omni--find-builder
                            :transform #'consult-omni--find-transform
                            :filter #'consult-omni--find-filter
@@ -85,8 +85,8 @@ Similar to `consult-find-args' bur for consult-omni."
                            :on-return #'identity
                            :on-callback #'consult-omni--find-callback
                            :preview-key consult-omni-preview-key
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :group #'consult-omni--group-function
                            :sort t
                            :static 'both

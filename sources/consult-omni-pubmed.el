@@ -220,11 +220,11 @@ for more info."
                            :type 'dynamic
                            :require-match t
                            :category 'consult-omni-scholar
-                           :face 'consult-omni-scholar-source-face
+                           :face 'consult-omni-scholar-title-face
                            :request #'consult-omni--pubmed-fetch-results
                            :preview-key consult-omni-preview-key
-                           :search-history 'consult-omni--search-history
-                           :selection-history 'consult-omni--selection-history
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
                            :enabled (lambda () (bound-and-true-p consult-omni-pubmed-api-key))
                            :group #'consult-omni--group-function
                            :sort t
