@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -18,7 +18,7 @@
 (require 'xdg)
 
 (defcustom consult-omni-apps-paths (list)
-  "List of paths to directories containing applications.
+  "List of directories that contain applications.
 "
   :type '(repeat :tag "List of paths" directory))
 
@@ -33,8 +33,6 @@
 (defcustom consult-omni-apps-regexp-pattern ""
 "Regexp pattern to find system applications"
 :type 'regexp)
-
-
 
 (defcustom consult-omni-apps-default-launch-function #'consult-omni--apps-lauch-app
   "consult-omni default function to launch an app"

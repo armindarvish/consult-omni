@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -19,7 +19,7 @@
 (defcustom consult-omni-locate-limit consult-omni-default-count
   "Max number results for `consult-omni-locate'
 
-This is passes to “-l” command line argument.
+This is passed to “-l” command line argument.
 "
   :type 'integer)
 
@@ -39,19 +39,19 @@ Similar to `consult-locate-args' bur for consult-omni."
   )
 
 (defun consult-omni--find-transform (candidates &optional query)
-  "Formats consult-omni-find candidates.
+  "Formats candidates `consult-omni-find'.
 "
   (mapcar (lambda (candidate)
            (string-remove-prefix (file-truename default-directory) candidate))
           candidates))
 
 (defun consult-omni--locate-filter (candidates &optional query)
-  "Formats consult-omni-find candidates.
+  "Filter for candidates of `consult-omni-find'.
 "
   (seq-filter (lambda (candidate) (not (string-match "^locate:.*$" candidate nil nil))) candidates))
 
 (cl-defun consult-omni--locate-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “locate”.
+  "Makes builder command line args for “locate”.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
@@ -106,7 +106,7 @@ Similar to `consult-locate-args' bur for consult-omni."
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -117,7 +117,7 @@ Similar to `consult-locate-args' bur for consult-omni."
 (require 'consult-omni)
 
 (defcustom consult-omni-mdfind-interpret t
-  "Whether to use the toggle -interpret in mdfind.
+  "Whether to toggle -interpret arg in mdfind.
 See mdfind documents (e.g. “man mdfind”) for more details.
 "
   :type 'boolean)
@@ -139,20 +139,19 @@ See `consult-locate-args' for example."
   )
 
 (defun consult-omni--find-transform (candidates &optional query)
-  "Formats consult-omni-mdfind candidates.
+  "Formats candidate sof `consult-omni-mdfind'.
 "
   (mapcar (lambda (candidate)
            (string-remove-prefix (file-truename default-directory) candidate))
           candidates))
 
 (defun consult-omni--mdfind-filter (candidates &optional query)
-  "Formats `consult-omni-mdfind' candidates.
+  "Filter for candidates of `consult-omni-mdfind'.
 "
-  ;; (seq-filter (lambda (candidate) (not (string-match "^mdfind:.*$" candidate nil nil))) candidates)
 )
 
 (cl-defun consult-omni--mdfind-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “mdfind”.
+  "Makes builder command line args for “mdfind”.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))

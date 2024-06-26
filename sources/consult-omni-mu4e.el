@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-mu "1.0") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-mu "1.0") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -63,7 +63,7 @@
   )
 
 (defun consult-omni--mu-return (cand)
-  "return function for mu4e candidates"
+  "Return function for mu4e candidates."
 (save-mark-and-excursion
   (consult-mu--execute-all-marks)
   )
@@ -72,7 +72,7 @@ cand
 )
 
 (defun consult-omni--mu-callback (cand)
-  "Callback function for mu4e candidates"
+  "Callback function for mu4e candidates."
   (let* ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
          (msg (plist-get info :msg))
          (query (plist-get info :query))
@@ -84,7 +84,7 @@ cand
 )
 
 (cl-defun consult-omni--mu-fetch-results (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “mu4e”.
+  "Makes builder command line args for “mu4e”.
 "
   (save-mark-and-excursion
   (consult-mu--execute-all-marks)

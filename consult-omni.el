@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -153,7 +153,7 @@ By default it is set to :source. but can be any of:
                 (const :tag "Do not group" nil)))
 
 
-(defcustom consult-omni-dynamic-sources (list)
+(defcustom consult-omni-multi-sources nil
   "List of sources used by `consult-omni-multi'.
 
 This variable is a list of strings or symbols;
@@ -164,83 +164,16 @@ or by using `consult-omni--make-source-from-consult-source'.
 (see `consult-buffer-sources' for example.)"
   :type '(choice (repeat :tag "list of source names" string)))
 
-(defcustom consult-omni-omni-sources nil
-"List of sources used by `consult-omni-omni'.
-
-This variable is a list of strings or symbols:
- - strings can be name of a source, a key from `consult-omni-sources-alist',
-which can be made with the convinient macro `consult-omni-define-source'
-or by using `consult-omni--make-source-from-consult-source'.
- - symbols can be other consult sources
-(see `consult-buffer-sources' for example.)"
-:type '(repeat :tag "list of source names" (choice (string symbol))))
-
-(defcustom consult-omni-web-sources nil
-"List of sources used by `consult-omni-web'.
-
-This variable is a list of strings or symbols:
- - strings can be name of a source, a key from `consult-omni-sources-alist',
-which can be made with the convinient macro `consult-omni-define-source'
-or by using `consult-omni--make-source-from-consult-source'.
- - symbols can be other consult sources
-(see `consult-buffer-sources' for example.)"
-:type '(repeat :tag "list of source names" (choice (string symbol))))
-
-(defcustom consult-omni-local-sources nil
-"List of sources used by `consult-omni-local'.
-
-This variable is a list of strings or symbols:
- - strings can be name of a source, a key from `consult-omni-sources-alist',
-which can be made with the convinient macro `consult-omni-define-source'
-or by using `consult-omni--make-source-from-consult-source'.
- - symbols can be other consult sources
-(see `consult-buffer-sources' for example.)"
-:type '(repeat :tag "list of source names" (choice (string symbol))))
-
-(defcustom consult-omni-emacs-sources nil
-"List of sources used by `consult-omni-emacs'.
-
-This variable is a list of strings or symbols:
- - strings can be name of a source, a key from `consult-omni-sources-alist',
-which can be made with the convinient macro `consult-omni-define-source'
-or by using `consult-omni--make-source-from-consult-source'.
- - symbols can be other consult sources
-(see `consult-buffer-sources' for example.)"
-:type '(repeat :tag "list of source names" (choice (string symbol))))
-
-
-(defcustom consult-omni-scholar-sources nil
-  "List of sources used by `consult-omni-scholar'.
-
-This variable is a list of strings or symbols:
- - strings can be name of a source, a key from `consult-omni-sources-alist',
-which can be made with the convinient macro `consult-omni-define-source'
-or by using `consult-omni--make-source-from-consult-source'.
- - symbols can be other consult sources
-(see `consult-buffer-sources' for example.)"
-  :type '(choice (repeat :tag "list of source names" string)))
-
-(defcustom consult-omni-static-sources (list)
-  "List of sources used by `consult-omni-static'.
-
-This variable is a list of strings or symbols:
- - strings can be name of a source, a key from `consult-omni-sources-alist',
-which can be made with the convinient macro `consult-omni-define-source'
-or by using `consult-omni--make-source-from-consult-source'.
- - symbols can be other consult sources
-(see `consult-buffer-sources' for example.)"
-  :type '(choice (repeat :tag "list of source names" string)))
 
 (defcustom consult-omni-highlight-matches t
   "Should `consult-omni' highlight search queries in the minibuffer?"
   :type 'boolean)
 
 
-(defcustom consult-omni-default-interactive-command #'consult-omni-omni
+(defcustom consult-omni-default-interactive-command #'consult-omni-multi
   "Which command should `consult-omni' call?"
-  :type '(choice (function :tag "(Default) Omni search with both local and web sources" consult-omni-omni)
-                 (function :tag "Multi web source (i.e. `consult-omni-multi')"  consult-omni-multi)
-                 (function :tag "Scholar (academic literature) search (i.e. `consult-omni-scholar')" consult-omni-scholar)
+  :type '(choice (function :tag "(Default) multi-source dynamic search"  consult-omni-multi)
+                 (function :tag "multi-source static search" consult-omni-multi-static)
                  (function :tag "Other custom interactive command")))
 
 
@@ -2303,12 +2236,12 @@ macro. See `consult-omni-define-source' for more details"
 INITIAL is the initial search prompt in the minibuffer.
 PROMPT is thean optional minibuffer prompt
 Searches all sources in SOURCES. if SOURCES is nil
-`consult-omni-dynamic-sources' is used.
+`consult-omni-multi-sources' is used.
 If NO-CALLBACK is t, only the selected candidate is returned without
 any callback action.
 
 This is an interactive command that fetches results form
-all the sources in either SOURCES or in `consult-omni-dynamic-sources'
+all the sources in either SOURCES or in `consult-omni-multi-sources'
 with dynamic completion meaning that the search term can be dynamically
 updated by the user and the results are fetched as
 the user types in the miinibuffer.
@@ -2332,17 +2265,17 @@ Built-in arguments include:
  :g, or :group for grouping (see `consult-omni-group-by' and `consult-omni--override-group-by'. for more info)
 
  :n, or :count is passed as the value for COUNT
-to any source in `consult-omni-dynamic-sources'.
+to any source in `consult-omni-multi-sources'.
 
  :p, or :page is passed as the value for PAGE to any source
- in `consult-omni-dynamic-sources'.
+ in `consult-omni-multi-sources'.
 
 Custom arguments can be passed by using “:ARG value”.
 For example, if the user types the following in the minibuffer:
 “#how to do web search in emacs? -- :model gpt-4”
 The term “how to do web search in emacs?” is passed as the search
 term and the “gpt-4” as a keyword argument for :model to every
-source in `consult-omni-dynamic-sources'. If any request function of
+source in `consult-omni-multi-sources'. If any request function of
 the sources takes a keyword argument for :model, “gpt-4” is
 used then.
 
@@ -2364,7 +2297,7 @@ here: URL `https://github.com/minad/consult'."
   (let* ((consult-async-refresh-delay consult-omni-dynamic-refresh-delay)
          (consult-async-input-throttle consult-omni-dynamic-input-throttle)
          (consult-async-input-debounce consult-omni-dynamic-input-debounce)
-         (sources (or sources consult-omni-dynamic-sources))
+         (sources (or sources consult-omni-multi-sources))
          (sources (remove nil (mapcar (lambda (source) (plist-get (cdr (assoc source consult-omni-sources-alist)) :source)) sources)))
          (prompt (or prompt (concat "[" (propertize "consult-omni-multi" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
          (selected
@@ -2393,12 +2326,12 @@ here: URL `https://github.com/minad/consult'."
     selected
     ))
 
-(defun consult-omni-static (&optional input prompt sources no-callback &rest args)
+(defun consult-omni-multi-static (&optional input prompt sources no-callback &rest args)
   "Interactive “static” multi-source search
 
 INPUT is the initial search query. Searches all sources
 in SOURCES for INPUT.
-If SOURCES is nil, `consult-omni-static-sources' is used.
+If SOURCES is nil, `consult-omni-multi-sources' is used.
 If NO-CALLBACK is t, only the selected candidate is returned
 without any callback action.
 "
@@ -2407,9 +2340,9 @@ without any callback action.
                     (and consult-omni-default-autosuggest-command  (funcall consult-omni-default-autosuggest-command))
                     (consult-omni--read-search-string)))
          (input (if (stringp input) (substring-no-properties input)))
-         (sources (or sources consult-omni-static-sources))
+         (sources (or sources consult-omni-multi-sources))
          (sources (remove nil (mapcar (lambda (source) (consult-omni--get-source-prop source :source))  sources)))
-         (prompt (or prompt (concat "[" (propertize "consult-omni-static" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
+         (prompt (or prompt (concat "[" (propertize "consult-omni-multi-static" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
          (selected (consult-omni--multi-static sources
                                                input
                                                args
@@ -2431,71 +2364,6 @@ without any callback action.
     (when (functionp callback-func)
       (funcall callback-func selected))
     selected
-    ))
-
-(defun consult-omni-scholar (&optional initial prompt sources no-callback &rest args)
-  "Interactive “multi-source acadmic literature” search
-
-This is similar to `consult-omni-multi', but runs the search on
-academic literature sources defined in `consult-omni-scholar-sources'.
-See `consult-omni-multi' for more details.
-"
-  (interactive "P")
-  (let ((prompt (or prompt (concat "[" (propertize "consult-omni-multi" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
-        (sources (or sources consult-omni-scholar-sources)))
-    (consult-omni-multi initial prompt sources no-callback args)
-    ))
-
-(defun consult-omni-omni (&optional initial prompt sources no-callback &rest args)
-  "Interactive “multi-source and dynamic omni search”
-
-This is similar to `consult-omni-multi', but runs the search on
-combination of web and local sources defined in
-`consult-omni-omni-sources'. See `consult-omni-multi' for more details.
-"
-  (interactive "P")
-  (let ((prompt (or prompt (concat "[" (propertize "consult-omni-omni" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
-        (sources (or sources consult-omni-omni-sources)))
-    (consult-omni-multi initial prompt sources no-callback args)
-    ))
-
-(defun consult-omni-web (&optional initial prompt sources no-callback &rest args)
-  "Interactive web search”
-
-This is similar to `consult-omni-multi', but runs the search on
-web sources defined in `consult-omni-web-sources'.
-See `consult-omni-multi' for more details.
-"
-  (interactive "P")
-  (let ((prompt (or prompt (concat "[" (propertize "consult-omni-web" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
-        (sources (or sources consult-omni-web-sources)))
-    (consult-omni-multi initial prompt sources no-callback args)
-    ))
-
-(defun consult-omni-local (&optional initial prompt sources no-callback &rest args)
-  "Interactive local search”
-
-This is similar to `consult-omni-multi', but runs the search on
-local sources defined in `consult-omni-local-sources'.
-See `consult-omni-multi' for more details.
-"
-  (interactive "P")
-  (let ((prompt (or prompt (concat "[" (propertize "consult-omni-local" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
-        (sources (or sources consult-omni-local-sources)))
-    (consult-omni-multi initial prompt sources no-callback args)
-    ))
-
-(defun consult-omni-emacs (&optional initial prompt sources no-callback &rest args)
-  "Interactive emacs related search”
-
-This is similar to `consult-omni-multi', but runs the search on
-emacs sources (buffer, projects, ...) defined in `consult-omni-emacs-sources'.
-See `consult-omni-multi' for more details.
-"
-  (interactive "P")
-  (let ((prompt (or prompt (concat "[" (propertize "consult-omni-emacs" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
-        (sources (or sources consult-omni-emacs-sources)))
-    (consult-omni-multi initial prompt sources no-callback args)
     ))
 
 (defun consult-omni (&rest args)

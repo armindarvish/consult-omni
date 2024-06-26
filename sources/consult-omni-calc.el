@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -19,21 +19,19 @@
 (require 'calc-aent nil t)
 
 (defcustom consult-omni-calc-number-only nil
-"Only show calculator rsults when the query result in a nunmber?"
+"Only show calculator results when the query result in a nunmber?"
 :type 'boolean)
 
 (defcustom consult-omni-calc-message-errors nil
-"whether to message errors for calc?
+"Whether to message errors for calc?
 
 Setting this to non-nil will show messages
 when the calcultor cannot find results
 "
 :type 'boolean)
 
-;; (unless (boundp 'calc-eval-error)
-;;   (defvar calc-eval-error nil))
-
 (defun consult-omni--calc-callback (cand)
+  "Copys the result as well as formula to kill ring."
   (let ((equ (get-text-property 0 :query cand))
         (result  (get-text-property 0 :title cand)))
   (kill-new (concat equ " => " result))

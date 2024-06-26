@@ -13,7 +13,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -172,7 +172,7 @@ By default it is set to :source. but can be any of:
                 (const :tag "Do not group" nil)))
 
 
-(defcustom consult-omni-dynamic-sources (list)
+(defcustom consult-omni-multi-sources nil
   "List of sources used by `consult-omni-multi'.
 
 This variable is a list of strings or symbols;
@@ -183,83 +183,16 @@ or by using `consult-omni--make-source-from-consult-source'.
 (see `consult-buffer-sources' for example.)"
   :type '(choice (repeat :tag "list of source names" string)))
 
-(defcustom consult-omni-omni-sources nil
-"List of sources used by `consult-omni-omni'.
-
-This variable is a list of strings or symbols:
- - strings can be name of a source, a key from `consult-omni-sources-alist',
-which can be made with the convinient macro `consult-omni-define-source'
-or by using `consult-omni--make-source-from-consult-source'.
- - symbols can be other consult sources
-(see `consult-buffer-sources' for example.)"
-:type '(repeat :tag "list of source names" (choice (string symbol))))
-
-(defcustom consult-omni-web-sources nil
-"List of sources used by `consult-omni-web'.
-
-This variable is a list of strings or symbols:
- - strings can be name of a source, a key from `consult-omni-sources-alist',
-which can be made with the convinient macro `consult-omni-define-source'
-or by using `consult-omni--make-source-from-consult-source'.
- - symbols can be other consult sources
-(see `consult-buffer-sources' for example.)"
-:type '(repeat :tag "list of source names" (choice (string symbol))))
-
-(defcustom consult-omni-local-sources nil
-"List of sources used by `consult-omni-local'.
-
-This variable is a list of strings or symbols:
- - strings can be name of a source, a key from `consult-omni-sources-alist',
-which can be made with the convinient macro `consult-omni-define-source'
-or by using `consult-omni--make-source-from-consult-source'.
- - symbols can be other consult sources
-(see `consult-buffer-sources' for example.)"
-:type '(repeat :tag "list of source names" (choice (string symbol))))
-
-(defcustom consult-omni-emacs-sources nil
-"List of sources used by `consult-omni-emacs'.
-
-This variable is a list of strings or symbols:
- - strings can be name of a source, a key from `consult-omni-sources-alist',
-which can be made with the convinient macro `consult-omni-define-source'
-or by using `consult-omni--make-source-from-consult-source'.
- - symbols can be other consult sources
-(see `consult-buffer-sources' for example.)"
-:type '(repeat :tag "list of source names" (choice (string symbol))))
-
-
-(defcustom consult-omni-scholar-sources nil
-  "List of sources used by `consult-omni-scholar'.
-
-This variable is a list of strings or symbols:
- - strings can be name of a source, a key from `consult-omni-sources-alist',
-which can be made with the convinient macro `consult-omni-define-source'
-or by using `consult-omni--make-source-from-consult-source'.
- - symbols can be other consult sources
-(see `consult-buffer-sources' for example.)"
-  :type '(choice (repeat :tag "list of source names" string)))
-
-(defcustom consult-omni-static-sources (list)
-  "List of sources used by `consult-omni-static'.
-
-This variable is a list of strings or symbols:
- - strings can be name of a source, a key from `consult-omni-sources-alist',
-which can be made with the convinient macro `consult-omni-define-source'
-or by using `consult-omni--make-source-from-consult-source'.
- - symbols can be other consult sources
-(see `consult-buffer-sources' for example.)"
-  :type '(choice (repeat :tag "list of source names" string)))
 
 (defcustom consult-omni-highlight-matches t
   "Should `consult-omni' highlight search queries in the minibuffer?"
   :type 'boolean)
 
 
-(defcustom consult-omni-default-interactive-command #'consult-omni-omni
+(defcustom consult-omni-default-interactive-command #'consult-omni-multi
   "Which command should `consult-omni' call?"
-  :type '(choice (function :tag "(Default) Omni search with both local and web sources" consult-omni-omni)
-                 (function :tag "Multi web source (i.e. `consult-omni-multi')"  consult-omni-multi)
-                 (function :tag "Scholar (academic literature) search (i.e. `consult-omni-scholar')" consult-omni-scholar)
+  :type '(choice (function :tag "(Default) multi-source dynamic search"  consult-omni-multi)
+                 (function :tag "multi-source static search" consult-omni-multi-static)
                  (function :tag "Other custom interactive command")))
 
 
@@ -2575,7 +2508,6 @@ macro. See `consult-omni-define-source' for more details"
 #+end_src
 ** Frontend Interactive commands
 *** consult-omni-multi
-**** interactive
 #+begin_src emacs-lisp
 
 (defun consult-omni-multi (&optional initial prompt sources no-callback &rest args)
@@ -2584,12 +2516,12 @@ macro. See `consult-omni-define-source' for more details"
 INITIAL is the initial search prompt in the minibuffer.
 PROMPT is thean optional minibuffer prompt
 Searches all sources in SOURCES. if SOURCES is nil
-`consult-omni-dynamic-sources' is used.
+`consult-omni-multi-sources' is used.
 If NO-CALLBACK is t, only the selected candidate is returned without
 any callback action.
 
 This is an interactive command that fetches results form
-all the sources in either SOURCES or in `consult-omni-dynamic-sources'
+all the sources in either SOURCES or in `consult-omni-multi-sources'
 with dynamic completion meaning that the search term can be dynamically
 updated by the user and the results are fetched as
 the user types in the miinibuffer.
@@ -2613,17 +2545,17 @@ Built-in arguments include:
  :g, or :group for grouping (see `consult-omni-group-by' and `consult-omni--override-group-by'. for more info)
 
  :n, or :count is passed as the value for COUNT
-to any source in `consult-omni-dynamic-sources'.
+to any source in `consult-omni-multi-sources'.
 
  :p, or :page is passed as the value for PAGE to any source
- in `consult-omni-dynamic-sources'.
+ in `consult-omni-multi-sources'.
 
 Custom arguments can be passed by using “:ARG value”.
 For example, if the user types the following in the minibuffer:
 “#how to do web search in emacs? -- :model gpt-4”
 The term “how to do web search in emacs?” is passed as the search
 term and the “gpt-4” as a keyword argument for :model to every
-source in `consult-omni-dynamic-sources'. If any request function of
+source in `consult-omni-multi-sources'. If any request function of
 the sources takes a keyword argument for :model, “gpt-4” is
 used then.
 
@@ -2645,7 +2577,7 @@ here: URL `https://github.com/minad/consult'."
   (let* ((consult-async-refresh-delay consult-omni-dynamic-refresh-delay)
          (consult-async-input-throttle consult-omni-dynamic-input-throttle)
          (consult-async-input-debounce consult-omni-dynamic-input-debounce)
-         (sources (or sources consult-omni-dynamic-sources))
+         (sources (or sources consult-omni-multi-sources))
          (sources (remove nil (mapcar (lambda (source) (plist-get (cdr (assoc source consult-omni-sources-alist)) :source)) sources)))
          (prompt (or prompt (concat "[" (propertize "consult-omni-multi" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
          (selected
@@ -2675,15 +2607,14 @@ here: URL `https://github.com/minad/consult'."
     ))
 
 #+end_src
-*** consult-omni-static
-**** interactive
+*** consult-omni-multi-static
 #+begin_src emacs-lisp
-(defun consult-omni-static (&optional input prompt sources no-callback &rest args)
+(defun consult-omni-multi-static (&optional input prompt sources no-callback &rest args)
   "Interactive “static” multi-source search
 
 INPUT is the initial search query. Searches all sources
 in SOURCES for INPUT.
-If SOURCES is nil, `consult-omni-static-sources' is used.
+If SOURCES is nil, `consult-omni-multi-sources' is used.
 If NO-CALLBACK is t, only the selected candidate is returned
 without any callback action.
 "
@@ -2692,9 +2623,9 @@ without any callback action.
                     (and consult-omni-default-autosuggest-command  (funcall consult-omni-default-autosuggest-command))
                     (consult-omni--read-search-string)))
          (input (if (stringp input) (substring-no-properties input)))
-         (sources (or sources consult-omni-static-sources))
+         (sources (or sources consult-omni-multi-sources))
          (sources (remove nil (mapcar (lambda (source) (consult-omni--get-source-prop source :source))  sources)))
-         (prompt (or prompt (concat "[" (propertize "consult-omni-static" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
+         (prompt (or prompt (concat "[" (propertize "consult-omni-multi-static" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
          (selected (consult-omni--multi-static sources
                                                input
                                                args
@@ -2716,86 +2647,6 @@ without any callback action.
     (when (functionp callback-func)
       (funcall callback-func selected))
     selected
-    ))
-#+end_src
-*** consult-omni-scholar
-**** interactive
-#+begin_src emacs-lisp
-(defun consult-omni-scholar (&optional initial prompt sources no-callback &rest args)
-  "Interactive “multi-source acadmic literature” search
-
-This is similar to `consult-omni-multi', but runs the search on
-academic literature sources defined in `consult-omni-scholar-sources'.
-See `consult-omni-multi' for more details.
-"
-  (interactive "P")
-  (let ((prompt (or prompt (concat "[" (propertize "consult-omni-multi" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
-        (sources (or sources consult-omni-scholar-sources)))
-    (consult-omni-multi initial prompt sources no-callback args)
-    ))
-#+end_src
-*** consult-omni-omni
-**** interactive
-#+begin_src emacs-lisp
-(defun consult-omni-omni (&optional initial prompt sources no-callback &rest args)
-  "Interactive “multi-source and dynamic omni search”
-
-This is similar to `consult-omni-multi', but runs the search on
-combination of web and local sources defined in
-`consult-omni-omni-sources'. See `consult-omni-multi' for more details.
-"
-  (interactive "P")
-  (let ((prompt (or prompt (concat "[" (propertize "consult-omni-omni" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
-        (sources (or sources consult-omni-omni-sources)))
-    (consult-omni-multi initial prompt sources no-callback args)
-    ))
-#+end_src
-*** consult-omni-web
-**** interactive
-#+begin_src emacs-lisp
-(defun consult-omni-web (&optional initial prompt sources no-callback &rest args)
-  "Interactive web search”
-
-This is similar to `consult-omni-multi', but runs the search on
-web sources defined in `consult-omni-web-sources'.
-See `consult-omni-multi' for more details.
-"
-  (interactive "P")
-  (let ((prompt (or prompt (concat "[" (propertize "consult-omni-web" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
-        (sources (or sources consult-omni-web-sources)))
-    (consult-omni-multi initial prompt sources no-callback args)
-    ))
-#+end_src
-*** consult-omni-local
-**** interactive
-#+begin_src emacs-lisp
-(defun consult-omni-local (&optional initial prompt sources no-callback &rest args)
-  "Interactive local search”
-
-This is similar to `consult-omni-multi', but runs the search on
-local sources defined in `consult-omni-local-sources'.
-See `consult-omni-multi' for more details.
-"
-  (interactive "P")
-  (let ((prompt (or prompt (concat "[" (propertize "consult-omni-local" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
-        (sources (or sources consult-omni-local-sources)))
-    (consult-omni-multi initial prompt sources no-callback args)
-    ))
-#+end_src
-*** consult-omni-emacs
-**** interactive
-#+begin_src emacs-lisp
-(defun consult-omni-emacs (&optional initial prompt sources no-callback &rest args)
-  "Interactive emacs related search”
-
-This is similar to `consult-omni-multi', but runs the search on
-emacs sources (buffer, projects, ...) defined in `consult-omni-emacs-sources'.
-See `consult-omni-multi' for more details.
-"
-  (interactive "P")
-  (let ((prompt (or prompt (concat "[" (propertize "consult-omni-emacs" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
-        (sources (or sources consult-omni-emacs-sources)))
-    (consult-omni-multi initial prompt sources no-callback args)
     ))
 #+end_src
 *** consult-omni
@@ -2823,7 +2674,7 @@ Calls the function in `consult-omni-default-interactive-command'.
 :END:
 ** Header
 #+begin_src emacs-lisp
-;;; consult-omni-embark.el --- Emabrk Actions for `consult-omni' -*- lexical-binding: t -*-
+;;; consult-omni-embark.el --- Embark Actions for `consult-omni' -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2024 Armin Darvish
 
@@ -2832,7 +2683,7 @@ Calls the function in `consult-omni-default-interactive-command'.
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (consult "0.34") (consult-omni 0.2))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -2894,7 +2745,7 @@ Gets the default callback function from `consult-omni-sources-alist'."
       (kill-new (string-trim title))))
 
 (defun consult-omni-embark-insert-url-link (cand)
-  "Insert the title oif the candidate at point."
+  "Insert the title of the candidate at point."
   (let* ((url (and (stringp cand) (get-text-property 0 :url cand)))
          (url (and (stringp url) (string-trim url)))
          (title (and (stringp cand) (get-text-property 0 :title cand))))
@@ -2936,7 +2787,7 @@ Gets the default callback function from `consult-omni-sources-alist'."
       (funcall consult-omni-alternate-browse-function url)))
 
 (defun consult-omni-embark-external-browse-search-link (cand)
-  "Open the search url (the search engine page) in the external browser."
+  "Open the search url (the source search page) in the external browser."
   (if-let* ((search-url (and (stringp cand) (get-text-property 0 :search-url cand))))
       (funcall #'browse-url search-url)))
 
@@ -2975,8 +2826,8 @@ Gets the preview function from `consult-omni-sources-alist'."
 *** variables
 #+begin_src emacs-lisp
 (defcustom consult-omni-embark-scholar-make-note-func  #'consult-omni-embark-scholar-default-note
-  "consult-omni default terminal to use in embark actions"
-  :type '(choice (function :tag "(Default) Make Note with Title, Link, Journal, Authors... " #'consult-omni-embark-scholar-default-note)
+  "function for template note for scholar article"
+  :type '(choice (function :tag "(Default) Make Note with Title, Link, Journal, Authors... " consult-omni-embark-scholar-default-note)
                  (function :tag "Custom Function" function)))
 #+end_src
 *** actions
@@ -2987,19 +2838,22 @@ Gets the preview function from `consult-omni-sources-alist'."
       (funcall #'browse-url (concat "https://doi.org/" doi))))
 
 (defun consult-omni-embark-scholar-copy-authors-as-kill (cand)
-  "Copy the authors of the candidate to `kill-ring'."
+  "Copy the authors of CAND to `kill-ring'."
   (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
       (kill-new (string-trim (format " %s " authors)))
     ))
 
 (defun consult-omni-embark-scholar-insert-authors (cand)
-  "Insrt the authors of the candidate at point."
+  "Insert the authors of CAND at point."
   (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
       (insert (string-trim (mapconcat #'identity authors ", ")))
     ))
 
 (defun consult-omni-embark-scholar-default-note (cand)
-  "insert note snippet for article"
+  "Default function for making note templates.
+
+This can be used for making notes for scholar articles.
+"
   (let* ((url (and (stringp cand) (get-text-property 0 :url cand)))
          (url (and (stringp url) (string-trim url)))
          (doi (and (stringp cand) (get-text-property 0 :doi cand)))
@@ -3061,6 +2915,9 @@ Gets the preview function from `consult-omni-sources-alist'."
       )))
 
 (defun consult-omni-embark-scholar-insert-note (cand)
+  "Insert note snippet for article.
+
+Uses `consult-omni-embark-scholar-make-note-func' to make template."
   (insert (funcall consult-omni-embark-scholar-make-note-func cand)))
 
 #+end_src
@@ -3091,8 +2948,8 @@ Gets the preview function from `consult-omni-sources-alist'."
 #+begin_src emacs-lisp
 ;;; Define Embark Action Functions
 
-(defun consult-omni-embark-apps-open-finder (cand)
-  "Insert the file location in finder"
+(defun consult-omni-embark-apps-open-filemanager (cand)
+  "Open CAND's filepath sith system's file manager."
   (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand))))
       (pcase system-type
         ('darwin (call-process "open" nil 0 nil path "-R"))
@@ -3102,7 +2959,7 @@ Gets the preview function from `consult-omni-sources-alist'."
         )))
 
 (defun consult-omni-embark-apps-find-file (cand)
-  "Insert the file location in finder"
+  "Open CAND's filepath with `find-file'."
   (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand)))
             (directory (and (file-exists-p (file-truename path)) (file-truename path)))
             (default-directory directory))
@@ -3120,19 +2977,19 @@ Gets the preview function from `consult-omni-sources-alist'."
     nil))
 
 (defun consult-omni-embark-apps-open-term (cand)
-  "Open FILE or url using system's default application."
+  "Open CAND's filepath in `consult-omni-embark-default-term'."
   (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand)))
             (directory (and (file-exists-p (file-truename path)) (file-truename path)))
             (default-directory directory))
       (funcall consult-omni-embark-default-term)))
 
 (defun consult-omni-embark-apps-insert-path (cand)
-  "Insert the title oif the candidate at point"
+  "Insert the title of CAND at point"
   (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
       (insert (format " %s " path))))
 
 (defun consult-omni-embark-apps-copy-path-as-kill (cand)
-  "Insert the title oif the candidate at point"
+  "Insert the title of CAND at point"
   (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
        (kill-new (format " %s " path))))
 #+end_src
@@ -3147,7 +3004,7 @@ Gets the preview function from `consult-omni-sources-alist'."
   "x"  #'consult-omni-embark-apps-open-externally
   "f"  #'consult-omni-embark-apps-find-file
   "o f"  #'consult-omni-embark-apps-find-file
-  "o o" #'consult-omni-embark-apps-open-finder
+  "o o" #'consult-omni-embark-apps-open-filemanager
   "o t" #'consult-omni-embark-apps-open-term
   "w p" #'consult-omni-embark-apps-copy-path-as-kil
   )
@@ -3168,7 +3025,7 @@ Gets the preview function from `consult-omni-sources-alist'."
     ))
 
 (defun consult-omni-embark-calc-insert-results (cand)
-  "Insert the title oif the candidate at point"
+  "Insert the title of CAND at point"
   (if-let (results (and (stringp cand) (get-text-property 0 :title cand)))
       (insert (format " %s " results))))
 
@@ -3179,7 +3036,7 @@ Gets the preview function from `consult-omni-sources-alist'."
     ))
 
 (defun consult-omni-embark-calc-insert-formula (cand)
-  "Insert the title oif the candidate at point"
+  "Insert the title of CAND at point"
   (if-let (formula (and (stringp cand) (get-text-property 0 :query cand)))
       (insert (format " %s " formula))))
 
@@ -3206,7 +3063,12 @@ Gets the preview function from `consult-omni-sources-alist'."
 *** variables
 #+begin_src emacs-lisp
 (defcustom consult-omni-embark-video-default-player  (executable-find "mpv")
-  "consult-omni default terminal to use in embark actions"
+  "consult-omni external video player.
+
+Can be:
+ - an elisp function that takes a URL argument (e.g. mpv-pay-url)
+ - a string for external command line program
+"
   :type '(choice (string :tag "(Default) mpv executable command" (executable-find "mpv"))
                  (function :tag "play with mpv package" mpv-play-url)
                  (function :tag "Custom Function" function)
@@ -3216,6 +3078,7 @@ Gets the preview function from `consult-omni-sources-alist'."
 *** actions
 #+begin_src emacs-lisp :lexical t
 (defun consult-omni-play-url-with-app (url)
+  "Plays video at URL with `consult-omni-embark-video-default-player'."
   (interactive (let* ((cand (consult-omni-youtube nil "Search Youtube:  " t))
                       (link (get-text-property 0 :url cand)))
                  (list link)))
@@ -3235,7 +3098,7 @@ Gets the preview function from `consult-omni-sources-alist'."
    ))
 
 (defun consult-omni-embark-video-play-with-app (cand)
-  "Open FILE or url using system's default application."
+  "Open CAND's video URL with `consult-omni-play-url-with-ap'."
   (if-let* ((url (and (stringp cand) (get-text-property 0 :url cand))))
       (consult-omni-play-url-with-app url)
     ))
@@ -3275,7 +3138,7 @@ Gets the preview function from `consult-omni-sources-alist'."
 :END:
 **** header
 #+begin_src emacs-lisp
-;;; consult-omni-sources.el --- Sources for Consulting Web Search Engines -*- lexical-binding: t -*-
+;;; consult-omni-sources.el --- Sources for consult-omni -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2024 Armin Darvish
 
@@ -3283,12 +3146,14 @@ Gets the preview function from `consult-omni-sources-alist'."
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
 ;;; Commentary:
 
 ;;; Code:
+
 
 (require 'consult-omni)
 #+end_src
@@ -3339,12 +3204,6 @@ Gets the preview function from `consult-omni-sources-alist'."
 If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil as well, loads `consult-omni-sources--all-modules-list'."
   (mapcar #'consult-omni-sources--load-module (or list consult-omni-sources-modules-to-load consult-omni-sources--all-modules-list)))
 #+end_src
-**** load the sources
-#+begin_src emacs-lisp
-(consult-omni-sources-load-modules)
-#+end_src
-
-
 **** provide and footer
 #+begin_src emacs-lisp
 ;;; provide `consult-omni-sources' module
@@ -3367,7 +3226,7 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -3382,7 +3241,7 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
 **** custom variables
 #+begin_src emacs-lisp
 (defcustom consult-omni-apps-paths (list)
-  "List of paths to directories containing applications.
+  "List of directories that contain applications.
 "
   :type '(repeat :tag "List of paths" directory))
 
@@ -3397,8 +3256,6 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
 (defcustom consult-omni-apps-regexp-pattern ""
 "Regexp pattern to find system applications"
 :type 'regexp)
-
-
 
 (defcustom consult-omni-apps-default-launch-function #'consult-omni--apps-lauch-app
   "consult-omni default function to launch an app"
@@ -3721,7 +3578,7 @@ in `consult-omni-apps-paths'.
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -3791,7 +3648,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                                                               :snippet snippet)))
 
                                               raw-results)))
-                                (when annotated-results
+                                (when (and annotated-results (functionp callback))
                                   (funcall callback annotated-results))
                                 annotated-results)))))
 
@@ -3841,7 +3698,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -3962,7 +3819,7 @@ See URL `https://brave.com/search/api/' for more info"
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -4098,7 +3955,7 @@ See URL `https://brave.com/search/api/' for more info"
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2") (browser-hist "0.0.1"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1") (browser-hist "0.0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -4115,7 +3972,7 @@ See URL `https://brave.com/search/api/' for more info"
 #+begin_src emacs-lisp
 
 (cl-defun consult-omni--browser-history-format-candidate (&rest args &key source query url search-url title face &allow-other-keys)
-  "Returns a highlighted formatted string for candidates.
+  "Formats candidates of `consult-omni-browser-history'.
 
 SOURCE is the name string of the source for candidate
 
@@ -4220,7 +4077,7 @@ SNIPPET is a string containing a snippet/description of candidate
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -4236,24 +4093,23 @@ SNIPPET is a string containing a snippet/description of candidate
 ***** custom
 #+begin_src emacs-lisp
 (defcustom consult-omni-calc-number-only nil
-"Only show calculator rsults when the query result in a nunmber?"
+"Only show calculator results when the query result in a nunmber?"
 :type 'boolean)
 
 (defcustom consult-omni-calc-message-errors nil
-"whether to message errors for calc?
+"Whether to message errors for calc?
 
 Setting this to non-nil will show messages
 when the calcultor cannot find results
 "
 :type 'boolean)
 
-;; (unless (boundp 'calc-eval-error)
-;;   (defvar calc-eval-error nil))
 #+end_src
 **** helper functions
 ***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--calc-callback (cand)
+  "Copys the result as well as formula to kill ring."
   (let ((equ (get-text-property 0 :query cand))
         (result  (get-text-property 0 :title cand)))
   (kill-new (concat equ " => " result))
@@ -4361,7 +4217,7 @@ This uses `calc-eval' to return the result of input"
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -4391,7 +4247,7 @@ See URL `https://openai.com/product' and URL `https://platform.openai.com/docs/i
 ***** format
 #+begin_src emacs-lisp
 (defun consult-omni-dynamic--chatgpt-format-candidate (source query title &optional model face)
-  "Returns a formatted string for candidates of `consult-omni-chatgpt'.
+  "Formats candidates of `consult-omni-chatgpt'.
 
 SOURCE is the name to use (e.g. “chatgPT”)
 
@@ -4485,9 +4341,9 @@ FACE is the face to apply to TITLE
                                              :url url
                                              :search-url search-url
                                              :query query))))
-          (when annotated-results
+          (when (and annotated-results (functionp callback))
           (funcall callback (list annotated-results)))
-          annotated-results)))))
+          (list annotated-results))))))
 
 #+end_src
 **** define sources
@@ -4539,7 +4395,7 @@ FACE is the face to apply to TITLE
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -4683,7 +4539,7 @@ FACE is the face to apply to TITLE"
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -4745,7 +4601,7 @@ FACE is the face to apply to TITLE"
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2") (consult-notes "0.7"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1") (consult-notes "0.7"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -4873,7 +4729,7 @@ FACE is the face to apply to TITLE"
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2") (consult-gh "1.0.0"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1") (consult-gh "1.0.0"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -4989,7 +4845,7 @@ FACE is the face to apply to TITLE"
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -5019,7 +4875,7 @@ FACE is the face to apply to TITLE"
 ***** transform
 #+begin_src emacs-lisp
 (defun consult-omni--grep-transform (candidates &optional query)
-  "Formats consult-omni-grep candidates.
+  "Formats candidates pf `consult-omni-grep'.
 "
 (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
       (file "")
@@ -5086,7 +4942,7 @@ FACE is the face to apply to TITLE"
 **** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--grep-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “grep”.
+  "Makes builder command line args for “grep”.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
@@ -5153,7 +5009,7 @@ FACE is the face to apply to TITLE"
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -5248,7 +5104,7 @@ FACE is the face to apply to TITLE"
 **** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--notes-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for `consult-omni-notes'.
+  "Makes builder command line args for `consult-omni-notes'.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
                (opts (car-safe opts))
@@ -5313,7 +5169,7 @@ FACE is the face to apply to TITLE"
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -5341,7 +5197,7 @@ Similar to `consult-find-args' bur for consult-omni."
 ***** transform
 #+begin_src emacs-lisp
 (defun consult-omni--find-transform (candidates &optional query)
-  "Formats consult-omni-find candidates.
+  "Formats candidates of `consult-omni-find'.
 "
   (mapcar (lambda (candidate)
            (string-remove-prefix (file-truename default-directory) candidate))
@@ -5350,7 +5206,7 @@ Similar to `consult-find-args' bur for consult-omni."
 ***** filter
 #+begin_src emacs-lisp
 (defun consult-omni--find-filter (candidates &optional query)
-  "Formats consult-omni-find candidates.
+  "Filters for candidates of `consult-omni-find'.
 "
   (seq-filter (lambda (candidate) (not (string-match "^find:.*$" candidate nil nil))) candidates))
 
@@ -5374,7 +5230,7 @@ Similar to `consult-find-args' bur for consult-omni."
 **** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--find-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “grep”.
+  "Makes builder command line args for “find”.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
@@ -5449,7 +5305,7 @@ Similar to `consult-find-args' bur for consult-omni."
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -5466,7 +5322,7 @@ Similar to `consult-find-args' bur for consult-omni."
 (defcustom consult-omni-locate-limit consult-omni-default-count
   "Max number results for `consult-omni-locate'
 
-This is passes to “-l” command line argument.
+This is passed to “-l” command line argument.
 "
   :type 'integer)
 
@@ -5497,7 +5353,7 @@ Similar to `consult-locate-args' bur for consult-omni."
 ***** transform
 #+begin_src emacs-lisp
 (defun consult-omni--find-transform (candidates &optional query)
-  "Formats consult-omni-find candidates.
+  "Formats candidates `consult-omni-find'.
 "
   (mapcar (lambda (candidate)
            (string-remove-prefix (file-truename default-directory) candidate))
@@ -5509,7 +5365,7 @@ Similar to `consult-locate-args' bur for consult-omni."
 ***** filter
 #+begin_src emacs-lisp
 (defun consult-omni--locate-filter (candidates &optional query)
-  "Formats consult-omni-find candidates.
+  "Filter for candidates of `consult-omni-find'.
 "
   (seq-filter (lambda (candidate) (not (string-match "^locate:.*$" candidate nil nil))) candidates))
 
@@ -5517,7 +5373,7 @@ Similar to `consult-locate-args' bur for consult-omni."
 **** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--locate-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “locate”.
+  "Makes builder command line args for “locate”.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
@@ -5587,7 +5443,7 @@ Similar to `consult-locate-args' bur for consult-omni."
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -5602,7 +5458,7 @@ Similar to `consult-locate-args' bur for consult-omni."
 #+begin_src emacs-lisp
 
 (defcustom consult-omni-mdfind-interpret t
-  "Whether to use the toggle -interpret in mdfind.
+  "Whether to toggle -interpret arg in mdfind.
 See mdfind documents (e.g. “man mdfind”) for more details.
 "
   :type 'boolean)
@@ -5635,7 +5491,7 @@ See `consult-locate-args' for example."
 ***** transform
 #+begin_src emacs-lisp
 (defun consult-omni--find-transform (candidates &optional query)
-  "Formats consult-omni-mdfind candidates.
+  "Formats candidate sof `consult-omni-mdfind'.
 "
   (mapcar (lambda (candidate)
            (string-remove-prefix (file-truename default-directory) candidate))
@@ -5647,16 +5503,15 @@ See `consult-locate-args' for example."
 ***** filter
 #+begin_src emacs-lisp
 (defun consult-omni--mdfind-filter (candidates &optional query)
-  "Formats `consult-omni-mdfind' candidates.
+  "Filter for candidates of `consult-omni-mdfind'.
 "
-  ;; (seq-filter (lambda (candidate) (not (string-match "^mdfind:.*$" candidate nil nil))) candidates)
 )
 
 #+end_src
 **** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--mdfind-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “mdfind”.
+  "Makes builder command line args for “mdfind”.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
@@ -5723,7 +5578,7 @@ See `consult-locate-args' for example."
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-mu "1.0") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-mu "1.0") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -5790,7 +5645,7 @@ See `consult-locate-args' for example."
 ***** return
 #+begin_src emacs-lisp
 (defun consult-omni--mu-return (cand)
-  "return function for mu4e candidates"
+  "Return function for mu4e candidates."
 (save-mark-and-excursion
   (consult-mu--execute-all-marks)
   )
@@ -5801,7 +5656,7 @@ cand
 ***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--mu-callback (cand)
-  "Callback function for mu4e candidates"
+  "Callback function for mu4e candidates."
   (let* ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
          (msg (plist-get info :msg))
          (query (plist-get info :query))
@@ -5815,7 +5670,7 @@ cand
 **** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--mu-fetch-results (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “mu4e”.
+  "Makes builder command line args for “mu4e”.
 "
   (save-mark-and-excursion
   (consult-mu--execute-all-marks)
@@ -5893,7 +5748,7 @@ cand
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2") (consult-notmuch "0.8.1"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1") (consult-notmuch "0.8.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -5996,7 +5851,7 @@ cand
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -6131,7 +5986,7 @@ cand
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -6249,7 +6104,7 @@ cand
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -6317,7 +6172,7 @@ for some limited documentation"
                                                                    )))
 
                                                    raw-results)))
-                                (when annotated-results
+                                (when (and annotated-results (functionp callback))
                                   (funcall callback annotated-results))
                                 annotated-results)))))
 
@@ -6367,7 +6222,7 @@ for some limited documentation"
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2") (elfeed "3.4.1"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1") (elfeed "3.4.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni/blob/main/consult-omni-sources
 ;; Keywords: convenience
 
@@ -6562,7 +6417,7 @@ if FILTER is non-nil, it is used as additional filter parameters.
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -6662,7 +6517,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                                                                    :snippet snippet)))
 
                                                    raw-results)))
-                                (when annotated-results
+                                (when (and annotated-results (functionp callback))
                                   (funcall callback annotated-results))
                                 annotated-results)))))
 
@@ -6710,7 +6565,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -6823,7 +6678,7 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2") (gptel "0.7.0"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1") (gptel "0.7.0"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -7010,10 +6865,9 @@ The preview buffer is from `consult-omni--gptel-response-preview'."
                             :model model
                             :stream stream
                             :backend backend)))
-    (when annotated-results
-      (when callback
+    (when (and annotated-results (functionp callback))
         (funcall callback (list annotated-results)))
-      (list annotated-results))))
+      (list annotated-results)))
 #+end_src
 ***** title with  short answer
 #+begin_src emacs-lisp
@@ -7122,7 +6976,7 @@ metadata so it can be send to `gptel'."
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult-omni "0.2") (consult "1.1"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -7335,7 +7189,7 @@ FACE is the face to apply to TITLE
 :subscriptions subcount)))
 
                                       raw-results)))
-                              (when annotated-results
+                              (when (and annotated-results (functionp callback))
                                 (funcall callback annotated-results))
                               annotated-results)
                               ))))
@@ -7386,7 +7240,7 @@ FACE is the face to apply to TITLE
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -7498,7 +7352,7 @@ See `consult-locate-args' for example."
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult-omni "0.2") (consult "1.1"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -7712,7 +7566,7 @@ for more info."
                                                                    :date date
                                                                    :doi doi)))
                                                    uids)))
-                                (when annotated-results
+                                (when (and annotated-results (functionp callback))
                                   (funcall callback annotated-results)
                                     )
                                 annotated-results)))))
@@ -7775,7 +7629,7 @@ for more info."
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult-omni "0.2") (consult "1.1"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -7995,7 +7849,7 @@ FACE is the face to apply to TITLE
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult-omni "0.2") (consult "1.1"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -8125,7 +7979,7 @@ See URL `https://api.stackexchange.com/' for more info.
                                                               )))
 
                                               raw-results)))
-                                (when annotated-results
+                                (when (and annotated-results (functionp callback))
                                   (funcall callback annotated-results))
                                 annotated-results)))))
 #+end_src
@@ -8174,7 +8028,7 @@ See URL `https://api.stackexchange.com/' for more info.
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult-omni "0.2") (consult "1.1"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -8336,7 +8190,7 @@ FACE is the face to apply to TITLE
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult-omni "0.2") (consult "1.1"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -8530,7 +8384,7 @@ such as viw counts and duration, ... of videos/playlists, etc.
                                                                :channelid channelid)))
 
                                                raw-results)))
-                                 (when annotated-results
+                                 (when (and annotated-results (functionp callback))
                                    (funcall callback annotated-results))
                                  annotated-results)))))
 #+end_src
@@ -8589,9 +8443,8 @@ such as viw counts and duration, ... of videos/playlists, etc.
                                                             :channelid channelid)))
 
                                       raw-results)))
-                               (when annotated-results
-                                (when callback
-                                  (funcall callback annotated-results)))
+                               (when (and annotated-results (functionp callback))
+                                (funcall callback annotated-results))
                               annotated-results)))))
 
 #+end_src
@@ -8647,9 +8500,8 @@ such as viw counts and duration, ... of videos/playlists, etc.
                                                             :channelid channelid)))
 
                                       raw-results)))
-                              (when annotated-results
-                                (when callback
-                                  (funcall callback annotated-results)))
+                              (when (and annotated-results (functionp callback))
+                                 (funcall callback annotated-results))
                               annotated-results)))))
 #+end_src
 
@@ -8705,9 +8557,8 @@ such as viw counts and duration, ... of videos/playlists, etc.
                                                             :channelid channelid)))
 
                                       raw-results)))
-                              (when annotated-results
-                                (when callback
-                                  (funcall callback annotated-results)))
+                              (when (and annotated-results (functionp callback))
+                                  (funcall callback annotated-results))
                               annotated-results)))))
 #+end_src
 

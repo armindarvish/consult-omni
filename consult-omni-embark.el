@@ -1,4 +1,4 @@
-;;; consult-omni-embark.el --- Emabrk Actions for `consult-omni' -*- lexical-binding: t -*-
+;;; consult-omni-embark.el --- Embark Actions for `consult-omni' -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2024 Armin Darvish
 
@@ -7,7 +7,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "27.1") (consult "0.34") (consult-omni 0.2))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -55,7 +55,7 @@ Gets the default callback function from `consult-omni-sources-alist'."
       (kill-new (string-trim title))))
 
 (defun consult-omni-embark-insert-url-link (cand)
-  "Insert the title oif the candidate at point."
+  "Insert the title of the candidate at point."
   (let* ((url (and (stringp cand) (get-text-property 0 :url cand)))
          (url (and (stringp url) (string-trim url)))
          (title (and (stringp cand) (get-text-property 0 :title cand))))
@@ -97,7 +97,7 @@ Gets the default callback function from `consult-omni-sources-alist'."
       (funcall consult-omni-alternate-browse-function url)))
 
 (defun consult-omni-embark-external-browse-search-link (cand)
-  "Open the search url (the search engine page) in the external browser."
+  "Open the search url (the source search page) in the external browser."
   (if-let* ((search-url (and (stringp cand) (get-text-property 0 :search-url cand))))
       (funcall #'browse-url search-url)))
 
@@ -128,8 +128,8 @@ Gets the preview function from `consult-omni-sources-alist'."
 (add-to-list 'embark-keymap-alist '(consult-omni . consult-omni-embark-general-actions-map))
 
 (defcustom consult-omni-embark-scholar-make-note-func  #'consult-omni-embark-scholar-default-note
-  "consult-omni default terminal to use in embark actions"
-  :type '(choice (function :tag "(Default) Make Note with Title, Link, Journal, Authors... " #'consult-omni-embark-scholar-default-note)
+  "function for template note for scholar article"
+  :type '(choice (function :tag "(Default) Make Note with Title, Link, Journal, Authors... " consult-omni-embark-scholar-default-note)
                  (function :tag "Custom Function" function)))
 
 (defun consult-omni-embark-scholar-external-browse-doi (cand)
@@ -138,19 +138,22 @@ Gets the preview function from `consult-omni-sources-alist'."
       (funcall #'browse-url (concat "https://doi.org/" doi))))
 
 (defun consult-omni-embark-scholar-copy-authors-as-kill (cand)
-  "Copy the authors of the candidate to `kill-ring'."
+  "Copy the authors of CAND to `kill-ring'."
   (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
       (kill-new (string-trim (format " %s " authors)))
     ))
 
 (defun consult-omni-embark-scholar-insert-authors (cand)
-  "Insrt the authors of the candidate at point."
+  "Insert the authors of CAND at point."
   (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
       (insert (string-trim (mapconcat #'identity authors ", ")))
     ))
 
 (defun consult-omni-embark-scholar-default-note (cand)
-  "insert note snippet for article"
+  "Default function for making note templates.
+
+This can be used for making notes for scholar articles.
+"
   (let* ((url (and (stringp cand) (get-text-property 0 :url cand)))
          (url (and (stringp url) (string-trim url)))
          (doi (and (stringp cand) (get-text-property 0 :doi cand)))
@@ -212,6 +215,9 @@ Gets the preview function from `consult-omni-sources-alist'."
       )))
 
 (defun consult-omni-embark-scholar-insert-note (cand)
+  "Insert note snippet for article.
+
+Uses `consult-omni-embark-scholar-make-note-func' to make template."
   (insert (funcall consult-omni-embark-scholar-make-note-func cand)))
 
 (defvar-keymap consult-omni-embark-scholar-actions-map
@@ -229,8 +235,8 @@ Gets the preview function from `consult-omni-sources-alist'."
 
 ;;; Define Embark Action Functions
 
-(defun consult-omni-embark-apps-open-finder (cand)
-  "Insert the file location in finder"
+(defun consult-omni-embark-apps-open-filemanager (cand)
+  "Open CAND's filepath sith system's file manager."
   (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand))))
       (pcase system-type
         ('darwin (call-process "open" nil 0 nil path "-R"))
@@ -240,7 +246,7 @@ Gets the preview function from `consult-omni-sources-alist'."
         )))
 
 (defun consult-omni-embark-apps-find-file (cand)
-  "Insert the file location in finder"
+  "Open CAND's filepath with `find-file'."
   (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand)))
             (directory (and (file-exists-p (file-truename path)) (file-truename path)))
             (default-directory directory))
@@ -258,19 +264,19 @@ Gets the preview function from `consult-omni-sources-alist'."
     nil))
 
 (defun consult-omni-embark-apps-open-term (cand)
-  "Open FILE or url using system's default application."
+  "Open CAND's filepath in `consult-omni-embark-default-term'."
   (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand)))
             (directory (and (file-exists-p (file-truename path)) (file-truename path)))
             (default-directory directory))
       (funcall consult-omni-embark-default-term)))
 
 (defun consult-omni-embark-apps-insert-path (cand)
-  "Insert the title oif the candidate at point"
+  "Insert the title of CAND at point"
   (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
       (insert (format " %s " path))))
 
 (defun consult-omni-embark-apps-copy-path-as-kill (cand)
-  "Insert the title oif the candidate at point"
+  "Insert the title of CAND at point"
   (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
        (kill-new (format " %s " path))))
 
@@ -282,7 +288,7 @@ Gets the preview function from `consult-omni-sources-alist'."
   "x"  #'consult-omni-embark-apps-open-externally
   "f"  #'consult-omni-embark-apps-find-file
   "o f"  #'consult-omni-embark-apps-find-file
-  "o o" #'consult-omni-embark-apps-open-finder
+  "o o" #'consult-omni-embark-apps-open-filemanager
   "o t" #'consult-omni-embark-apps-open-term
   "w p" #'consult-omni-embark-apps-copy-path-as-kil
   )
@@ -299,7 +305,7 @@ Gets the preview function from `consult-omni-sources-alist'."
     ))
 
 (defun consult-omni-embark-calc-insert-results (cand)
-  "Insert the title oif the candidate at point"
+  "Insert the title of CAND at point"
   (if-let (results (and (stringp cand) (get-text-property 0 :title cand)))
       (insert (format " %s " results))))
 
@@ -310,7 +316,7 @@ Gets the preview function from `consult-omni-sources-alist'."
     ))
 
 (defun consult-omni-embark-calc-insert-formula (cand)
-  "Insert the title oif the candidate at point"
+  "Insert the title of CAND at point"
   (if-let (formula (and (stringp cand) (get-text-property 0 :query cand)))
       (insert (format " %s " formula))))
 
@@ -329,13 +335,19 @@ Gets the preview function from `consult-omni-sources-alist'."
 (add-to-list 'embark-default-action-overrides '(consult-omni-calc . consult-omni-embark-default-action))
 
 (defcustom consult-omni-embark-video-default-player  (executable-find "mpv")
-  "consult-omni default terminal to use in embark actions"
+  "consult-omni external video player.
+
+Can be:
+ - an elisp function that takes a URL argument (e.g. mpv-pay-url)
+ - a string for external command line program
+"
   :type '(choice (string :tag "(Default) mpv executable command" (executable-find "mpv"))
                  (function :tag "play with mpv package" mpv-play-url)
                  (function :tag "Custom Function" function)
                  (string :tag "Custom Executable Command" string)))
 
 (defun consult-omni-play-url-with-app (url)
+  "Plays video at URL with `consult-omni-embark-video-default-player'."
   (interactive (let* ((cand (consult-omni-youtube nil "Search Youtube:  " t))
                       (link (get-text-property 0 :url cand)))
                  (list link)))
@@ -355,7 +367,7 @@ Gets the preview function from `consult-omni-sources-alist'."
    ))
 
 (defun consult-omni-embark-video-play-with-app (cand)
-  "Open FILE or url using system's default application."
+  "Open CAND's video URL with `consult-omni-play-url-with-ap'."
   (if-let* ((url (and (stringp cand) (get-text-property 0 :url cand))))
       (consult-omni-play-url-with-app url)
     ))

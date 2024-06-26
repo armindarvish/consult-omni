@@ -1,4 +1,4 @@
-;;; consult-omni-sources.el --- Sources for Consulting Web Search Engines -*- lexical-binding: t -*-
+;;; consult-omni-sources.el --- Sources for consult-omni -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2024 Armin Darvish
 
@@ -6,12 +6,14 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
 ;;; Commentary:
 
 ;;; Code:
+
 
 (require 'consult-omni)
 
@@ -57,8 +59,6 @@
   "Loads the LIST of symbols.
 If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil as well, loads `consult-omni-sources--all-modules-list'."
   (mapcar #'consult-omni-sources--load-module (or list consult-omni-sources-modules-to-load consult-omni-sources--all-modules-list)))
-
-(consult-omni-sources-load-modules)
 
 ;;; provide `consult-omni-sources' module
 

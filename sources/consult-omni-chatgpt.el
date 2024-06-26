@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -27,7 +27,7 @@ See URL `https://openai.com/product' and URL `https://platform.openai.com/docs/i
 (defvar consult-omni-chatgpt-api-url "https://api.openai.com/v1/chat/completions")
 
 (defun consult-omni-dynamic--chatgpt-format-candidate (source query title &optional model face)
-  "Returns a formatted string for candidates of `consult-omni-chatgpt'.
+  "Formats candidates of `consult-omni-chatgpt'.
 
 SOURCE is the name to use (e.g. “chatgPT”)
 

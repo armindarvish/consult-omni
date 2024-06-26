@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -27,14 +27,14 @@ Similar to `consult-find-args' bur for consult-omni."
   :type '(choice string (repeat (choice string sexp))))
 
 (defun consult-omni--find-transform (candidates &optional query)
-  "Formats consult-omni-find candidates.
+  "Formats candidates of `consult-omni-find'.
 "
   (mapcar (lambda (candidate)
            (string-remove-prefix (file-truename default-directory) candidate))
           candidates))
 
 (defun consult-omni--find-filter (candidates &optional query)
-  "Formats consult-omni-find candidates.
+  "Filters for candidates of `consult-omni-find'.
 "
   (seq-filter (lambda (candidate) (not (string-match "^find:.*$" candidate nil nil))) candidates))
 
@@ -48,7 +48,7 @@ Similar to `consult-find-args' bur for consult-omni."
   )
 
 (cl-defun consult-omni--find-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “grep”.
+  "Makes builder command line args for “find”.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))

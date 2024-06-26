@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.1") (consult-omni "0.2"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -28,7 +28,7 @@
 ))
 
 (defun consult-omni--grep-transform (candidates &optional query)
-  "Formats consult-omni-grep candidates.
+  "Formats candidates pf `consult-omni-grep'.
 "
 (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
       (file "")
@@ -82,7 +82,7 @@
   )
 
 (cl-defun consult-omni--grep-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “grep”.
+  "Makes builder command line args for “grep”.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
