@@ -207,7 +207,7 @@ FACE is the face to apply to TITLE
 :subscriptions subcount)))
 
                                       raw-results)))
-                              (when annotated-results
+                              (when (and annotated-results (functionp callback))
                                 (funcall callback annotated-results))
                               annotated-results)
                               ))))

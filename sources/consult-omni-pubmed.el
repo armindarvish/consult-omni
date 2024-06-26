@@ -201,7 +201,7 @@ for more info."
                                                                    :date date
                                                                    :doi doi)))
                                                    uids)))
-                                (when annotated-results
+                                (when (and annotated-results (functionp callback))
                                   (funcall callback annotated-results)
                                     )
                                 annotated-results)))))

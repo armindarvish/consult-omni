@@ -30,7 +30,7 @@ Similar to `consult-find-args' bur for consult-omni."
   "Formats candidates of `consult-omni-find'.
 "
   (mapcar (lambda (candidate)
-           (string-remove-prefix (file-truename default-directory) candidate))
+           (string-trim (string-remove-prefix (file-truename default-directory) candidate)))
           candidates))
 
 (defun consult-omni--find-filter (candidates &optional query)

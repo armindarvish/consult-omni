@@ -177,10 +177,9 @@ The preview buffer is from `consult-omni--gptel-response-preview'."
                             :model model
                             :stream stream
                             :backend backend)))
-    (when annotated-results
-      (when callback
+    (when (and annotated-results (functionp callback))
         (funcall callback (list annotated-results)))
-      (list annotated-results))))
+      (list annotated-results)))
 
 (cl-defun consult-omni--gptel-make-title-short-answer (input &rest args &key callback &allow-other-keys)
 "Get a short answer preview from gptel."

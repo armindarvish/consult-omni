@@ -3868,7 +3868,7 @@ See URL `https://brave.com/search/api/' for more info"
                (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min (max count 1) 20))
-               (params  `(("q" . ,query)
+               (params  `(("q" . ,(replace-regexp-in-string " " "+" query))
                           ("count" . ,(format "%s" count))
                           ("page" . ,(format "%s" page))
                           ("country" . "US")))
@@ -3878,38 +3878,39 @@ See URL `https://brave.com/search/api/' for more info"
                           ("X-Subscription-Token" . ,(consult-omni-expand-variable-function consult-omni-brave-autosuggest-api-key))
                           )))
     (consult-omni--fetch-url consult-omni-brave-autosuggest-api-url consult-omni-http-retrieve-backend
-                                  :params params
-                                  :headers headers
-                                  :parser #'consult-omni--json-parse-buffer
-                                  :callback
-                                  (lambda (attrs)
-                                    (when-let* ((original (make-hash-table :test 'equal))
-                                                (_ (puthash "query" (gethash "original" (gethash "query" attrs)) original))
-                                                (raw-results  (append (map-nested-elt attrs '("results")) (list original)))
-                                                (annotated-results
-                                                 (mapcar (lambda (item)
-                                                           (let* ((source "Brave AutoSuggest")
-                                                                  (word (gethash "query" item))
-                                                                  (url (concat "https://search.brave.com/search?q="  (replace-regexp-in-string " " "+" word)))
-                                                                  (urlobj (and url (url-generic-parse-url url)))
-                                                                  (domain (and (url-p urlobj) (url-domain urlobj)))
-                                                                  (domain (and (stringp domain)
-                                                                               (propertize domain 'face 'font-lock-variable-name-face)))
-                                                                  (path (and (url-p urlobj) (url-filename urlobj)))
-                                                                  (path (and (stringp path)
-                                                                             (propertize path 'face 'font-lock-warning-face)))
-                                                                  (search-url nil)
-                                                                  (decorated (propertize word 'face 'consult-omni-default-face)))
-                                                             (propertize decorated
-                                                                         :source source
-                                                                         :title word
-                                                                         :url url
-                                                                         :search-url search-url
-                                                                         :query query)))
+                             :encoding 'utf-8
+                             :params params
+                             :headers headers
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (when-let* ((original (make-hash-table :test 'equal))
+                                           (_ (puthash "query" (gethash "original" (gethash "query" attrs)) original))
+                                           (raw-results  (append (map-nested-elt attrs '("results")) (list original)))
+                                           (annotated-results
+                                            (mapcar (lambda (item)
+                                                      (let* ((source "Brave AutoSuggest")
+                                                             (word (gethash "query" item))
+                                                             (url (concat "https://search.brave.com/search?q="  (replace-regexp-in-string " " "+" word)))
+                                                             (urlobj (and url (url-generic-parse-url url)))
+                                                             (domain (and (url-p urlobj) (url-domain urlobj)))
+                                                             (domain (and (stringp domain)
+                                                                          (propertize domain 'face 'font-lock-variable-name-face)))
+                                                             (path (and (url-p urlobj) (url-filename urlobj)))
+                                                             (path (and (stringp path)
+                                                                        (propertize path 'face 'font-lock-warning-face)))
+                                                             (search-url nil)
+                                                             (decorated (propertize word 'face 'consult-omni-default-face)))
+                                                        (propertize decorated
+                                                                    :source source
+                                                                    :title word
+                                                                    :url url
+                                                                    :search-url search-url
+                                                                    :query query)))
 
-                                                         raw-results)))
-                                      (funcall callback annotated-results)
-                                      annotated-results)))))
+                                                    raw-results)))
+                                 (funcall callback annotated-results)
+                                 annotated-results)))))
 
 #+end_src
 **** define source
@@ -4187,7 +4188,7 @@ This uses `calc-eval' to return the result of input"
                            :enabled (lambda () (fboundp 'calc-eval))
                            :group #'consult-omni--group-function
                            :sort t
-                           :static 'both
+                           :static nil
                            :annotate nil
                            )
 #+end_src
@@ -4316,34 +4317,36 @@ FACE is the face to apply to TITLE
                (opts (car-safe opts))
                (model (or (plist-get opts :model) "gpt-3.5-turbo"))
                (headers `(("Content-Type" . "application/json")
-                    ("Authorization" . ,(concat "Bearer " (consult-omni-expand-variable-function consult-omni-openai-api-key))))))
+                          ("Authorization" . ,(concat "Bearer " (consult-omni-expand-variable-function consult-omni-openai-api-key))))))
     (consult-omni--fetch-url consult-omni-chatgpt-api-url
-                            consult-omni-http-retrieve-backend
-      :type "POST"
-      :encoding 'utf-8
-      :headers headers
-      :data  (json-encode `((model . ,model)
-                    (messages . [((role . "user")
-                                  (content . ,query))])))
-      :parser #'consult-omni--json-parse-buffer
-      :callback
-      (lambda (attrs)
-        (let* ((source "chatGPT")
-                    (url nil)
-                    (search-url nil)
-                    (choices (car-safe (gethash "choices" attrs)))
-                    (title (and choices (map-nested-elt choices '("message" "content"))))
-                    (model model)
-                    (decorated (consult-omni-dynamic--chatgpt-format-candidate source query title model))
-                    (annotated-results (and decorated (propertize decorated
-                                             :source source
-                                             :title title
-                                             :url url
-                                             :search-url search-url
-                                             :query query))))
-          (when (and annotated-results (functionp callback))
-          (funcall callback (list annotated-results)))
-          (list annotated-results))))))
+                             consult-omni-http-retrieve-backend
+                             :type "POST"
+                             :encoding 'utf-8
+                             :headers headers
+                             :data  (json-encode `((model . ,model)
+                                                   (messages . [((role . "user")
+                                                                 (content . ,query))])))
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (let* ((source "chatGPT")
+                                      (url nil)
+                                      (search-url nil)
+                                      (choices (car-safe (gethash "choices" attrs)))
+                                      (title (and choices (map-nested-elt choices '("message" "content"))))
+                                      (model model)
+                                      (decorated (consult-omni-dynamic--chatgpt-format-candidate source query title model))
+                                      (annotated-results (and decorated
+                                                              (propertize decorated
+                                                                          :source source
+                                                                          :title title
+                                                                          :url url
+                                                                          :model model
+                                                                          :search-url search-url
+                                                                          :query query))))
+                                 (when (and annotated-results (functionp callback))
+                                   (funcall callback (list annotated-results)))
+                                 (list annotated-results))))))
 
 #+end_src
 **** define sources
@@ -5200,7 +5203,7 @@ Similar to `consult-find-args' bur for consult-omni."
   "Formats candidates of `consult-omni-find'.
 "
   (mapcar (lambda (candidate)
-           (string-remove-prefix (file-truename default-directory) candidate))
+           (string-trim (string-remove-prefix (file-truename default-directory) candidate)))
           candidates))
 #+end_src
 ***** filter
@@ -6047,7 +6050,7 @@ cand
                (opts (car-safe opts))
                (source "doiorg")
                (url (consult-omni--doi-to-url query))
-               (title (format "%s" query))
+               (title (if url (format "%s" url) (format "%s - Not Found" query)))
                (search-url (concat consult-omni-doiorg-search-url query))
                (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title))
                (annotated-results (propertize decorated
@@ -6056,8 +6059,9 @@ cand
                                               :url url
                                               :search-url search-url
                                               :query query)))
-    (list annotated-results)
-          ))
+    (when url
+      (list annotated-results))
+    ))
 
 #+end_src
 **** define source
@@ -6140,8 +6144,8 @@ for some limited documentation"
                          consult-omni-default-page))
                (count (min count 10))
                (page (+ (* page count) 1))
-               (params `(("q" . ,input)
-                   ("format" . "json")))
+               (params `(("q" . ,(replace-regexp-in-string " " "+" query))
+                         ("format" . "json")))
                (headers `(("Accept" . "application/json"))))
     (consult-omni--fetch-url consult-omni-duckduckgo-api-url consult-omni-http-retrieve-backend
                             :encoding 'utf-8
@@ -6152,26 +6156,24 @@ for some limited documentation"
                             (lambda (attrs)
                               (let* ((raw-results (gethash "RelatedTopics" attrs))
                                      (annotated-results
-                                           (mapcar (lambda (item)
+                                           (remove nil (mapcar (lambda (item)
                                                      (let*
                                                          ((source "DuckDuckGo API")
                                                           (url (gethash "FirstURL" item))
                                                           (title (gethash "Result" item))
                                                           (title (if (and title (stringp title) (string-match "<a href=.*>\\(?1:.*\\)</a>.*" title)) (match-string 1 title) nil))
                                                           (snippet (format "%s" (gethash "Text" item)))
-
                                                           (search-url (consult-omni--make-url-string consult-omni-duckduckgo-search-url params '("format")))
-
-                                                          (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet)))
-                                                       (propertize decorated
+                                                          (decorated (if title (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet) nil)))
+                                                       (if decorated (propertize decorated
                                                                    :source source
                                                                    :title title
                                                                    :url url
                                                                    :search-url search-url
                                                                    :query query
-                                                                   )))
+                                                                   ))))
 
-                                                   raw-results)))
+                                                   raw-results))))
                                 (when (and annotated-results (functionp callback))
                                   (funcall callback annotated-results))
                                 annotated-results)))))
@@ -6192,7 +6194,7 @@ for some limited documentation"
                            :enabled (lambda () (bound-and-true-p consult-omni-duckduckgo-search-url))
                            :group #'consult-omni--group-function
                            :sort t
-                           :static nil
+                           :static 'both
                            :annotate nil
                            )
 #+end_src
@@ -6576,9 +6578,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
 (require 'consult-omni)
 #+end_src
 **** variables
-***** other
 #+begin_src emacs-lisp
-
 (defvar consult-omni-google-autosuggest-api-url "http://suggestqueries.google.com/complete/search")
 #+end_src
 **** items
@@ -6599,8 +6599,9 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                          consult-omni-default-count))
                (params `(("q" . ,query)
                          ("client" . "chrome")))
-               (headers `(("Accept" . "application/json"))))
+               (headers '(("Accept" . "application/json"))))
     (consult-omni--fetch-url consult-omni-google-autosuggest-api-url consult-omni-http-retrieve-backend
+                            :encoding 'utf-8
                             :params params
                             :headers headers
                             :parser #'consult-omni--json-parse-buffer
@@ -6648,7 +6649,7 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                            :search-hist 'consult-omni--search-history
                            :select-hist t
                            :group #'consult-omni--group-function
-                           :enabled (lambda () (boundp consult-omni-google-autosuggest-api-url))
+                           :enabled (lambda () (bound-and-true-p consult-omni-google-autosuggest-api-url))
                            :sort t
                            :static nil
                            )
@@ -7835,7 +7836,7 @@ FACE is the face to apply to TITLE
 (add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-scopus)
 ;;; consult-omni-scopus.el ends here
 #+end_src
-*** StackOverflow
+*** StAckoverflow
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-stackoverflow.el
 :END:

@@ -90,34 +90,36 @@ FACE is the face to apply to TITLE
                (opts (car-safe opts))
                (model (or (plist-get opts :model) "gpt-3.5-turbo"))
                (headers `(("Content-Type" . "application/json")
-                    ("Authorization" . ,(concat "Bearer " (consult-omni-expand-variable-function consult-omni-openai-api-key))))))
+                          ("Authorization" . ,(concat "Bearer " (consult-omni-expand-variable-function consult-omni-openai-api-key))))))
     (consult-omni--fetch-url consult-omni-chatgpt-api-url
-                            consult-omni-http-retrieve-backend
-      :type "POST"
-      :encoding 'utf-8
-      :headers headers
-      :data  (json-encode `((model . ,model)
-                    (messages . [((role . "user")
-                                  (content . ,query))])))
-      :parser #'consult-omni--json-parse-buffer
-      :callback
-      (lambda (attrs)
-        (let* ((source "chatGPT")
-                    (url nil)
-                    (search-url nil)
-                    (choices (car-safe (gethash "choices" attrs)))
-                    (title (and choices (map-nested-elt choices '("message" "content"))))
-                    (model model)
-                    (decorated (consult-omni-dynamic--chatgpt-format-candidate source query title model))
-                    (annotated-results (and decorated (propertize decorated
-                                             :source source
-                                             :title title
-                                             :url url
-                                             :search-url search-url
-                                             :query query))))
-          (when annotated-results
-          (funcall callback (list annotated-results)))
-          annotated-results)))))
+                             consult-omni-http-retrieve-backend
+                             :type "POST"
+                             :encoding 'utf-8
+                             :headers headers
+                             :data  (json-encode `((model . ,model)
+                                                   (messages . [((role . "user")
+                                                                 (content . ,query))])))
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (let* ((source "chatGPT")
+                                      (url nil)
+                                      (search-url nil)
+                                      (choices (car-safe (gethash "choices" attrs)))
+                                      (title (and choices (map-nested-elt choices '("message" "content"))))
+                                      (model model)
+                                      (decorated (consult-omni-dynamic--chatgpt-format-candidate source query title model))
+                                      (annotated-results (and decorated
+                                                              (propertize decorated
+                                                                          :source source
+                                                                          :title title
+                                                                          :url url
+                                                                          :model model
+                                                                          :search-url search-url
+                                                                          :query query))))
+                                 (when (and annotated-results (functionp callback))
+                                   (funcall callback (list annotated-results)))
+                                 (list annotated-results))))))
 
 (consult-omni-define-source "chatGPT"
                            :narrow-char ?a

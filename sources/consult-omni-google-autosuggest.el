@@ -33,8 +33,9 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                          consult-omni-default-count))
                (params `(("q" . ,query)
                          ("client" . "chrome")))
-               (headers `(("Accept" . "application/json"))))
+               (headers '(("Accept" . "application/json"))))
     (consult-omni--fetch-url consult-omni-google-autosuggest-api-url consult-omni-http-retrieve-backend
+                            :encoding 'utf-8
                             :params params
                             :headers headers
                             :parser #'consult-omni--json-parse-buffer
@@ -78,7 +79,7 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                            :search-hist 'consult-omni--search-history
                            :select-hist t
                            :group #'consult-omni--group-function
-                           :enabled (lambda () (boundp consult-omni-google-autosuggest-api-url))
+                           :enabled (lambda () (bound-and-true-p consult-omni-google-autosuggest-api-url))
                            :sort t
                            :static nil
                            )

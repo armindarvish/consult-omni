@@ -53,7 +53,7 @@
                (opts (car-safe opts))
                (source "doiorg")
                (url (consult-omni--doi-to-url query))
-               (title (format "%s" query))
+               (title (if url (format "%s" url) (format "%s - Not Found" query)))
                (search-url (concat consult-omni-doiorg-search-url query))
                (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title))
                (annotated-results (propertize decorated
@@ -62,8 +62,9 @@
                                               :url url
                                               :search-url search-url
                                               :query query)))
-    (list annotated-results)
-          ))
+    (when url
+      (list annotated-results))
+    ))
 
 (consult-omni-define-source "doiorg"
                            :narrow-char ?D

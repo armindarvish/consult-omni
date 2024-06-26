@@ -44,7 +44,7 @@ See URL `https://brave.com/search/api/' for more info"
                (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (min (max count 1) 20))
-               (params  `(("q" . ,query)
+               (params  `(("q" . ,(replace-regexp-in-string " " "+" query))
                           ("count" . ,(format "%s" count))
                           ("page" . ,(format "%s" page))
                           ("country" . "US")))
@@ -54,38 +54,39 @@ See URL `https://brave.com/search/api/' for more info"
                           ("X-Subscription-Token" . ,(consult-omni-expand-variable-function consult-omni-brave-autosuggest-api-key))
                           )))
     (consult-omni--fetch-url consult-omni-brave-autosuggest-api-url consult-omni-http-retrieve-backend
-                                  :params params
-                                  :headers headers
-                                  :parser #'consult-omni--json-parse-buffer
-                                  :callback
-                                  (lambda (attrs)
-                                    (when-let* ((original (make-hash-table :test 'equal))
-                                                (_ (puthash "query" (gethash "original" (gethash "query" attrs)) original))
-                                                (raw-results  (append (map-nested-elt attrs '("results")) (list original)))
-                                                (annotated-results
-                                                 (mapcar (lambda (item)
-                                                           (let* ((source "Brave AutoSuggest")
-                                                                  (word (gethash "query" item))
-                                                                  (url (concat "https://search.brave.com/search?q="  (replace-regexp-in-string " " "+" word)))
-                                                                  (urlobj (and url (url-generic-parse-url url)))
-                                                                  (domain (and (url-p urlobj) (url-domain urlobj)))
-                                                                  (domain (and (stringp domain)
-                                                                               (propertize domain 'face 'font-lock-variable-name-face)))
-                                                                  (path (and (url-p urlobj) (url-filename urlobj)))
-                                                                  (path (and (stringp path)
-                                                                             (propertize path 'face 'font-lock-warning-face)))
-                                                                  (search-url nil)
-                                                                  (decorated (propertize word 'face 'consult-omni-default-face)))
-                                                             (propertize decorated
-                                                                         :source source
-                                                                         :title word
-                                                                         :url url
-                                                                         :search-url search-url
-                                                                         :query query)))
+                             :encoding 'utf-8
+                             :params params
+                             :headers headers
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (when-let* ((original (make-hash-table :test 'equal))
+                                           (_ (puthash "query" (gethash "original" (gethash "query" attrs)) original))
+                                           (raw-results  (append (map-nested-elt attrs '("results")) (list original)))
+                                           (annotated-results
+                                            (mapcar (lambda (item)
+                                                      (let* ((source "Brave AutoSuggest")
+                                                             (word (gethash "query" item))
+                                                             (url (concat "https://search.brave.com/search?q="  (replace-regexp-in-string " " "+" word)))
+                                                             (urlobj (and url (url-generic-parse-url url)))
+                                                             (domain (and (url-p urlobj) (url-domain urlobj)))
+                                                             (domain (and (stringp domain)
+                                                                          (propertize domain 'face 'font-lock-variable-name-face)))
+                                                             (path (and (url-p urlobj) (url-filename urlobj)))
+                                                             (path (and (stringp path)
+                                                                        (propertize path 'face 'font-lock-warning-face)))
+                                                             (search-url nil)
+                                                             (decorated (propertize word 'face 'consult-omni-default-face)))
+                                                        (propertize decorated
+                                                                    :source source
+                                                                    :title word
+                                                                    :url url
+                                                                    :search-url search-url
+                                                                    :query query)))
 
-                                                         raw-results)))
-                                      (funcall callback annotated-results)
-                                      annotated-results)))))
+                                                    raw-results)))
+                                 (funcall callback annotated-results)
+                                 annotated-results)))))
 
 (consult-omni-define-source "Brave AutoSuggest"
                            :narrow-char ?B

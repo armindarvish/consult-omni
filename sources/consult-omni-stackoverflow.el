@@ -126,7 +126,7 @@ See URL `https://api.stackexchange.com/' for more info.
                                                               )))
 
                                               raw-results)))
-                                (when annotated-results
+                                (when (and annotated-results (functionp callback))
                                   (funcall callback annotated-results))
                                 annotated-results)))))
 

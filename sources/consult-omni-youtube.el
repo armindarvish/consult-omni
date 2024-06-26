@@ -189,7 +189,7 @@ such as viw counts and duration, ... of videos/playlists, etc.
                                                                :channelid channelid)))
 
                                                raw-results)))
-                                 (when annotated-results
+                                 (when (and annotated-results (functionp callback))
                                    (funcall callback annotated-results))
                                  annotated-results)))))
 
@@ -245,9 +245,8 @@ such as viw counts and duration, ... of videos/playlists, etc.
                                                             :channelid channelid)))
 
                                       raw-results)))
-                               (when annotated-results
-                                (when callback
-                                  (funcall callback annotated-results)))
+                               (when (and annotated-results (functionp callback))
+                                (funcall callback annotated-results))
                               annotated-results)))))
 
 (cl-defun consult-omni--youtube-fetch-playlist-details (playlistids &rest args &key callback query candidates &allow-other-keys)
@@ -299,9 +298,8 @@ such as viw counts and duration, ... of videos/playlists, etc.
                                                             :channelid channelid)))
 
                                       raw-results)))
-                              (when annotated-results
-                                (when callback
-                                  (funcall callback annotated-results)))
+                              (when (and annotated-results (functionp callback))
+                                 (funcall callback annotated-results))
                               annotated-results)))))
 
 (cl-defun consult-omni--youtube-fetch-channel-details (channelids &rest args &key callback query candidates &allow-other-keys)
@@ -353,9 +351,8 @@ such as viw counts and duration, ... of videos/playlists, etc.
                                                             :channelid channelid)))
 
                                       raw-results)))
-                              (when annotated-results
-                                (when callback
-                                  (funcall callback annotated-results)))
+                              (when (and annotated-results (functionp callback))
+                                  (funcall callback annotated-results))
                               annotated-results)))))
 
 (cl-defun consult-omni--youtube-fetch-results-details (input &rest args &key callback &allow-other-keys)

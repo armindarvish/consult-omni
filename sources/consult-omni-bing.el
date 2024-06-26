@@ -70,7 +70,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                                                               :snippet snippet)))
 
                                               raw-results)))
-                                (when annotated-results
+                                (when (and annotated-results (functionp callback))
                                   (funcall callback annotated-results))
                                 annotated-results)))))
 
