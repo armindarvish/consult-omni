@@ -22,7 +22,7 @@
 
 ;;; Customization Variables
 (defcustom consult-omni-embark-default-term  #'eshell
-  "consult-omni default terminal to use in embark actions"
+  "Consult-omni default terminal to use in embark actions."
   :type '(choice (function :tag "(Default) eshell" #'eshell)
                  (function :tag "shell" #'shell)
                  (function :tag "term" #'term)
@@ -36,7 +36,8 @@
 (defun consult-omni-embark-default-action (cand)
   "Calls the default action on CAND.
 
-Gets the default callback function from `consult-omni-sources-alist'."
+Gets the default callback function from `consult-omni-sources-alist'.
+"
   (let* ((source (and (stringp cand) (get-text-property 0 :source cand))))
     (funcall (consult-omni--get-source-prop source :on-callback) cand))
   )
@@ -160,64 +161,65 @@ This can be used for making notes for scholar articles.
          (doi (if (and doi (stringp doi)) (concat "https://doi.org/" doi)))
          (source (and (stringp cand) (get-text-property 0 :source cand)))
          (url (if (and (equal source "Scopus") doi)
-                doi
+                  doi
                 url))
          (title (and (stringp cand) (get-text-property 0 :title cand)))
          (authors (and (stringp cand) (get-text-property 0 :authors cand)))
          (authors (cond
-                  ((and (listp authors) (= (length authors) 1))
-                   (car authors))
-                  ((listp authors)
-                   (mapconcat #'identity authors ", "))
-                  (t authors)))
+                   ((and (listp authors) (= (length authors) 1))
+                    (car authors))
+                   ((listp authors)
+                    (mapconcat #'identity authors ", "))
+                   (t authors)))
 
          (journal  (and (stringp cand) (get-text-property 0 :journal cand)))
-        (date (and (stringp cand) (get-text-property 0 :date cand))))
+         (date (and (stringp cand) (get-text-property 0 :date cand))))
 
     (cond
-      ((derived-mode-p 'org-mode)
-       (concat
-                "\n"
-                (cond
-                 ((and url title) (format "** [[%s][%s]]\n" url title))
-                 (url (format "** [[%s]]\n" url))
-                 (title (format "** %s\n" title)))
-                (if authors (format "\n%s" authors))
-                (if journal (format "\nin =%s= " journal))
-                (if date (format "published on [%s]\n" date) "\n")
-                "\n*** Notes\n"
-                ))
-      ((derived-mode-p 'markdown-mode)
-       (concat
-                "\n"
-                (cond
-                 ((and url title) (format "## [%s](%s)\n" url title))
-                 (url (format "## <%s>\n" url))
-                 (title (format "## %s\n" title)))
-                (if authors (format "\n%s" authors))
-                (if journal (format "\nin **%s** " journal))
-                (if date (format "published on %s\n" date) "\n")
-                "\n### Notes\n"
-                ))
-      (t
-       (concat
-                "\n"
-                (cond
-                 ((and url title) (format "** %s (%s)\n" title  url))
-                 (url (format "** %s\n" url))
-                 (title (format "** %s\n" title)))
-                (if authors (format "\n%s" authors))
-                (if journal (format "\nin %s " journal))
-                (if date (format "published on %s\n" date) "\n")
-                "\n*** Notes\n"
-                ))
+     ((derived-mode-p 'org-mode)
+      (concat
+       "\n"
+       (cond
+        ((and url title) (format "** [[%s][%s]]\n" url title))
+        (url (format "** [[%s]]\n" url))
+        (title (format "** %s\n" title)))
+       (if authors (format "\n%s" authors))
+       (if journal (format "\nin =%s= " journal))
+       (if date (format "published on [%s]\n" date) "\n")
+       "\n*** Notes\n"
+       ))
+     ((derived-mode-p 'markdown-mode)
+      (concat
+       "\n"
+       (cond
+        ((and url title) (format "## [%s](%s)\n" url title))
+        (url (format "## <%s>\n" url))
+        (title (format "## %s\n" title)))
+       (if authors (format "\n%s" authors))
+       (if journal (format "\nin **%s** " journal))
+       (if date (format "published on %s\n" date) "\n")
+       "\n### Notes\n"
+       ))
+     (t
+      (concat
+       "\n"
+       (cond
+        ((and url title) (format "** %s (%s)\n" title  url))
+        (url (format "** %s\n" url))
+        (title (format "** %s\n" title)))
+       (if authors (format "\n%s" authors))
+       (if journal (format "\nin %s " journal))
+       (if date (format "published on %s\n" date) "\n")
+       "\n*** Notes\n"
+       ))
 
-      )))
+     )))
 
 (defun consult-omni-embark-scholar-insert-note (cand)
   "Insert note snippet for article.
 
-Uses `consult-omni-embark-scholar-make-note-func' to make template."
+Uses `consult-omni-embark-scholar-make-note-func' to make template.
+"
   (insert (funcall consult-omni-embark-scholar-make-note-func cand)))
 
 (defvar-keymap consult-omni-embark-scholar-actions-map
@@ -255,11 +257,11 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
 (defun consult-omni-embark-apps-open-externally (cand)
   "Open CAND's filepath using system's default application."
   (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
-    (pcase system-type
-      ('darwin (call-process "open" nil 0 nil path))
-      ('cygwin (call-process "cygstart" nil 0 nil path))
-      ('windows-nt (and (fboundp 'w32-shell-execute) (w32-shell-execute "open" path)))
-      (_ (call-process "xdg-open" nil 0 nil path))
+      (pcase system-type
+        ('darwin (call-process "open" nil 0 nil path))
+        ('cygwin (call-process "cygstart" nil 0 nil path))
+        ('windows-nt (and (fboundp 'w32-shell-execute) (w32-shell-execute "open" path)))
+        (_ (call-process "xdg-open" nil 0 nil path))
         )
     nil))
 
@@ -271,14 +273,14 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
       (funcall consult-omni-embark-default-term)))
 
 (defun consult-omni-embark-apps-insert-path (cand)
-  "Insert the title of CAND at point"
+  "Insert the title of CAND at point."
   (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
       (insert (format " %s " path))))
 
 (defun consult-omni-embark-apps-copy-path-as-kill (cand)
-  "Copy the title of CAND to `kill-ring'"
+  "Copy the title of CAND to `kill-ring'."
   (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
-       (kill-new (format " %s " path))))
+      (kill-new (format " %s " path))))
 
 ;;; Define Embark Keymaps
 
@@ -347,7 +349,8 @@ Can be:
                  (string :tag "Custom Executable Command" string)))
 
 (defun consult-omni-play-url-with-app (url)
-  "Plays video at URL with `consult-omni-embark-video-default-player'."
+  "Plays video at URL with `consult-omni-embark-video-default-player'.
+"
   (interactive (let* ((cand (consult-omni-youtube nil "Search Youtube:  " t))
                       (link (get-text-property 0 :url cand)))
                  (list link)))
@@ -367,7 +370,8 @@ Can be:
    ))
 
 (defun consult-omni-embark-video-play-with-app (cand)
-  "Open CAND's video URL with `consult-omni-play-url-with-ap'."
+  "Open CAND's video URL with `consult-omni-play-url-with-app'.
+"
   (if-let* ((url (and (stringp cand) (get-text-property 0 :url cand))))
       (consult-omni-play-url-with-app url)
     ))

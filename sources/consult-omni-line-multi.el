@@ -18,29 +18,31 @@
 (require 'consult-omni)
 
 (defun consult-omni--line-multi-candidates (input &optional buffers)
-  "Wrapper around consult--line-multi-candidates for consult-omni."
+  "Wrapper around consult--line-multi-candidates for consult-omni.
+"
   (let  ((buffers (or buffers (consult--buffer-query :directory (consult--normalize-directory default-directory) :sort 'alpha-current))))
     (consult--line-multi-candidates buffers input)))
 
 (defun consult-omni--line-multi-preview (cand)
-"Preview function for consult-omni-line-multi."
+  "Preview function for consult-omni-line-multi.
+"
   (let* ((marker (car (get-text-property 0 :marker cand)))
          (query (get-text-property 0 :query cand)))
     (consult--jump marker)
-       ))
+    ))
 
 (cl-defun consult-omni--line-multi-format-candidate (&rest args &key source query marker title face &allow-other-keys)
   "Formats the cnaiddates of `consult-omni-line-multi'.
 
-SOURCE is the name to use (e.g. “Line MUlti”)
+Description of Arguments:
 
-QUERY is the query input from the user
+  SOURCE     the source name to use (e.g. “buffers text search”)
+  QUERY      query input from the user
+  MARKER     the marker pointing to results of line multi search
+  TITLE      the title of the candidate (e.g. response from chatgpt)
+  FACE       the face to apply to TITLE
 
-MARKER is the marker pointing to results of line multi search
-
-TITLE is the title of the candidate (e.g. line text)
-
-FACE is the face to apply to TITLE"
+"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (marker (car marker))
@@ -86,25 +88,26 @@ FACE is the face to apply to TITLE"
                                                        ))) items)))
     annotated-results))
 
+;; Define the Buffers Text Search Source
 (consult-omni-define-source "buffers text search"
-                           :narrow-char ?s
-                           :type 'sync
-                           :require-match t
-                           :category 'consult-location
-                           :face 'default
-                           :request #'consult-omni--line-multi-fetch-results
-                           :preview-key consult-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :on-preview #'consult-omni--line-multi-preview
-                           :on-return #'identity
-                           :on-callback #'consult-omni--line-multi-preview
-                           :enabled (lambda () (fboundp 'consult-omni--line-multi-candidates))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?s
+                            :type 'sync
+                            :require-match t
+                            :category 'consult-location
+                            :face 'default
+                            :request #'consult-omni--line-multi-fetch-results
+                            :preview-key consult-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :on-preview #'consult-omni--line-multi-preview
+                            :on-return #'identity
+                            :on-callback #'consult-omni--line-multi-preview
+                            :enabled (lambda () (fboundp 'consult-omni--line-multi-candidates))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-line-multi' module
 

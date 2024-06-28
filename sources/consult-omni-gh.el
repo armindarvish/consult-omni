@@ -20,10 +20,11 @@
 (defun consult-omni--gh-transform (items &optional query)
   "Transforms consult-gh candidates to consult-omni style."
   (remove nil (mapcar (lambda (string)
-            (car (consult-gh--repo-format string (or query "") t))) items)))
+                        (car (consult-gh--repo-format string (or query "") t))) items)))
 
 (defun consult-omni--gh-preview (cand)
-  "Preview for github repo candidates"
+  "Preview for `consult-omni-github'.
+"
   (when-let ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
              (repo (plist-get info :repo))
              (query (plist-get info :query))
@@ -46,11 +47,12 @@
     ))
 
 (defun consult-omni--gh-callback (cand)
-  "Callback for github repo candidates."
+  "Callback for `consult-omni-github'.
+"
   (funcall consult-gh-repo-action (cons cand (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))))
 
 (cl-defun consult-omni--gh-search-repos-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “GitHub CLI”.
+  "Makes builder command line args for “GitHub CLI”.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (if callback (seq-difference args (list :callback callback)) args)))
                (opts (car-safe opts))
@@ -60,12 +62,13 @@
                (cmd (consult--build-args '("gh" "search" "repos")))
                (cmd-opts (list "--limit" (format "%s" count)))
                (`(,re . ,hl) (funcall consult--regexp-compiler query 'basic t)))
-      (when re
-        (cons (append cmd
-                      (list (string-join re " "))
-                      cmd-opts)
-              hl))))
+    (when re
+      (cons (append cmd
+                    (list (string-join re " "))
+                    cmd-opts)
+            hl))))
 
+;; Define the GitHub Source
 (consult-omni-define-source "GitHub"
                            :narrow-char ?h
                            :type 'async

@@ -77,19 +77,19 @@ See URL `https://brave.com/search/api/' for more info"
 
 ;; Define the Brave Source
 (consult-omni-define-source "Brave"
-                           :narrow-char ?b
-                           :type 'dynamic
-                           :require-match t
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--brave-fetch-results
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :enabled (lambda () (bound-and-true-p consult-omni-brave-api-key))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           )
+                            :narrow-char ?b
+                            :type 'dynamic
+                            :require-match t
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--brave-fetch-results
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (bound-and-true-p consult-omni-brave-api-key))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            )
 
 ;;; provide `consult-omni-brave' module
 

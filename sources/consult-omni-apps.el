@@ -74,9 +74,11 @@
    )
   )
 
-(defvar consult-omni-apps-cached-apps nil)
+(defvar consult-omni-apps-cached-apps nil
+"Cached list of Paths to Desktop Entry Files")
 
-(defvar consult-omni-apps-cached-items nil)
+(defvar consult-omni-apps-cached-items nil
+"Cached list of desktop apps for `consult-omni-apps'.")
 
 (defun consult-omni--apps-cmd-args (app &optional file)
   "Returns a commandline string for opening the APP
@@ -118,7 +120,7 @@ If APP is nil, `consult-omni-apps-static' is called to select one.
                (format "%s" (and (file-exists-p file) file)))))
 
 (defun consult-omni--apps-preview (cand)
-  "Preview function for for `consult-omni-apps'."
+  "Preview function for `consult-omni-apps'."
 (ignore))
 
 (defun consult-omni--apps-callback (cand)
@@ -130,13 +132,15 @@ If APP is nil, `consult-omni-apps-static' is called to select one.
 (cl-defun consult-omni--apps-format-candidates (&rest args &key source query title path snippet visible face &allow-other-keys)
 "Formats the candidates of `consult-omni-apps'.
 
-SOURCE is the name to use (e.g. “Apps”)
-QUERY is the query input from the user
-TITLE is the title of the App (name of an application)
-PATH is the filepath to the application
-SNIPPET is the description of the app (from Desktop Entry)
-VISIBLE is whether the applicaiton is visible (from Desktop Entry)
-FACE is the face to apply to TITLE
+Description of Arguments:
+
+  SOURCE  the name to use (e.g. “Apps”)
+  QUERY   the query input from the user
+  TITLE   the title of the App (name of an application)
+  PATH    the filepath to the application
+  SNIPPET the description of the app (from Desktop Entry)
+  VISIBLE whether the applicaiton is visible (from Desktop Entry)
+  FACE    the face to apply to TITLE
 "
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
@@ -170,14 +174,15 @@ match `consult-omni-apps-regexp-pattern' in `consult-omni-apps-paths'.
 "
   (if (and consult-omni-apps-use-cache consult-omni-apps-cached-apps)
       consult-omni-apps-cached-apps
-(let ((paths (if (stringp consult-omni-apps-paths)
-                   (list consult-omni-apps-paths)
-                 consult-omni-apps-paths)))
-    (when (listp paths)
-      (setq consult-omni-apps-cached-apps (cl-remove-duplicates (apply #'append (mapcar (lambda (path)
-                          (when (file-exists-p path)
-                          (directory-files path t consult-omni-apps-regexp-pattern t))) paths))))))))
+    (let ((paths (if (stringp consult-omni-apps-paths)
+                     (list consult-omni-apps-paths)
+                   consult-omni-apps-paths)))
+      (when (listp paths)
+        (setq consult-omni-apps-cached-apps (cl-remove-duplicates (apply #'append (mapcar (lambda (path)
+                                                                                            (when (file-exists-p path)
+                                                                                              (directory-files path t consult-omni-apps-regexp-pattern t))) paths))))))))
 
+;; set the `consult-omni-apps-cached-apps'
 (setq consult-omni-apps-cached-apps (consult-omni--apps-get-desktop-apps))
 
 (defun consult-omni--apps-parse-app-file (file)
@@ -320,24 +325,24 @@ a new list is generated.
  )))
 
 (consult-omni-define-source "Apps"
-                           :narrow-char ?A
-                           :category 'consult-omni-apps
-                           :type 'sync
-                           :require-match t
-                           :request #'consult-omni--apps-list-apps
-                           :on-preview #'ignore
-                           :on-return #'identity
-                           :on-callback #'consult-omni--apps-callback
-                           :preview-key nil
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--apps-select-history
-                           :enabled (lambda () (boundp 'consult-omni-apps-paths))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           :category 'file
-                           )
+                            :narrow-char ?A
+                            :category 'consult-omni-apps
+                            :type 'sync
+                            :require-match t
+                            :request #'consult-omni--apps-list-apps
+                            :on-preview #'ignore
+                            :on-return #'identity
+                            :on-callback #'consult-omni--apps-callback
+                            :preview-key nil
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--apps-select-history
+                            :enabled (lambda () (boundp 'consult-omni-apps-paths))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            :category 'file
+                            )
 
 ;;; provide `consult-omni-apps module
 

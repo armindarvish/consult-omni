@@ -19,6 +19,12 @@
 
 (defun consult-omni-mu--format-candidate (cand highlight)
   "Formats candidates for `consult-omni-mu4e'
+
+Description of Arguments:
+
+  CAND      a candidate from consult-mu
+  HIGHLIGHT when non-nil highlights the query term in minibuffer
+
 "
 
   (let* ((string (car cand))
@@ -44,7 +50,7 @@
   (cons str (list :msg msg :query query :type :dynamic)))))
 
 (defun consult-omni--mu-preview (cand)
-  "Preview for mu4e candidates"
+  "Preview for `consult-omni-mu4e'."
   (when-let* ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
               (msg (plist-get info :msg))
               (query (plist-get info :query))
@@ -63,16 +69,17 @@
   )
 
 (defun consult-omni--mu-return (cand)
-  "Return function for mu4e candidates."
-(save-mark-and-excursion
-  (consult-mu--execute-all-marks)
+  "Return function for `consult-omni-mu4e'."
+  (save-mark-and-excursion
+    (consult-mu--execute-all-marks)
+    )
+  (setq consult-mu--override-group nil)
+  cand
   )
-(setq consult-mu--override-group nil)
-cand
-)
 
 (defun consult-omni--mu-callback (cand)
-  "Callback function for mu4e candidates."
+  "Callback function for `consult-omni-mu4e'.
+"
   (let* ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
          (msg (plist-get info :msg))
          (query (plist-get info :query))
@@ -81,14 +88,14 @@ cand
     (consult-mu--view msg nil consult-mu-mark-viewed-as-read match-str)
     (consult-mu-overlays-toggle consult-mu-view-buffer-name)
     )
-)
+  )
 
 (cl-defun consult-omni--mu-fetch-results (input &rest args &key callback &allow-other-keys)
   "Makes builder command line args for “mu4e”.
 "
   (save-mark-and-excursion
-  (consult-mu--execute-all-marks)
-  )
+    (consult-mu--execute-all-marks)
+    )
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -100,37 +107,38 @@ cand
     (consult-mu--update-headers mu-input nil nil :dynamic)
     (with-current-buffer consult-mu-headers-buffer-name
       (goto-char (point-min))
-     (setq messages (remove nil
-              (cl-loop until (eobp)
-                       collect (let ((msg (ignore-errors (mu4e-message-at-point))))
-                                 (consult-omni-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
-                 do (forward-line 1)))
-           ))
+      (setq messages (remove nil
+                             (cl-loop until (eobp)
+                                      collect (let ((msg (ignore-errors (mu4e-message-at-point))))
+                                                (consult-omni-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
+                                      do (forward-line 1)))
+            ))
     (when (and messages callback)
       (funcall callback messages))))
 
+;; Define the Mu4e Source
 (consult-omni-define-source "mu4e"
-                           :narrow-char ?m
-                           :type 'dynamic
-                           :require-match nil
-                           :category 'consult-mu-messages
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--mu-fetch-results
-                           :lookup #'consult-mu--lookup
-                           :on-preview #'consult-omni--mu-preview
-                           :on-return #'consult-omni--mu-return
-                           :on-callback #'consult-omni--mu-callback
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--email-select-history
-                           :enabled (lambda () (if (and (executable-find "mu")
-                                                   (fboundp 'consult-mu))
-                                                   t nil))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?m
+                            :type 'dynamic
+                            :require-match nil
+                            :category 'consult-mu-messages
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--mu-fetch-results
+                            :lookup #'consult-mu--lookup
+                            :on-preview #'consult-omni--mu-preview
+                            :on-return #'consult-omni--mu-return
+                            :on-callback #'consult-omni--mu-callback
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--email-select-history
+                            :enabled (lambda () (if (and (executable-find "mu")
+                                                         (fboundp 'consult-mu))
+                                                    t nil))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-mu4e' module
 

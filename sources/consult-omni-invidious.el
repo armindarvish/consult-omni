@@ -16,8 +16,10 @@
 
 (require 'consult-omni)
 
-(defvar consult-omni-invidious-servers nil)
-(defvar consult-omni-invidious-server-url "https://api.invidious.io/instances.json")
+(defvar consult-omni-invidious-servers nil
+"List of “Invidious” API servers")
+(defvar consult-omni-invidious-server-url "https://api.invidious.io/instances.json"
+"URL to fetch “Invidious” API servers")
 
 (defun consult-omni--invidious-get-servers (&optional rotate)
   "Get list of Invidious API servers.
@@ -29,48 +31,41 @@
   (or consult-omni-invidious-servers
       (setq consult-omni-invidious-servers
             (let ((params `(("pretty" . "1")
-                                  ("sort_by" . "type"))))
-       (consult-omni--fetch-url
-        consult-omni-invidious-server-url
-        consult-omni-http-retrieve-backend
-        :params params
-        :sync t
-        :parser #'consult-omni--json-parse-buffer
-        :callback (lambda (attrs)
-  (delq nil (mapcar (lambda (item)
-                      (when (equal (gethash "api" (cadr item)) t)
-                                  (gethash "uri" (cadr item))
-                      )
+                            ("sort_by" . "type"))))
+              (consult-omni--fetch-url
+               consult-omni-invidious-server-url
+               consult-omni-http-retrieve-backend
+               :params params
+               :sync t
+               :parser #'consult-omni--json-parse-buffer
+               :callback (lambda (attrs)
+                           (delq nil (mapcar (lambda (item)
+                                               (when (equal (gethash "api" (cadr item)) t)
+                                                 (gethash "uri" (cadr item))
+                                                 )
 
-                      ) attrs))
-))))))
+                                               ) attrs))
+                           ))))))
 
 (cl-defun consult-omni--invidious-format-candidate (&rest args &key source type query title snippet channeltitle date subcount videocount viewcount length face &allow-other-keys)
 "Formats a candidate for `consult-omni-invidious' commands.
 
-SOURCE is the name to use (e.g. “Invidious”)
+Description of Arguments:
 
-TYPE is the type of candidate (e.g. video, channel, playlist)
+  SOURCE       the name to use (e.g. “Invidious”)
+  TYPE         the type of candidate (e.g. video, channel, playlist)
+  QUERY        query input from the user
+               the search results of QUERY on the SOURCE website
+  TITLE        the title of the video
+  SNIPPET      a string containing a snippet/description of the video
+  CHANNELTITLE the name of the channel for the video
+  DATE         the publish date of the video
+  SUBCOUNT     the subscriber count fpr a channel
+  VIDEOCOUNT   the number of videos in a playlist
+  VIEWCOUNT    the number of times a video is viewed
+  LENGTH       the duration of a  video in seconds
+  FACE         the face to apply to TITLE
 
-QUERY is the query input from the user
-
-TITLE is the title of the video
-
-SNIPPET is a string containing a snippet/description of the video
-
-CHANNELTITLE is the name of the channel for the video
-
-DATE is the publish date of the video
-
-SUBCOUNT is the subscriber count fpr a channel
-
-VIDEOCOUNT is the number of videos in a playlist
-
-VIEWCOUNT is the number of times a video is viewed
-
-LENGTH is the duration of a  video in seconds
-
-FACE is the face to apply to TITLE
 "
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
@@ -143,91 +138,92 @@ FACE is the face to apply to TITLE
                (order  (if (and order (member (format "%s" order) '("date" "rating" "relevance" "upload_date" "views" "view_count"))) (format "%s" order) "relevance"))
                (type (if (and type (member (format "%s" type) '("channel" "playlist" "video" "movie" "show" "all"))) (format "%s" type) "video"))
                (params (delq nil `(("q" . ,(replace-regexp-in-string " " "+" query))
-                         ("sort_by" . ,order)
-                         ("type" . ,type)
-                         ,(when searchdate `("date" . ,searchdate))
-                         ,(when features `("features" . ,features))
-                         ,(when duration `("duration" . ,duration))
-                         ,(when subs `("subscriptions" . ,(if subs "true" "false"))))))
+                                   ("sort_by" . ,order)
+                                   ("type" . ,type)
+                                   ,(when searchdate `("date" . ,searchdate))
+                                   ,(when features `("features" . ,features))
+                                   ,(when duration `("duration" . ,duration))
+                                   ,(when subs `("subscriptions" . ,(if subs "true" "false"))))))
                (server-url (car (consult-omni--invidious-get-servers)))
                (api-url (concat server-url "/api/v1/search?")))
     (consult-omni--fetch-url api-url consult-omni-http-retrieve-backend
-                            :encoding 'utf-8
-                            :params params
-                            :parser #'consult-omni--json-parse-buffer
-                            :callback
-                            (lambda (attrs)
-                              (let* ((raw-results attrs)
-                                     (annotated-results
-                                      (mapcar (lambda (item)
-                                                (let*
-                                                    ((source "Invidious")
-                                                     (item-type (gethash "type" item))
-                                                     (channelhandle (gethash "channelHandle" item))
-                                                     (title (or (gethash "title" item)
-                                                                (unless (eq channelhandle :null) channelhandle)
-                                                                (gethash "author" item)
-                                                                ))
-                                                     (videos  (gethash "videos" item))
-                                                     (videoid (or (gethash "videoId" item)
-                                                                  (and videos (gethash "videoId" (car videos)))))
-                                                     (channeltitle (gethash "author" item))
-                                                     (channelid (gethash "authorId" item))
-                                                     (playlistid (gethash "playlistId" item))
-                                                     (videocount (gethash "videoCount" item))
-                                                     (subcount (gethash "subCount" item))
-                                                     (viewcount (gethash "viewCount" item))
-                                                     (videolength (gethash "lengthSeconds" item))
-                                                     (date (gethash "published" item))
-                                                     (date (when date (format-time-string "%Y-%m-%d" (seconds-to-time date))))
-                                                     (url (cond
-                                                           ((and playlistid videoid) (consult-omni--make-url-string consult-omni-youtube-watch-url `(("v" . ,videoid)
-                               ("list" . ,playlistid))))
-                                                           (playlistid (consult-omni--make-url-string consult-omni-youtube-watch-url `(("list" . ,playlistid))))
-                                                           (videoid (consult-omni--make-url-string consult-omni-youtube-watch-url `(("v" . ,videoid))))
+                             :encoding 'utf-8
+                             :params params
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (let* ((raw-results attrs)
+                                      (annotated-results
+                                       (mapcar (lambda (item)
+                                                 (let*
+                                                     ((source "Invidious")
+                                                      (item-type (gethash "type" item))
+                                                      (channelhandle (gethash "channelHandle" item))
+                                                      (title (or (gethash "title" item)
+                                                                 (unless (eq channelhandle :null) channelhandle)
+                                                                 (gethash "author" item)
+                                                                 ))
+                                                      (videos  (gethash "videos" item))
+                                                      (videoid (or (gethash "videoId" item)
+                                                                   (and videos (gethash "videoId" (car videos)))))
+                                                      (channeltitle (gethash "author" item))
+                                                      (channelid (gethash "authorId" item))
+                                                      (playlistid (gethash "playlistId" item))
+                                                      (videocount (gethash "videoCount" item))
+                                                      (subcount (gethash "subCount" item))
+                                                      (viewcount (gethash "viewCount" item))
+                                                      (videolength (gethash "lengthSeconds" item))
+                                                      (date (gethash "published" item))
+                                                      (date (when date (format-time-string "%Y-%m-%d" (seconds-to-time date))))
+                                                      (url (cond
+                                                            ((and playlistid videoid) (consult-omni--make-url-string consult-omni-youtube-watch-url `(("v" . ,videoid)
+                                                                                                                                                      ("list" . ,playlistid))))
+                                                            (playlistid (consult-omni--make-url-string consult-omni-youtube-watch-url `(("list" . ,playlistid))))
+                                                            (videoid (consult-omni--make-url-string consult-omni-youtube-watch-url `(("v" . ,videoid))))
 
-                                                           (channelid (concat consult-omni-youtube-channel-url channelid))))
-                                                     (search-url (consult-omni--make-url-string server-url params))
-                                                     (description (gethash "description" item))
+                                                            (channelid (concat consult-omni-youtube-channel-url channelid))))
+                                                      (search-url (consult-omni--make-url-string server-url params))
+                                                      (description (gethash "description" item))
 
-                                                     (decorated (consult-omni--invidious-format-candidate :source source :type item-type :query query :title title :snippet description :channeltitle channeltitle :date date :subcount subcount :videocount videocount :viewcount viewcount :length videolength)))
-                                                (propertize decorated
-                                                            :source source
-                                                            :title title
-                                                            :url url
-                                                            :search-url search-url
-                                                            :query query
-                                                            :snippet description
-                                                            :videoid videoid
-                                                            :channeltitle channeltitle
-                                                            :channelid channelid
-                                                            :duration duration
-:views viewcount
-:videocount videocount
-:subscriptions subcount)))
+                                                      (decorated (consult-omni--invidious-format-candidate :source source :type item-type :query query :title title :snippet description :channeltitle channeltitle :date date :subcount subcount :videocount videocount :viewcount viewcount :length videolength)))
+                                                   (propertize decorated
+                                                               :source source
+                                                               :title title
+                                                               :url url
+                                                               :search-url search-url
+                                                               :query query
+                                                               :snippet description
+                                                               :videoid videoid
+                                                               :channeltitle channeltitle
+                                                               :channelid channelid
+                                                               :duration duration
+                                                               :views viewcount
+                                                               :videocount videocount
+                                                               :subscriptions subcount)))
 
-                                      raw-results)))
-                              (when (and annotated-results (functionp callback))
-                                (funcall callback annotated-results))
-                              annotated-results)
-                              ))))
+                                               raw-results)))
+                                 (when (and annotated-results (functionp callback))
+                                   (funcall callback annotated-results))
+                                 annotated-results)
+                               ))))
 
+;; Define the Invidious Source
 (consult-omni-define-source "Invidious"
-                           :narrow-char ?y
-                           :type 'dynamic
-                           :require-match t
-                           :category 'consult-omni-video
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--invidious-fetch-results
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :enabled (lambda () (bound-and-true-p consult-omni-invidious-server-url))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?y
+                            :type 'dynamic
+                            :require-match t
+                            :category 'consult-omni-video
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--invidious-fetch-results
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (bound-and-true-p consult-omni-invidious-server-url))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-invidious' module
 

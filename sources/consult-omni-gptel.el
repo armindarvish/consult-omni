@@ -27,7 +27,7 @@ See `gptel-backend' for more info."
   :type `(choice
           (const :tag "ChatGPT" ,gptel--openai)
           (restricted-sexp :match-alternatives (gptel-backend-p 'nil)
-           :tag "Other backend")))
+                           :tag "Other backend")))
 
 (defcustom consult-omni-gptel-model (or gptel-model "gpt-3.5-turbo")
   "GPT Model for use in consult-omni-gptel.
@@ -58,23 +58,23 @@ See `gptel-model' for more info."
 
 (defcustom consult-omni-gptel-short-answer-wordcount 10
   "Number of words to use in a short answer"
-:type 'integer)
+  :type 'integer)
 
-(cl-defun consult-omni--gptel-format-candidate (title &rest args &key source query model backend stream face &allow-other-keys)
+(cl-defun consult-omni--gptel-format-candidate (&rest args &key source query title model backend stream face &allow-other-keys)
   "Returns a formatted string for gptel's candidates
 
-SOURCE is the name string of the source for candidate
+Description of Arguments:
 
-QUERY is the query string used for searching
+  SOURCE   the name to use (e.g. “gptel”)
+  QUERY    query input from the user
+           the search results of QUERY on the SOURCE website
+  TITLE    the string of the candidate.
+  MODEL    the model to use for gptel. see `gptel-mode' for details.
+  BACKEND  the backend to use for gptel. see `gptel-backend' for details.
+  STREAM   boolean to determine whether to use strem or not.
+           see`gptel-stream' for details.
+  FACE     the face to apply to TITLE
 
-URL is a string pointing to url of the candidate
-
-SEARCH-URL is a string pointing to the url for
-the search results of QUERY on the SOURCE website
-
-TITLE is the title of the candidate
-
-SNIPPET is a string containing a snippet/description of candidate
 "
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
@@ -155,6 +155,11 @@ The preview buffer is from `consult-omni--gptel-response-preview'."
                  ))))
 
 (cl-defun consult-omni--gptel-make-title-placeholder (input &rest args &key callback &allow-other-keys)
+  "Makes a placeholder for sending query to gptel.
+
+This makes a placeholder string “ask gptel: %s” %s=INPUT with
+metadata so it can be send to `gptel'.
+"
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (if callback (seq-difference args (list :callback callback)) args)))
                (opts (car-safe opts))
                (source "gptel")
@@ -167,7 +172,7 @@ The preview buffer is from `consult-omni--gptel-response-preview'."
                           (and backend-struct (car (cl-struct-slot-value (type-of backend-struct) 'models backend-struct)))))
                (stream (or (and (plist-member opts :stream) (plist-get opts :stream)) gptel-stream))
                (placeholder (format "ask gptel: %s" (if query (string-trim-right query) "")))
-               (decorated (consult-omni--gptel-format-candidate placeholder :source source :query query :model model :backend backend :stream stream))
+               (decorated (consult-omni--gptel-format-candidate :source source :query query :title placeholder :model model :backend backend :stream stream))
                (annotated-results
                 (propertize decorated
                             :source source
@@ -182,7 +187,7 @@ The preview buffer is from `consult-omni--gptel-response-preview'."
       (list annotated-results)))
 
 (cl-defun consult-omni--gptel-make-title-short-answer (input &rest args &key callback &allow-other-keys)
-"Get a short answer preview from gptel."
+  "Gets a short preview answer from gptel."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (if callback (seq-difference args (list :callback callback)) args)))
                (opts (car-safe opts))
                (source "gptel")
@@ -205,54 +210,53 @@ The preview buffer is from `consult-omni--gptel-response-preview'."
       (lambda (response _)
         (when response
           (let* ((decorated
-                (consult-omni--gptel-format-candidate (string-trim-right response) :source source :query query :model model :backend backend :stream stream))
+                  (consult-omni--gptel-format-candidate :source source :query query :title (string-trim-right response) :model model :backend backend :stream stream))
                  (annotated-result (propertize decorated
-                        :title response
-                        :source "gptel"
-                        :url nil
-                        :query query
-                        :model model
-                        :stream stream
-                        :backend backend)))
-        (when annotated-result
-          (when callback
-            (funcall callback (list annotated-result)))
-          (setq output (list annotated-result)))))))
+                                               :title response
+                                               :source "gptel"
+                                               :url nil
+                                               :query query
+                                               :model model
+                                               :stream stream
+                                               :backend backend)))
+            (when annotated-result
+              (when callback
+                (funcall callback (list annotated-result)))
+              (setq output (list annotated-result)))))))
     output))
 
 (cl-defun consult-omni--gptel-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Makes cnaidate with INPUT as placeholder for `consult-omni-gptel'.
-
-This makes a placeholder string “ask gptel: %s” %s=INPUT with
-metadata so it can be send to `gptel'."
+  "Fetches chat response for INPUT from gptel.
+"
   (unless (featurep 'gptel)
     (error "consult-omni: gptel is not available. Make sure to install and load `gptel'."))
   (let ((results))
     (cond
      ((stringp consult-omni-gptel-cand-title) (setq results (list consult-omni-gptel-cand-title)))
      ((functionp consult-omni-gptel-cand-title)
-           (setq results (apply consult-omni-gptel-cand-title input :callback callback args))))
+      (setq results (apply consult-omni-gptel-cand-title input :callback callback args))))
     results
     ))
 
+;; Define the Gptel Source
 (consult-omni-define-source "gptel"
-                           :narrow-char ?a
-                           :type 'dynamic
-                           :require-match t
-                           :face 'consult-omni-ai-title-face
-                           :request #'consult-omni--gptel-fetch-results
-                           :on-preview #'consult-omni--gptelbuffer-preview
-                           :on-return #'identity
-                           :on-callback #'consult-omni--gptelbuffer-preview
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :enabled (lambda () (fboundp 'gptel))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?a
+                            :type 'dynamic
+                            :require-match t
+                            :face 'consult-omni-ai-title-face
+                            :request #'consult-omni--gptel-fetch-results
+                            :on-preview #'consult-omni--gptelbuffer-preview
+                            :on-return #'identity
+                            :on-callback #'consult-omni--gptelbuffer-preview
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (fboundp 'gptel))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-gptel' module
 

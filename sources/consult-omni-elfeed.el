@@ -27,10 +27,14 @@
   :type 'string)
 
 (defun consult-omni--elfeed-format-candidate (entries query)
-"Formats the cnaiddates of `consult-omni-elfeed'.
+  "Formats the candidates of `consult-omni-elfeed'.
 
-ENTRIES are entries from `consult-omni--elfeed-fetch-result'.
-QUERY is the query input from the user"
+Description of Arguments:
+
+  ENTRIES entries from `consult-omni--elfeed-fetch-result'.
+  QUERY   the query input from the user
+
+"
   (let ((annotated-entries))
     (dolist (entry entries annotated-entries)
       (let* ((url (elfeed-entry-link entry))
@@ -86,11 +90,13 @@ QUERY is the query input from the user"
               annotated-entries)))))
 
 (defun consult-omni--elfeed-search-buffer ()
-  "Get or create buffer for `consult-omni-elfeed'"
+  "Get or create buffer for `consult-omni-elfeed'.
+"
   (get-buffer-create (or consult-omni-elfeed-search-buffer-name "*consult-omni-elfeed-search*")))
 
 (defun consult-omni--elfeed-preview (cand)
-  "Shows a preview buffer of CAND for `consult-omni-elfeed'.
+  "Preview function for `consult-omni-elfeed'.
+
 Uses `elfeed-show-entry'."
   (if (listp cand) (setq cand (or (car-safe cand) cand)))
   (let* ((entry (get-text-property 0 :entry cand))
@@ -105,55 +111,58 @@ Uses `elfeed-show-entry'."
 
 (cl-defun consult-omni--elfeed-fetch-results (input &rest args &key callback &allow-other-keys)
   "Return entries matching INPUT in elfeed database.
+
 uses INPUT as filter ro find entries in elfeed databse.
 if FILTER is non-nil, it is used as additional filter parameters.
-"
-(cl-letf* (((symbol-function #'elfeed-search-buffer) #'consult-omni--elfeed-search-buffer))
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
-               (opts (car-safe opts))
-               (maxcount (plist-get opts :count))
-               (filter (and (plist-member opts :filter) (plist-get opts :filter)))
-               (maxcount (or (and (integerp maxcount) maxcount)
-                             (and maxcount (string-to-number (format "%s" maxcount)))
-                             consult-omni-default-count))
-               (elfeed-search-filter (concat (if maxcount (format "#%d " maxcount))
-                                             (if filter (format "%s" filter)
-                                               consult-omni-elfeed-default-filter)
-                                             (if query (format "%s" query))
-                                             ))
-               (filter (elfeed-search-parse-filter elfeed-search-filter))
-               (head (list nil))
-               (tail head)
-               (count 0)
-               (lexical-binding t)
-               (search-func (byte-compile (elfeed-search-compile-filter filter))))
-    (with-elfeed-db-visit (entry feed)
-      (when (funcall search-func entry feed count)
-        (setf (cdr tail) (list entry)
-              tail (cdr tail)
-              count (1+ count))))
-    (when-let ((entries (cdr head)))
-      (consult-omni--elfeed-format-candidate entries query)))
-      ))
 
+"
+  (cl-letf* (((symbol-function #'elfeed-search-buffer) #'consult-omni--elfeed-search-buffer))
+    (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+                 (opts (car-safe opts))
+                 (maxcount (plist-get opts :count))
+                 (filter (and (plist-member opts :filter) (plist-get opts :filter)))
+                 (maxcount (or (and (integerp maxcount) maxcount)
+                               (and maxcount (string-to-number (format "%s" maxcount)))
+                               consult-omni-default-count))
+                 (elfeed-search-filter (concat (if maxcount (format "#%d " maxcount))
+                                               (if filter (format "%s" filter)
+                                                 consult-omni-elfeed-default-filter)
+                                               (if query (format "%s" query))
+                                               ))
+                 (filter (elfeed-search-parse-filter elfeed-search-filter))
+                 (head (list nil))
+                 (tail head)
+                 (count 0)
+                 (lexical-binding t)
+                 (search-func (byte-compile (elfeed-search-compile-filter filter))))
+      (with-elfeed-db-visit (entry feed)
+        (when (funcall search-func entry feed count)
+          (setf (cdr tail) (list entry)
+                tail (cdr tail)
+                count (1+ count))))
+      (when-let ((entries (cdr head)))
+        (consult-omni--elfeed-format-candidate entries query)))
+    ))
+
+;; Define the Elfeed Source
 (consult-omni-define-source "elfeed"
-                           :narrow-char ?e
-                           :type 'sync
-                           :require-match t
-                           :face 'elfeed-search-unread-title-face
-                           :request #'consult-omni--elfeed-fetch-results
-                           :on-preview #'consult-omni--elfeed-preview
-                           :on-return #'identity
-                           :on-callback #'consult-omni--elfeed-preview
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :enabled (lambda () (boundp 'elfeed-db))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?e
+                            :type 'sync
+                            :require-match t
+                            :face 'elfeed-search-unread-title-face
+                            :request #'consult-omni--elfeed-fetch-results
+                            :on-preview #'consult-omni--elfeed-preview
+                            :on-return #'identity
+                            :on-callback #'consult-omni--elfeed-preview
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (boundp 'elfeed-db))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-elfeed' module
 

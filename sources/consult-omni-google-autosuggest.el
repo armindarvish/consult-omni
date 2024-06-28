@@ -16,7 +16,8 @@
 
 (require 'consult-omni)
 
-(defvar consult-omni-google-autosuggest-api-url "http://suggestqueries.google.com/complete/search")
+(defvar consult-omni-google-autosuggest-api-url "http://suggestqueries.google.com/complete/search"
+"API URL for Google AutoSuggest")
 
 (cl-defun consult-omni--google-autosuggest-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results for INPUT from Google Autosuggest.
@@ -35,54 +36,55 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                          ("client" . "chrome")))
                (headers '(("Accept" . "application/json"))))
     (consult-omni--fetch-url consult-omni-google-autosuggest-api-url consult-omni-http-retrieve-backend
-                            :encoding 'utf-8
-                            :params params
-                            :headers headers
-                            :parser #'consult-omni--json-parse-buffer
-                            :callback
-                            (lambda (attrs)
-                              (when-let* ((raw-results (append (list (car-safe attrs)) (car-safe (cdr-safe attrs))))
-                                          (annotated-results
-                                           (mapcar (lambda (item)
-                                                     (let* ((source "Google AutoSuggest")
-                                                            (word item)
-                                                            (url                                  (concat "https://www.google.com/search?q="  (replace-regexp-in-string " " "+" word)))
-                                                            (urlobj (and url (url-generic-parse-url url)))
-                                                            (domain (and (url-p urlobj) (url-domain urlobj)))
-                                                            (domain (and (stringp domain)
-                                                                         (propertize domain 'face 'font-lock-variable-name-face)))
-                                                            (path (and (url-p urlobj) (url-filename urlobj)))
-                                                            (path (and (stringp path)
-                                                                       (propertize path 'face 'font-lock-warning-face)))
-                                                            (search-url nil)
-                                                            (decorated (propertize word 'face 'consult-omni-default-face)))
-                                                       (propertize decorated
-                                                                   :source source
-                                                                   :title word
-                                                                   :url url
-                                                                   :search-url search-url
-                                                                   :query query)))
+                             :encoding 'utf-8
+                             :params params
+                             :headers headers
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (when-let* ((raw-results (append (list (car-safe attrs)) (car-safe (cdr-safe attrs))))
+                                           (annotated-results
+                                            (mapcar (lambda (item)
+                                                      (let* ((source "Google AutoSuggest")
+                                                             (word item)
+                                                             (url                                  (concat "https://www.google.com/search?q="  (replace-regexp-in-string " " "+" word)))
+                                                             (urlobj (and url (url-generic-parse-url url)))
+                                                             (domain (and (url-p urlobj) (url-domain urlobj)))
+                                                             (domain (and (stringp domain)
+                                                                          (propertize domain 'face 'font-lock-variable-name-face)))
+                                                             (path (and (url-p urlobj) (url-filename urlobj)))
+                                                             (path (and (stringp path)
+                                                                        (propertize path 'face 'font-lock-warning-face)))
+                                                             (search-url nil)
+                                                             (decorated (propertize word 'face 'consult-omni-default-face)))
+                                                        (propertize decorated
+                                                                    :source source
+                                                                    :title word
+                                                                    :url url
+                                                                    :search-url search-url
+                                                                    :query query)))
 
-                                                   raw-results)))
-                                (funcall callback annotated-results)
-                                annotated-results)))))
+                                                    raw-results)))
+                                 (funcall callback annotated-results)
+                                 annotated-results)))))
 
+;; Define the Google AutoSuggest Source
 (consult-omni-define-source "Google AutoSuggest"
-                           :narrow-char ?G
-                           :type 'dynamic
-                           :require-match nil
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--google-autosuggest-fetch-results
-                           :on-preview #'ignore
-                           :on-return #'identity
-                           :on-callback #'string-trim
-                           :search-hist 'consult-omni--search-history
-                           :select-hist t
-                           :group #'consult-omni--group-function
-                           :enabled (lambda () (bound-and-true-p consult-omni-google-autosuggest-api-url))
-                           :sort t
-                           :static nil
-                           )
+                            :narrow-char ?G
+                            :type 'dynamic
+                            :require-match nil
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--google-autosuggest-fetch-results
+                            :on-preview #'ignore
+                            :on-return #'identity
+                            :on-callback #'string-trim
+                            :search-hist 'consult-omni--search-history
+                            :select-hist t
+                            :group #'consult-omni--group-function
+                            :enabled (lambda () (bound-and-true-p consult-omni-google-autosuggest-api-url))
+                            :sort t
+                            :static nil
+                            )
 
 ;;; provide `consult-omni-google-autosuggest' module
 

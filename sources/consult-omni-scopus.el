@@ -24,33 +24,29 @@ See URL `https://dev.elsevier.com/documentation/SCOPUSSearchAPI.wadl' for more i
   :type '(choice (const :tag "Scopus API Key" string)
                  (function :tag "Custom Function")))
 
-(defvar consult-omni-scopus-search-url "https://www.scopus.com/record/display.uri?")
+(defvar consult-omni-scopus-search-url "https://www.scopus.com/record/display.uri?"
+"Search URL for Scopus.")
 
-(defvar consult-omni-scopus-api-url "https://api.elsevier.com/content/search/scopus")
+(defvar consult-omni-scopus-api-url "https://api.elsevier.com/content/search/scopus"
+"API URL for Scopus.")
 
 (cl-defun consult-omni--scopus-format-candidate (&rest args &key source query url search-url title authors date journal doi face &allow-other-keys)
   "Returns a formatted string for candidates of `consult-omni-scopus'.
 
-SOURCE is the name to use (e.g. “PubMed”)
+Description of Arguments:
 
-QUERY is the query input from the user
+  SOURCE     the name to use (e.g. “Scopus”)
+  QUERY      query input from the user
+  URL        the url of  candidate
+  SEARCH-URL the web search url
+             (e.g. https://www.scopus.com/record/display.uri?&eid=%s)
+  TITLE      the title of the result/paper (e.g. title of paper)
+  AUTHORS    the authors of the result/paper
+  DATE       the publish date of the result/paper
+  JOURNAL    the journal that the result/paper is published in
+  DOI        the doi of the result/paper
+  FACE       the face to apply to TITLE
 
-URL is the url of  candidate
-
-SEARCH-URL is the web search url
-(e.g. https://www.scopus.com/record/display.uri?&eid=%s)
-
-TITLE is the title of the result/paper (e.g. title of paper)
-
-AUTHORS are authors of the result/paper
-
-DATE is the publish date of the result/paper
-
-JOURNAL is the journal that the result/paper is published in
-
-DOI is doi of the result/paper
-
-FACE is the face to apply to TITLE
 "
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
@@ -83,18 +79,20 @@ FACE is the face to apply to TITLE
     str))
 
 (defun consult-omni--scopus-callback (cand)
-  "Callback function for `consult-omni-scopus'."
+  "Callback function for `consult-omni-scopus'.
+"
   (let* ((doi (get-text-property 0 :doi cand))
          (url (if doi (consult-omni--doi-to-url doi)
                 (get-text-property 0 :url cand))))
-         (funcall consult-omni-default-browse-function url)))
+    (funcall consult-omni-default-browse-function url)))
 
 (defun consult-omni--scopus-preview (cand)
-   "Preview function for `consult-omni-scopus'."
+  "Preview function for `consult-omni-scopus'.
+"
   (let* ((doi (get-text-property 0 :doi cand))
          (url (if doi (consult-omni--doi-to-url doi)
                 (get-text-property 0 :url cand))))
-         (funcall consult-omni-default-preview-function url)))
+    (funcall consult-omni-default-preview-function url)))
 
 (cl-defun consult-omni--scopus-fetch-results (input &rest args &key callback &allow-other-keys)
   "Retrieve search results from SCOPUS for INPUT.
@@ -116,69 +114,70 @@ FACE is the face to apply to TITLE
                (headers `(("Accept" . "application/json")
                           )))
     (consult-omni--fetch-url consult-omni-scopus-api-url consult-omni-http-retrieve-backend
-                            :encoding 'utf-8
-                            :params params
-                            :headers headers
-                            :parser #'consult-omni--json-parse-buffer
-                            :callback
-                            (lambda (attrs)
-                              (when-let* ((raw-results (map-nested-elt attrs '("search-results" "entry")))
-                                          (annotated-results
-                                           (mapcar (lambda (item)
-                                                     (let*
-                                                         ((source "Scopus")
-                                                          (title (gethash "dc:title" item))
-                                                          (journal (gethash "prism:publicationName" item))
-                                                          (volume (gethash "prism:volume" item))
-                                                          (pages (gethash "prism:pageRange" item))
-                                                          (authors (gethash "dc:creator" item))
-                                                          (authors (cond
-                                                                    ((stringp authors) (list authors))
-                                                                    (t authors)))
-                                                          (date (gethash "prism:coverDate" item))
-                                                          (eid (gethash "eid" item))
-                                                          (doi (gethash "prism:doi" item))
-                                                          (url (concat consult-omni-scopus-search-url "&eid=" eid "&origin=inward"))
+                             :encoding 'utf-8
+                             :params params
+                             :headers headers
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (when-let* ((raw-results (map-nested-elt attrs '("search-results" "entry")))
+                                           (annotated-results
+                                            (mapcar (lambda (item)
+                                                      (let*
+                                                          ((source "Scopus")
+                                                           (title (gethash "dc:title" item))
+                                                           (journal (gethash "prism:publicationName" item))
+                                                           (volume (gethash "prism:volume" item))
+                                                           (pages (gethash "prism:pageRange" item))
+                                                           (authors (gethash "dc:creator" item))
+                                                           (authors (cond
+                                                                     ((stringp authors) (list authors))
+                                                                     (t authors)))
+                                                           (date (gethash "prism:coverDate" item))
+                                                           (eid (gethash "eid" item))
+                                                           (doi (gethash "prism:doi" item))
+                                                           (url (concat consult-omni-scopus-search-url "&eid=" eid "&origin=inward"))
 
-                                                          (search-url (concat consult-omni-scopus-search-url "&eid=" eid "&origin=inward"))
+                                                           (search-url (concat consult-omni-scopus-search-url "&eid=" eid "&origin=inward"))
 
-                                                          (decorated (consult-omni--scopus-format-candidate :source source :query query :url url :search-url search-url :title title :authors authors :date date :journal journal :doi doi)))
-                                                       (propertize decorated
-                                                                   :source source
-                                                                   :url url
-                                                                   :title title
-                                                                   :search-url search-url
-                                                                   :query query
-                                                                   :journal journal
-                                                                   :volume volume
-                                                                   :pages pages
-                                                                   :authors authors
-                                                                   :date date
-                                                                   :doi doi
-                                                                   :eid eid)))
+                                                           (decorated (consult-omni--scopus-format-candidate :source source :query query :url url :search-url search-url :title title :authors authors :date date :journal journal :doi doi)))
+                                                        (propertize decorated
+                                                                    :source source
+                                                                    :url url
+                                                                    :title title
+                                                                    :search-url search-url
+                                                                    :query query
+                                                                    :journal journal
+                                                                    :volume volume
+                                                                    :pages pages
+                                                                    :authors authors
+                                                                    :date date
+                                                                    :doi doi
+                                                                    :eid eid)))
 
-                                                   raw-results)))
-                                (funcall callback annotated-results))))))
+                                                    raw-results)))
+                                 (funcall callback annotated-results))))))
 
+;; Define the Scopus Source
 (consult-omni-define-source "Scopus"
-                           :narrow-char ?s
-                           :type 'dynamic
-                           :require-match t
-                           :category 'consult-omni-scholar
-                           :face 'consult-omni-scholar-title-face
-                           :request #'consult-omni--scopus-fetch-results
-                           :preview-key consult-omni-preview-key
-                           :on-preview #'consult-omni--scopus-preview
-                           :on-return #'identity
-                           :on-callback #'consult-omni--scopus-callback
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :enabled (lambda () (bound-and-true-p consult-omni-scopus-api-key))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?s
+                            :type 'dynamic
+                            :require-match t
+                            :category 'consult-omni-scholar
+                            :face 'consult-omni-scholar-title-face
+                            :request #'consult-omni--scopus-fetch-results
+                            :preview-key consult-omni-preview-key
+                            :on-preview #'consult-omni--scopus-preview
+                            :on-return #'identity
+                            :on-callback #'consult-omni--scopus-callback
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (bound-and-true-p consult-omni-scopus-api-key))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-scopus' module
 

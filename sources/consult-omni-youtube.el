@@ -33,30 +33,53 @@ for details"
                  (function :tag "Simple Results without stats"  #'consult-omni--youtube-fetch-results-simple)
                  (function :tag "Custom Function")))
 
-(defvar consult-omni-youtube-base-url "https://www.youtube.com/")
-(defvar consult-omni-youtube-watch-url "https://www.youtube.com/watch")
-(defvar consult-omni-youtube-channel-url "https://www.youtube.com/channel/")
-(defvar consult-omni-youtube-search-results-url "https://www.youtube.com/results")
-(defvar consult-omni-youtube-search-api-url "https://www.googleapis.com/youtube/v3/search")
-(defvar consult-omni-youtube-videos-api-url "https://www.googleapis.com/youtube/v3/videos")
-(defvar consult-omni-youtube-playlists-api-url "https://www.googleapis.com/youtube/v3/playlists")
-(defvar consult-omni-youtube-channels-api-url "https://www.googleapis.com/youtube/v3/channels")
+(defvar consult-omni-youtube-base-url "https://www.youtube.com/"
+  "Base URL of YouTube.")
+
+(defvar consult-omni-youtube-watch-url "https://www.youtube.com/watch"
+  "Watch URL of YouTube."
+  )
+
+(defvar consult-omni-youtube-channel-url "https://www.youtube.com/channel/"
+  "Channel URL of YouTube."
+  )
+(defvar consult-omni-youtube-search-results-url "https://www.youtube.com/results"
+  "Search Results URL of YouTube."
+  )
+
+(defvar consult-omni-youtube-search-api-url "https://www.googleapis.com/youtube/v3/search"
+  "API URL of YouTube Search."
+  )
+
+(defvar consult-omni-youtube-videos-api-url "https://www.googleapis.com/youtube/v3/videos"
+  "API URL for YouTube Videos."
+  )
+
+(defvar consult-omni-youtube-playlists-api-url "https://www.googleapis.com/youtube/v3/playlists"
+  "API URL for YouTube Playlists.")
+
+(defvar consult-omni-youtube-channels-api-url "https://www.googleapis.com/youtube/v3/channels"
+  "API URL for YouTube Channels."
+  )
 
 (cl-defun consult-omni--youtube-format-candidate (&rest args &key source type query title snippet channeltitle date length subcount videocount viewcount face &allow-other-keys)
 "Formats a candidate for `consult-omni-youtube' commands.
 
-SOURCE is the name to use (e.g. “YouTube”)
-TYPE is the type of candidate (e.g. video, channel, playlist)
-QUERY is the query input from the user
-TITLE is the title of the video
-SNIPPET is a string containing a snippet/description of the video
-CHANNELTITLE is the name of the channel for the video
-DATE is the publish date of the video
-LENGTH is the duration of a  video in seconds
-SUBCOUNT is the subscriber count fpr a channel
-VIDEOCOUNT is the number of videos in a playlist
-VIEWCOUNT is the number of times a video is viewed
-FACE is the face to apply to TITLE
+Description of Arguments:
+
+  SOURCE       the name to use (e.g. “YouTube”)
+  TYPE         the type of candidate (e.g. video, channel, playlist)
+  QUERY        the query input from the user
+  TITLE        the title of the video
+  SNIPPET      string containing a snippet/description of the video
+  CHANNELTITLE the name of the channel for the video
+  DATE         the publish date of the video
+  LENGTH       the duration of a  video in seconds
+  SUBCOUNT     the subscriber count fpr a channel
+  VIDEOCOUNT   the number of videos in a playlist
+  VIEWCOUNT    the number of times a video is viewed
+  FACE         the face to apply to TITLE
+
 "
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
@@ -194,49 +217,49 @@ such as viw counts and duration, ... of videos/playlists, etc.
                           ("User-Agent" . "consult-omni (gzip)")
                           ("X-Goog-Api-Key" . ,(consult-omni-expand-variable-function consult-omni-youtube-search-key)))))
     (consult-omni--fetch-url consult-omni-youtube-videos-api-url consult-omni-http-retrieve-backend
-                            :encoding 'utf-8
-                            :params params
-                            :headers headers
-                            :parser #'consult-omni--json-parse-buffer
-                            :callback
-                            (lambda (attrs)
-                              (let* ((raw-results (gethash "items" attrs))
-                                     (annotated-results
-                                      (mapcar (lambda (item)
-                                                (let*
-                                                    ((source "YouTube")
-                                                     (videoid (gethash "id" item))
-                                                     (snippet (gethash "snippet" item))
-                                                     (contentdetails (gethash "contentDetails" item))
-                                                     (statistics (gethash "statistics" item))
-                                                     (channeltitle (gethash "channelTitle" snippet))
-                                                     (channelid (gethash "channelId" snippet))
-                                                     (title (gethash "title" snippet))
-                                                     (date (gethash "publishedAt" snippet))
-                                                     (date (format-time-string "%Y-%m-%d" (date-to-time date)))
-                                                     (url (consult-omni--make-url-string consult-omni-youtube-watch-url `(("v" . ,videoid))))
-                                                     (search-url (consult-omni--make-url-string consult-omni-youtube-search-results-url `(("search_query" . ,query))))
-                                                     (description (gethash "description" snippet))
-                                                     (duration (gethash "duration" contentdetails))
-                                                     (duration (if duration (iso8601-parse-duration duration)))
-                                                     (duration (if duration (+ (* (caddr duration) 2600) (* (cadr duration) 60) (car duration))))
-                                                     (viewcount (string-to-number (gethash "viewCount" statistics)))
-                                                     (decorated (consult-omni--youtube-format-candidate :source source :type "video" :query query :title title :snippet description :channeltitle channeltitle :date date :length duration :viewcount viewcount)))
-                                                (propertize decorated
-                                                            :source source
-                                                            :title title
-                                                            :url url
-                                                            :search-url search-url
-                                                            :query query
-                                                            :snippet description
-                                                            :id videoid
-                                                            :channeltitle channeltitle
-                                                            :channelid channelid)))
+                             :encoding 'utf-8
+                             :params params
+                             :headers headers
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (let* ((raw-results (gethash "items" attrs))
+                                      (annotated-results
+                                       (mapcar (lambda (item)
+                                                 (let*
+                                                     ((source "YouTube")
+                                                      (videoid (gethash "id" item))
+                                                      (snippet (gethash "snippet" item))
+                                                      (contentdetails (gethash "contentDetails" item))
+                                                      (statistics (gethash "statistics" item))
+                                                      (channeltitle (gethash "channelTitle" snippet))
+                                                      (channelid (gethash "channelId" snippet))
+                                                      (title (gethash "title" snippet))
+                                                      (date (gethash "publishedAt" snippet))
+                                                      (date (format-time-string "%Y-%m-%d" (date-to-time date)))
+                                                      (url (consult-omni--make-url-string consult-omni-youtube-watch-url `(("v" . ,videoid))))
+                                                      (search-url (consult-omni--make-url-string consult-omni-youtube-search-results-url `(("search_query" . ,query))))
+                                                      (description (gethash "description" snippet))
+                                                      (duration (gethash "duration" contentdetails))
+                                                      (duration (if duration (iso8601-parse-duration duration)))
+                                                      (duration (if duration (+ (* (caddr duration) 2600) (* (cadr duration) 60) (car duration))))
+                                                      (viewcount (string-to-number (gethash "viewCount" statistics)))
+                                                      (decorated (consult-omni--youtube-format-candidate :source source :type "video" :query query :title title :snippet description :channeltitle channeltitle :date date :length duration :viewcount viewcount)))
+                                                   (propertize decorated
+                                                               :source source
+                                                               :title title
+                                                               :url url
+                                                               :search-url search-url
+                                                               :query query
+                                                               :snippet description
+                                                               :id videoid
+                                                               :channeltitle channeltitle
+                                                               :channelid channelid)))
 
-                                      raw-results)))
-                               (when (and annotated-results (functionp callback))
-                                (funcall callback annotated-results))
-                              annotated-results)))))
+                                               raw-results)))
+                                 (when (and annotated-results (functionp callback))
+                                   (funcall callback annotated-results))
+                                 annotated-results)))))
 
 (cl-defun consult-omni--youtube-fetch-playlist-details (playlistids &rest args &key callback query candidates &allow-other-keys)
   "Fetches details with PLAYLISTIDS from “YouTube Data API” service.
@@ -251,45 +274,45 @@ such as viw counts and duration, ... of videos/playlists, etc.
                           ("User-Agent" . "consult-omni (gzip)")
                           ("X-Goog-Api-Key" . ,(consult-omni-expand-variable-function consult-omni-youtube-search-key)))))
     (consult-omni--fetch-url consult-omni-youtube-playlists-api-url consult-omni-http-retrieve-backend
-                            :encoding 'utf-8
-                            :params params
-                            :headers headers
-                            :parser #'consult-omni--json-parse-buffer
-                            :callback
-                            (lambda (attrs)
-                              (let* ((raw-results (gethash "items" attrs))
-                                     (annotated-results
-                                      (mapcar (lambda (item)
-                                                (let*
-                                                    ((source "YouTube")
-                                                     (playlistid (gethash "id" item))
-                                                     (snippet (gethash "snippet" item))
-                                                     (contentdetails (gethash "contentDetails" item))
-                                                     (videocount (gethash "itemCount" contentdetails))
-                                                     (channeltitle (gethash "channelTitle" snippet))
-                                                     (channelid (gethash "channelId" snippet))
-                                                     (title (gethash "title" snippet))
-                                                     (date (gethash "publishedAt" snippet))
-                                                     (date (format-time-string "%Y-%m-%d" (date-to-time date)))
-                                                     (url (consult-omni--make-url-string consult-omni-youtube-watch-url `(("list" . ,playlistid))))
-                                                     (search-url (consult-omni--make-url-string consult-omni-youtube-search-results-url `(("search_query" . ,query))))
-                                                     (description (gethash "description" snippet))
-                                                     (decorated (consult-omni--youtube-format-candidate :source source :type "playlist" :query query :title title :snippet description :channeltitle channeltitle :date date :videocount videocount)))
-                                                (propertize decorated
-                                                            :source source
-                                                            :title title
-                                                            :url url
-                                                            :search-url search-url
-                                                            :query query
-                                                            :snippet description
-                                                            :id playlistid
-                                                            :channeltitle channeltitle
-                                                            :channelid channelid)))
+                             :encoding 'utf-8
+                             :params params
+                             :headers headers
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (let* ((raw-results (gethash "items" attrs))
+                                      (annotated-results
+                                       (mapcar (lambda (item)
+                                                 (let*
+                                                     ((source "YouTube")
+                                                      (playlistid (gethash "id" item))
+                                                      (snippet (gethash "snippet" item))
+                                                      (contentdetails (gethash "contentDetails" item))
+                                                      (videocount (gethash "itemCount" contentdetails))
+                                                      (channeltitle (gethash "channelTitle" snippet))
+                                                      (channelid (gethash "channelId" snippet))
+                                                      (title (gethash "title" snippet))
+                                                      (date (gethash "publishedAt" snippet))
+                                                      (date (format-time-string "%Y-%m-%d" (date-to-time date)))
+                                                      (url (consult-omni--make-url-string consult-omni-youtube-watch-url `(("list" . ,playlistid))))
+                                                      (search-url (consult-omni--make-url-string consult-omni-youtube-search-results-url `(("search_query" . ,query))))
+                                                      (description (gethash "description" snippet))
+                                                      (decorated (consult-omni--youtube-format-candidate :source source :type "playlist" :query query :title title :snippet description :channeltitle channeltitle :date date :videocount videocount)))
+                                                   (propertize decorated
+                                                               :source source
+                                                               :title title
+                                                               :url url
+                                                               :search-url search-url
+                                                               :query query
+                                                               :snippet description
+                                                               :id playlistid
+                                                               :channeltitle channeltitle
+                                                               :channelid channelid)))
 
-                                      raw-results)))
-                              (when (and annotated-results (functionp callback))
-                                 (funcall callback annotated-results))
-                              annotated-results)))))
+                                               raw-results)))
+                                 (when (and annotated-results (functionp callback))
+                                   (funcall callback annotated-results))
+                                 annotated-results)))))
 
 (cl-defun consult-omni--youtube-fetch-channel-details (channelids &rest args &key callback query candidates &allow-other-keys)
   "Fetches  details with CHANNELIDS from “YouTube Data API” service.
@@ -303,46 +326,46 @@ such as viw counts and duration, ... of videos/playlists, etc.
                           ("User-Agent" . "consult-omni (gzip)")
                           ("X-Goog-Api-Key" . ,(consult-omni-expand-variable-function consult-omni-youtube-search-key)))))
     (consult-omni--fetch-url consult-omni-youtube-channels-api-url consult-omni-http-retrieve-backend
-                            :encoding 'utf-8
-                            :params params
-                            :headers headers
-                            :parser #'consult-omni--json-parse-buffer
-                            :callback
-                            (lambda (attrs)
-                              (let* ((raw-results (gethash "items" attrs))
-                                     (annotated-results
-                                      (mapcar (lambda (item)
-                                                (let*
-                                                    ((source "YouTube")
-                                                     (channelid (gethash "id" item))
-                                                     (snippet (gethash "snippet" item))
-                                                     (statistics (gethash "statistics" item))
-                                                     (title (gethash "title" snippet))
-                                                     (customurl (gethash "customUrl" snippet))
-                                                     (date (gethash "publishedAt" snippet))
-                                                     (date (format-time-string "%Y-%m-%d" (date-to-time date)))
-                                                     (subcount (gethash "subscriberCount" statistics))
-                                                     (url (if customurl
-                                                              (concat consult-omni-youtube-base-url customurl)
-                                                            (concat consult-omni-youtube-channel-url channelid)))
-                                                     (search-url (consult-omni--make-url-string consult-omni-youtube-search-results-url `(("search_query" . ,query))))
-                                                     (description (gethash "description" snippet))
-                                                     (decorated (consult-omni--youtube-format-candidate :source source :type "channel" :query query :title title :snippet description :channeltitle title :date date :subcount subcount)))
-                                                (propertize decorated
-                                                            :source source
-                                                            :title title
-                                                            :url url
-                                                            :search-url search-url
-                                                            :query query
-                                                            :snippet description
-                                                            :id channelid
-                                                            :channeltitle title
-                                                            :channelid channelid)))
+                             :encoding 'utf-8
+                             :params params
+                             :headers headers
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (let* ((raw-results (gethash "items" attrs))
+                                      (annotated-results
+                                       (mapcar (lambda (item)
+                                                 (let*
+                                                     ((source "YouTube")
+                                                      (channelid (gethash "id" item))
+                                                      (snippet (gethash "snippet" item))
+                                                      (statistics (gethash "statistics" item))
+                                                      (title (gethash "title" snippet))
+                                                      (customurl (gethash "customUrl" snippet))
+                                                      (date (gethash "publishedAt" snippet))
+                                                      (date (format-time-string "%Y-%m-%d" (date-to-time date)))
+                                                      (subcount (gethash "subscriberCount" statistics))
+                                                      (url (if customurl
+                                                               (concat consult-omni-youtube-base-url customurl)
+                                                             (concat consult-omni-youtube-channel-url channelid)))
+                                                      (search-url (consult-omni--make-url-string consult-omni-youtube-search-results-url `(("search_query" . ,query))))
+                                                      (description (gethash "description" snippet))
+                                                      (decorated (consult-omni--youtube-format-candidate :source source :type "channel" :query query :title title :snippet description :channeltitle title :date date :subcount subcount)))
+                                                   (propertize decorated
+                                                               :source source
+                                                               :title title
+                                                               :url url
+                                                               :search-url search-url
+                                                               :query query
+                                                               :snippet description
+                                                               :id channelid
+                                                               :channeltitle title
+                                                               :channelid channelid)))
 
-                                      raw-results)))
-                              (when (and annotated-results (functionp callback))
-                                  (funcall callback annotated-results))
-                              annotated-results)))))
+                                               raw-results)))
+                                 (when (and annotated-results (functionp callback))
+                                   (funcall callback annotated-results))
+                                 annotated-results)))))
 
 (cl-defun consult-omni--youtube-fetch-results-details (input &rest args &key callback &allow-other-keys)
   "Fetches search results for INPUT from “YouTube Data API” service.
@@ -418,22 +441,23 @@ This is a version with  statistics (e.g. view counts)
                                    (consult-omni--youtube-fetch-channel-details channelids :callback callback :query query))
                                  )))))
 
+;; Define the YouTube Source
 (consult-omni-define-source "YouTube"
-                           :narrow-char ?y
-                           :type 'dynamic
-                           :require-match t
-                           :category 'consult-omni-video
-                           :face 'consult-omni-engine-title-face
-                           :request consult-omni-youtube-search-command
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :enabled (lambda () (bound-and-true-p consult-omni-youtube-search-key))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?y
+                            :type 'dynamic
+                            :require-match t
+                            :category 'consult-omni-video
+                            :face 'consult-omni-engine-title-face
+                            :request consult-omni-youtube-search-command
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (bound-and-true-p consult-omni-youtube-search-key))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-youtube' module
 

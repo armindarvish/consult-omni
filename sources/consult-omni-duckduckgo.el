@@ -16,9 +16,13 @@
 
 (require 'consult-omni)
 
-(defvar consult-omni-duckduckgo-api-url "http://api.duckduckgo.com/")
+(defvar consult-omni-duckduckgo-api-url "http://api.duckduckgo.com/"
+  "API URL for DuckDuckGo."
+  )
 
-(defvar consult-omni-duckduckgo-search-url "https://duckduckgo.com/")
+(defvar consult-omni-duckduckgo-search-url "https://duckduckgo.com/"
+  "Search URL for DuckDuckGo."
+  )
 
 (cl-defun consult-omni--duckduckgoapi-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results got INPUT from DuckDuckGo limited API.
@@ -40,51 +44,52 @@ for some limited documentation"
                          ("format" . "json")))
                (headers `(("Accept" . "application/json"))))
     (consult-omni--fetch-url consult-omni-duckduckgo-api-url consult-omni-http-retrieve-backend
-                            :encoding 'utf-8
-                            :params params
-                            :headers headers
-                            :parser #'consult-omni--json-parse-buffer
-                            :callback
-                            (lambda (attrs)
-                              (let* ((raw-results (gethash "RelatedTopics" attrs))
-                                     (annotated-results
-                                           (remove nil (mapcar (lambda (item)
-                                                     (let*
-                                                         ((source "DuckDuckGo API")
-                                                          (url (gethash "FirstURL" item))
-                                                          (title (gethash "Result" item))
-                                                          (title (if (and title (stringp title) (string-match "<a href=.*>\\(?1:.*\\)</a>.*" title)) (match-string 1 title) nil))
-                                                          (snippet (format "%s" (gethash "Text" item)))
-                                                          (search-url (consult-omni--make-url-string consult-omni-duckduckgo-search-url params '("format")))
-                                                          (decorated (if title (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet) nil)))
-                                                       (if decorated (propertize decorated
-                                                                   :source source
-                                                                   :title title
-                                                                   :url url
-                                                                   :search-url search-url
-                                                                   :query query
-                                                                   ))))
+                             :encoding 'utf-8
+                             :params params
+                             :headers headers
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (let* ((raw-results (gethash "RelatedTopics" attrs))
+                                      (annotated-results
+                                       (remove nil (mapcar (lambda (item)
+                                                             (let*
+                                                                 ((source "DuckDuckGo API")
+                                                                  (url (gethash "FirstURL" item))
+                                                                  (title (gethash "Result" item))
+                                                                  (title (if (and title (stringp title) (string-match "<a href=.*>\\(?1:.*\\)</a>.*" title)) (match-string 1 title) nil))
+                                                                  (snippet (format "%s" (gethash "Text" item)))
+                                                                  (search-url (consult-omni--make-url-string consult-omni-duckduckgo-search-url params '("format")))
+                                                                  (decorated (if title (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet) nil)))
+                                                               (if decorated (propertize decorated
+                                                                                         :source source
+                                                                                         :title title
+                                                                                         :url url
+                                                                                         :search-url search-url
+                                                                                         :query query
+                                                                                         ))))
 
-                                                   raw-results))))
-                                (when (and annotated-results (functionp callback))
-                                  (funcall callback annotated-results))
-                                annotated-results)))))
+                                                           raw-results))))
+                                 (when (and annotated-results (functionp callback))
+                                   (funcall callback annotated-results))
+                                 annotated-results)))))
 
+;; Define the DuckDuckGo Source
 (consult-omni-define-source "DuckDuckGo API"
-                           :narrow-char ?d
-                           :type 'dynamic
-                           :require-match t
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--duckduckgoapi-fetch-results
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :enabled (lambda () (bound-and-true-p consult-omni-duckduckgo-search-url))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?d
+                            :type 'dynamic
+                            :require-match t
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--duckduckgoapi-fetch-results
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (bound-and-true-p consult-omni-duckduckgo-search-url))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-duckduckgo' module
 

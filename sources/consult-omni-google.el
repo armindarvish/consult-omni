@@ -19,7 +19,8 @@
 (defcustom consult-omni-google-customsearch-key nil
   "Key for Google custom search API
 
-See URL `https://developers.google.com/custom-search/' and URL `https://developers.google.com/custom-search/v1/introduction' for details"
+See URL `https://developers.google.com/custom-search/' and
+URL `https://developers.google.com/custom-search/v1/introduction' for details"
   :group 'consult-omni
   :type '(choice (const :tag "API Key" string)
                  (function :tag "Custom Function")))
@@ -27,19 +28,23 @@ See URL `https://developers.google.com/custom-search/' and URL `https://develope
 (defcustom consult-omni-google-customsearch-cx nil
   "CX for Google custom search API
 
-See URL `https://developers.google.com/custom-search/' and URL `https://developers.google.com/custom-search/v1/introduction' for details"
+See URL `https://developers.google.com/custom-search/' and
+URL `https://developers.google.com/custom-search/v1/introduction' for details"
   :group 'consult-omni
   :type '(choice (const :tag "CX String" string)
                  (function :tag "Custom Function")))
 
-(defvar consult-omni-google-search-url "https://www.google.com/search")
+(defvar consult-omni-google-search-url "https://www.google.com/search"
+"Search URL for Google")
 
-(defvar consult-omni-google-customsearch-api-url "https://www.googleapis.com/customsearch/v1")
+(defvar consult-omni-google-customsearch-api-url "https://www.googleapis.com/customsearch/v1"
+"API URL for Google Custom Search")
 
 (cl-defun consult-omni--google-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Fetches search results for INPUT from “Google custom search” service.
+  "Fetches search results for INPUT from “Google Custom Search” service.
 
-Refer to URL `https://programmablesearchengine.google.com/about/' and `https://developers.google.com/custom-search/' for more info.
+Refer to URL `https://programmablesearchengine.google.com/about/' and
+URL `https://developers.google.com/custom-search/' for more info.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
@@ -68,51 +73,52 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                           ("Accept-Encoding" . "gzip")
                           ("User-Agent" . "consult-omni (gzip)"))))
     (consult-omni--fetch-url consult-omni-google-customsearch-api-url consult-omni-http-retrieve-backend
-                            :encoding 'utf-8
-                            :params params
-                            :headers headers
-                            :parser #'consult-omni--json-parse-buffer
-                            :callback
-                            (lambda (attrs)
-                              (let* ((raw-results (gethash "items" attrs))
-                                     (annotated-results
-                                           (mapcar (lambda (item)
-                                                     (let*
-                                                         ((source "Google")
-                                                          (url (format "%s" (gethash "link" item)))
-                                                          (title (format "%s" (gethash "title" item)))
-                                                          (snippet (string-trim (format "%s" (gethash "snippet" item))))
-                                                          (search-url (consult-omni--make-url-string consult-omni-google-search-url params '("key" "cx" "gl")))
+                             :encoding 'utf-8
+                             :params params
+                             :headers headers
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (let* ((raw-results (gethash "items" attrs))
+                                      (annotated-results
+                                       (mapcar (lambda (item)
+                                                 (let*
+                                                     ((source "Google")
+                                                      (url (format "%s" (gethash "link" item)))
+                                                      (title (format "%s" (gethash "title" item)))
+                                                      (snippet (string-trim (format "%s" (gethash "snippet" item))))
+                                                      (search-url (consult-omni--make-url-string consult-omni-google-search-url params '("key" "cx" "gl")))
 
-                                                          (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet)))
-                                                       (propertize decorated
-                                                                   :source source
-                                                                   :title title
-                                                                   :url url
-                                                                   :search-url search-url
-                                                                   :query query
-                                                                   :snippet snippet)))
+                                                      (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet)))
+                                                   (propertize decorated
+                                                               :source source
+                                                               :title title
+                                                               :url url
+                                                               :search-url search-url
+                                                               :query query
+                                                               :snippet snippet)))
 
-                                                   raw-results)))
-                                (when (and annotated-results (functionp callback))
-                                  (funcall callback annotated-results))
-                                annotated-results)))))
+                                               raw-results)))
+                                 (when (and annotated-results (functionp callback))
+                                   (funcall callback annotated-results))
+                                 annotated-results)))))
 
+;; Define the Google Source
 (consult-omni-define-source "Google"
-                           :narrow-char ?g
-                           :type 'dynamic
-                           :require-match t
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--google-fetch-results
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :enabled (lambda () (bound-and-true-p consult-omni-google-customsearch-key))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?g
+                            :type 'dynamic
+                            :require-match t
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--google-fetch-results
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (bound-and-true-p consult-omni-google-customsearch-key))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-google' module
 

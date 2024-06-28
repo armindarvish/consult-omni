@@ -18,7 +18,9 @@
 (defcustom consult-omni-bing-search-api-key nil
   "Key for Bing (Microsoft Azure) search API
 
-See URL `https://www.microsoft.com/en-us/bing/apis/bing-web-search-api' and URL `https://learn.microsoft.com/en-us/bing/search-apis/bing-web-search/search-the-web' for details"
+See URL `https://www.microsoft.com/en-us/bing/apis/bing-web-search-api' and URL `https://learn.microsoft.com/en-us/bing/search-apis/bing-web-search/search-the-web'
+for details.
+"
   :group 'consult-omni
   :type '(choice (const :tag "API Key" string)
                  (function :tag "Custom Function")))
@@ -74,21 +76,22 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                                   (funcall callback annotated-results))
                                 annotated-results)))))
 
+;; Define the Bing Source
 (consult-omni-define-source "Bing"
-                           :narrow-char ?i
-                           :type 'dynamic
-                           :require-match t
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--bing-fetch-results
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :enabled (lambda () (bound-and-true-p consult-omni-bing-search-api-key))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?i
+                            :type 'dynamic
+                            :require-match t
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--bing-fetch-results
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (bound-and-true-p consult-omni-bing-search-api-key))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-bing' module
 

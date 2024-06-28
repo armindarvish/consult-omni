@@ -17,7 +17,7 @@
 (require 'consult-omni)
 
 (defcustom consult-omni-numi-args "numi-cli"
-"Command line arguments for “numi-cli”.
+  "Command line arguments for “numi-cli”.
 
 Similar to other command line args for consult but for numi-cli.
 See `consult-locate-args' for example."
@@ -29,7 +29,7 @@ See `consult-locate-args' for example."
 (defun consult-omni--numi-callback (cand)
   "Callback function for `consult-omni-numi' command."
   (let ((result  (get-text-property 0 :title cand)))
-  (kill-new result))
+    (kill-new result))
   )
 
 (defun consult-omni--numi-filter (candidates &optional query)
@@ -45,28 +45,29 @@ See `consult-locate-args' for example."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts)))
     (funcall #'consult-omni--async-builder (shell-quote-argument query) consult-omni-numi-args)
-            ))
+    ))
 
+;; Define the Numi Source
 (consult-omni-define-source "Numi"
-                           :narrow-char ?N
-                           :category 'consult-omni-calc
-                           :type 'async
-                           :require-match t
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--numi-builder
-                           :filter #'consult-omni--numi-filter
-                           :on-preview #'ignore
-                           :on-return #'identity
-                           :on-callback #'consult-omni--numi-callback
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :group #'consult-omni--group-function
-                           :enabled (lambda () (if (executable-find "numi-cli") t nil))
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?N
+                            :category 'consult-omni-calc
+                            :type 'async
+                            :require-match t
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--numi-builder
+                            :filter #'consult-omni--numi-filter
+                            :on-preview #'ignore
+                            :on-return #'identity
+                            :on-callback #'consult-omni--numi-callback
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :group #'consult-omni--group-function
+                            :enabled (lambda () (if (executable-find "numi-cli") t nil))
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-numi module
 

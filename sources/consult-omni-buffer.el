@@ -17,7 +17,8 @@
 (require 'consult-omni)
 
 (defun consult-omni--consult-buffer-preview (cand)
-  "Preview function for `consult-omni--buffer'."
+  "Preview function for `consult-omni--buffer'.
+"
   (if cand
       (let* ((title (get-text-property 0 :title cand)))
         (when-let ((buff (get-buffer title)))
@@ -27,16 +28,16 @@
 ;; make consult-omni sources from `consult-buffer-sources'
 (cl-loop for source in consult-buffer-sources
          do (if (symbolp source) (consult-omni--make-source-from-consult-source source
-                                              :type 'sync
-                                              :on-preview #'consult-omni--consult-buffer-preview
-                                              :on-return #'identity
-                                              :on-callback #'consult--buffer-action
-                                              :search-hist 'consult-omni--search-history
-                                              :select-hist 'consult-omni--selection-history
-                                              :static 'both
-                                              :preview-key 'consult-omni-preview-key
-                                              :group #'consult-omni--group-function
-                                              )))
+                                                                                :type 'sync
+                                                                                :on-preview #'consult-omni--consult-buffer-preview
+                                                                                :on-return #'identity
+                                                                                :on-callback #'consult--buffer-action
+                                                                                :search-hist 'consult-omni--search-history
+                                                                                :select-hist 'consult-omni--selection-history
+                                                                                :static 'both
+                                                                                :preview-key 'consult-omni-preview-key
+                                                                                :group #'consult-omni--group-function
+                                                                                )))
 
 ;;; provide `consult-omni-buffer' module
 

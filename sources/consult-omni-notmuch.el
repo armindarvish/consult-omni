@@ -53,15 +53,17 @@ By default inherits from `consult-omni-default-count'."
 "Alist for transfrom function of notmuch commandline output.")
 
 (cl-defun consult-omni--notmuch-format-candidate (&rest args &key source query title from date tags face &allow-other-keys)
-"Formats a candidate for `consult-omni-notmuch' commands.
+  "Formats a candidate for `consult-omni-notmuch' commands.
 
-SOURCE is the name to use (e.g. “YouTube”)
-QUERY is the query input from the user
-TITLE is the nootmuch title string of the message
-FROM is the notmuch sender string of the message
-DATE is the notmuch date string of the message
-TAGS is a (list of) notmuch tag string(s) for message
-FACE is the face to apply to TITLE
+Description of Arguments:
+
+  SOURCE the name to use (e.g. “YouTube”)
+  QUERY  the query input from the user
+  TITLE  the nootmuch title string of the message
+  FROM   the notmuch sender string of the message
+  DATE   the notmuch date string of the message
+  TAGS   a (list of) notmuch tag string(s) for message
+  FACE   the face to apply to TITLE
 
 "
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
@@ -79,63 +81,64 @@ FACE is the face to apply to TITLE
          (title-str (if (stringp title-str) (consult-omni--set-string-width title-str (* 5 frame-width-percent))))
          (str (if (string-empty-p from) ""
                 (concat (if date (format "%s" date))
-                      (if from-str (format "\s%s" from-str))
-                      "\t"
-                      (if title-str title-str)
-                      (if tags (format "\s\s%s" tags))
-                      (if source (concat "\t" source))))))
+                        (if from-str (format "\s%s" from-str))
+                        "\t"
+                        (if title-str title-str)
+                        (if tags (format "\s\s%s" tags))
+                        (if source (concat "\t" source))))))
     (if consult-omni-highlight-matches
         (cond
          ((and (listp match-str) (stringp str))
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
          ((and (stringp match-str) (stringp str))
           (setq str (consult-omni--highlight-match match-str str t)))))
-     str))
+    str))
 
 (defun consult-omni--notmuch-search-transform (candidates &optional query)
   "Transforms “notmuch search” output to consult-omni's style.
 
 Parses the output from command “notmuch search” and passes its components
-to  `consult-omni--notmuch-format-candidate'."
+to  `consult-omni--notmuch-format-candidate'.
+"
 
   (remove nil (remove "" (mapcar (lambda (item)
-                        (when (and (stringp item) (string-match "thread:" item))
-                          (let* ((source "notmuch")
-                                 (id (car (split-string item "\\ +")))
-                                 (date (substring item 24 37))
-                                 (mid (substring item 24))
-                                 (c0 (string-match "[[]" mid))
-                                 (c1 (string-match "[]]" mid))
-                                 (count (substring mid c0 (1+ c1)))
-                                 (senders (string-trim (nth 1 (split-string mid "[];]"))))
-                                 (subject (string-trim (nth 1 (split-string mid "[;]"))))
-                                 (headers (list :Subject subject :From senders))
-                                 (t0 (string-match "([^)]*)\\s-*$" mid))
-                                 (tags (split-string (substring mid (1+  t0) -1)))
-                                 (decorated (consult-omni--notmuch-format-candidate :source source :query query :title subject :from senders :date date :tags tags)))
-                            (when (and (stringp decorated) (not (string-empty-p decorated))) (propertize decorated
-                                        :source source
-                                        :query query
-                                        :title subject
-                                        :url nil
-                                        :search-url nil
-                                        :id id
-                                        :from senders
-                                        :date date
-                                        :match t
-                                        :headers headers
-                                        :count count
-                                        :tags tags
-                                        )))))
-                      candidates)
-          )))
+                                   (when (and (stringp item) (string-match "thread:" item))
+                                     (let* ((source "notmuch")
+                                            (id (car (split-string item "\\ +")))
+                                            (date (substring item 24 37))
+                                            (mid (substring item 24))
+                                            (c0 (string-match "[[]" mid))
+                                            (c1 (string-match "[]]" mid))
+                                            (count (substring mid c0 (1+ c1)))
+                                            (senders (string-trim (nth 1 (split-string mid "[];]"))))
+                                            (subject (string-trim (nth 1 (split-string mid "[;]"))))
+                                            (headers (list :Subject subject :From senders))
+                                            (t0 (string-match "([^)]*)\\s-*$" mid))
+                                            (tags (split-string (substring mid (1+  t0) -1)))
+                                            (decorated (consult-omni--notmuch-format-candidate :source source :query query :title subject :from senders :date date :tags tags)))
+                                       (when (and (stringp decorated) (not (string-empty-p decorated))) (propertize decorated
+                                                                                                                    :source source
+                                                                                                                    :query query
+                                                                                                                    :title subject
+                                                                                                                    :url nil
+                                                                                                                    :search-url nil
+                                                                                                                    :id id
+                                                                                                                    :from senders
+                                                                                                                    :date date
+                                                                                                                    :match t
+                                                                                                                    :headers headers
+                                                                                                                    :count count
+                                                                                                                    :tags tags
+                                                                                                                    )))))
+                                 candidates)
+                      )))
 
 (defun consult-omni--notmuch-show-transform (candidates &optional query)
   "Transforms “notmuch show” output to consult-omni's style.
 
 Parses the output from command “notmuch show” and passes its components
-to `consult-omni--notmuch-format-candidate'."
-
+to `consult-omni--notmuch-format-candidate'.
+"
   (let ((source "notmuch") (id) (headers) (subject) (senders) (cc) (to) (count) (date) (tags) (match) (info))
     (remove nil (mapcar (lambda (item)
                           (if (string-prefix-p "message}" item)
@@ -148,19 +151,19 @@ to `consult-omni--notmuch-format-candidate'."
                                          (decorated (consult-omni--notmuch-format-candidate :source source :query query :title subject :from senders :date date :tags tags)))
                                     (when (and (stringp decorated) (not (string-empty-p decorated)))
                                       (propertize decorated
-                                                :source source
-                                                :query query
-                                                :title subject
-                                                :url nil
-                                                :search-url nil
-                                                :id id
-                                                :from senders
-                                                :date date
-                                                :match t
-                                                :headers headers
-                                                :count count
-                                                :tags tags
-                                                )))
+                                                  :source source
+                                                  :query query
+                                                  :title subject
+                                                  :url nil
+                                                  :search-url nil
+                                                  :id id
+                                                  :from senders
+                                                  :date date
+                                                  :match t
+                                                  :headers headers
+                                                  :count count
+                                                  :tags tags
+                                                  )))
                                 (setq id nil
                                       headers nil
                                       senders nil
@@ -200,10 +203,10 @@ This is needed to get the right function for
 parsing outputs of “notmuch search”, and
 “notmuch show” accordingly.
 "
-    (cdr (assoc consult-omni-notmuch-default-command-arg consult-omni--notmuch-format-func-alist)))
+  (cdr (assoc consult-omni-notmuch-default-command-arg consult-omni--notmuch-format-func-alist)))
 
 (defun consult-omni--notmuch--preview (cand)
-  "Preview function for `consult-omni-notmuch' command.
+  "Preview function for `consult-omni-notmuch' commands.
 "
   (let* ((query (get-text-property 0 :query cand))
          (id (get-text-property 0 :id cand)))
@@ -221,10 +224,10 @@ parsing outputs of “notmuch search”, and
       (when (get-buffer consult-omni-notmuch-message-buffer-name)
         (kill-buffer consult-omni-notmuch-message-buffer-name))
       (notmuch-tree query nil id consult-omni-notmuch-tree-buffer-name t nil nil nil)))
-)
+  )
 
 (cl-defun consult-omni--notmuch-command-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “notmuch”.
+  "Makes builder command line args for “notmuch”.
 "
   (setq consult-notmuch--partial-parse nil)
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
@@ -239,29 +242,30 @@ parsing outputs of “notmuch search”, and
                (consult-omni-notmuch-extra-command-args (unless (listp consult-omni-notmuch-extra-command-args) (list consult-omni-notmuch-extra-command-args)))
                (cmd (append (list notmuch-command) (list consult-omni-notmuch-default-command-arg) (when count (list "--limit" (format "%s" count))) (when (and page (not (equal page 0))) (list "--offset" (format "%s" page))) consult-omni-notmuch-extra-command-args (list query))))
     cmd
-  ))
+    ))
 
+;; Define the Notmuch Source
 (consult-omni-define-source "notmuch"
-                           :narrow-char ?m
-                           :type 'async
-                           :require-match nil
-                           :category 'notmuch-result
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--notmuch-command-builder
-                           :on-preview #'consult-omni--notmuch--preview
-                           :on-return #'identity
-                           :on-callback #'consult-omni--notmuch-callback
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--email-select-history
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :transform (lambda (candidates &optional query) (funcall (consult-omni--notmuch-get-transform-func) candidates query))
-                           :enabled (lambda () (if (and (bound-and-true-p notmuch-command) (executable-find notmuch-command))
-                                                   t nil))
-                           :annotate nil
-                           )
+                            :narrow-char ?m
+                            :type 'async
+                            :require-match nil
+                            :category 'notmuch-result
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--notmuch-command-builder
+                            :on-preview #'consult-omni--notmuch--preview
+                            :on-return #'identity
+                            :on-callback #'consult-omni--notmuch-callback
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--email-select-history
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :transform (lambda (candidates &optional query) (funcall (consult-omni--notmuch-get-transform-func) candidates query))
+                            :enabled (lambda () (if (and (bound-and-true-p notmuch-command) (executable-find notmuch-command))
+                                                    t nil))
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-notmuch' module
 

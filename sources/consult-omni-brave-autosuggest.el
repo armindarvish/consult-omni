@@ -24,7 +24,8 @@ See URL `https://brave.com/search/api/' for more info"
   :type '(choice (const :tag "Brave Autosuggest API Key" string)
                  (function :tag "Custom Function")))
 
-(defvar consult-omni-brave-autosuggest-api-url "https://api.search.brave.com/res/v1/suggest/search")
+(defvar consult-omni-brave-autosuggest-api-url "https://api.search.brave.com/res/v1/suggest/search"
+"API URL for Brave AutoSuggest")
 
 (defun consult-omni--brave-autosuggest-return (cand)
   "Return the string of CAND with no properties
@@ -88,22 +89,23 @@ See URL `https://brave.com/search/api/' for more info"
                                  (funcall callback annotated-results)
                                  annotated-results)))))
 
+;; Define the Brave AutoSuggest Source
 (consult-omni-define-source "Brave AutoSuggest"
-                           :narrow-char ?B
-                           :type 'dynamic
-                           :require-match nil
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--brave-autosuggest-fetch-results
-                           :group #'consult-omni--group-function
-                           :on-preview #'ignore
-                           :on-return #'consult-omni--brave-autosuggest-return
-                           :on-callback #'string-trim
-                           :search-hist 'consult-omni--search-history
-                           :select-hist t
-                           :enabled (lambda () (bound-and-true-p consult-omni-brave-autosuggest-api-key))
-                           :sort t
-                           :static nil
-                           )
+                            :narrow-char ?B
+                            :type 'dynamic
+                            :require-match nil
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--brave-autosuggest-fetch-results
+                            :group #'consult-omni--group-function
+                            :on-preview #'ignore
+                            :on-return #'consult-omni--brave-autosuggest-return
+                            :on-callback #'string-trim
+                            :search-hist 'consult-omni--search-history
+                            :select-hist t
+                            :enabled (lambda () (bound-and-true-p consult-omni-brave-autosuggest-api-key))
+                            :sort t
+                            :static nil
+                            )
 
 ;;; provide `consult-omni-brave-autosuggest' module
 

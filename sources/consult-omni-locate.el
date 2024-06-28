@@ -24,29 +24,32 @@ This is passed to “-l” command line argument.
   :type 'integer)
 
 (defcustom consult-omni-locate-args "locate -i"
-"Command line arguments for locate.
+  "Command line arguments for locate.
 
 Similar to `consult-locate-args' bur for consult-omni."
   :type '(choice string (repeat (choice string sexp))))
 
 (defun consult-omni--locate-preview (cand)
-  "Grep preview function."
-(funcall (consult--file-preview) 'preview cand))
+  "Preview for `consult-omni-locate'.
+"
+  (funcall (consult--file-preview) 'preview cand))
 
 (defun consult-omni--locate-callback (cand)
-  "Find callback function."
+  "Callback for `consult-omni-locate'.
+"
   (consult--file-action cand)
   )
 
-(defun consult-omni--find-transform (candidates &optional query)
-  "Formats candidates `consult-omni-find'.
+(defun consult-omni--locate-transform (candidates &optional query)
+  "Formats candidates `consult-omni-locate'.
+
 "
   (mapcar (lambda (candidate)
            (string-remove-prefix (file-truename default-directory) candidate))
           candidates))
 
 (defun consult-omni--locate-filter (candidates &optional query)
-  "Filter for candidates of `consult-omni-find'.
+  "Filters candidates for `consult-omni-find'.
 "
   (seq-filter (lambda (candidate) (not (string-match "^locate:.*$" candidate nil nil))) candidates))
 
@@ -66,30 +69,31 @@ Similar to `consult-locate-args' bur for consult-omni."
                                             (if count (format " -l %s" count))))
                )
 
-   (funcall #'consult--locate-builder query)
-            ))
+    (funcall #'consult--locate-builder query)
+    ))
 
+;; Define the Locate Source
 (consult-omni-define-source "locate"
-                           :narrow-char ?f
-                           :category 'file
-                           :type 'async
-                           :require-match t
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--locate-builder
-                           ;; :transform nil
-                           :filter #'consult-omni--locate-filter
-                           :on-preview #'consult-omni--locate-preview
-                           :on-return #'identity
-                           :on-callback #'consult-omni--locate-callback
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :group #'consult-omni--group-function
-                           :enabled (lambda () (if (executable-find "locate") t nil))
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?f
+                            :category 'file
+                            :type 'async
+                            :require-match t
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--locate-builder
+                            ;; :transform #'consult-omni--locate-transform
+                            :filter #'consult-omni--locate-filter
+                            :on-preview #'consult-omni--locate-preview
+                            :on-return #'identity
+                            :on-callback #'consult-omni--locate-callback
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :group #'consult-omni--group-function
+                            :enabled (lambda () (if (executable-find "locate") t nil))
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-locate' module
 
@@ -123,26 +127,28 @@ See mdfind documents (e.g. “man mdfind”) for more details.
   :type 'boolean)
 
 (defcustom consult-omni-mdfind-args "mdfind"
-"Command line arguments for mdfind.
+  "Command line arguments for mdfind.
 
 Similar to other command line args for consult but for mdfind.
 See `consult-locate-args' for example."
   :type '(choice string (repeat (choice string sexp))))
 
 (defun consult-omni--mdfind-preview (cand)
-  "Mdfind preview function."
-(funcall (consult--file-preview) 'preview cand))
+  "Preview for `consult-omni-mdfind'.
+"
+  (funcall (consult--file-preview) 'preview cand))
 
 (defun consult-omni--mdfind-callback (cand)
-  "Mdfind callback function."
+  "Callback for `consult-omni-locate'.
+"
   (consult--file-action cand)
   )
 
-(defun consult-omni--find-transform (candidates &optional query)
-  "Formats candidate sof `consult-omni-mdfind'.
+(defun consult-omni--mdfind-transform (candidates &optional query)
+  "Formats candidate for `consult-omni-mdfind'.
 "
   (mapcar (lambda (candidate)
-           (string-remove-prefix (file-truename default-directory) candidate))
+            (string-remove-prefix (file-truename default-directory) candidate))
           candidates))
 
 (defun consult-omni--mdfind-filter (candidates &optional query)
@@ -163,29 +169,32 @@ See `consult-locate-args' for example."
                (default-directory (or dir default-directory))
                (consult-locate-args (concat consult-omni-mdfind-args
                                             (if consult-omni-mdfind-interpret " -interpret")
-(if dir (format " -onlyin %s" dir)))))
-   (funcall #'consult--locate-builder query)
-            ))
+                                            (if dir (format " -onlyin %s" dir)))))
+    (funcall #'consult--locate-builder query)
+    ))
 
+;; Define the Mdfind Source
 (consult-omni-define-source "mdfind"
-                           :narrow-char ?f
-                           :category 'file
-                           :type 'async
-                           :require-match t
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--mdfind-builder
-                           :on-preview #'consult-omni--mdfind-preview
-                           :on-return #'identity
-                           :on-callback #'consult-omni--mdfind-callback
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :group #'consult-omni--group-function
-                           :enabled (lambda () (if (executable-find "mdfind") t nil))
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?f
+                            :category 'file
+                            :type 'async
+                            :require-match t
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--mdfind-builder
+                            ;; :transform consult-omni--mdfind-transform
+                            ;; :filter consult-omni--mdfind-filter
+                            :on-preview #'consult-omni--mdfind-preview
+                            :on-return #'identity
+                            :on-callback #'consult-omni--mdfind-callback
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :group #'consult-omni--group-function
+                            :enabled (lambda () (if (executable-find "mdfind") t nil))
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-mdfind' module
 

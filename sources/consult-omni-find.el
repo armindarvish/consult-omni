@@ -30,7 +30,7 @@ Similar to `consult-find-args' bur for consult-omni."
   "Formats candidates of `consult-omni-find'.
 "
   (mapcar (lambda (candidate)
-           (string-trim (string-remove-prefix (file-truename default-directory) candidate)))
+            (string-trim (string-remove-prefix (file-truename default-directory) candidate)))
           candidates))
 
 (defun consult-omni--find-filter (candidates &optional query)
@@ -39,11 +39,12 @@ Similar to `consult-find-args' bur for consult-omni."
   (seq-filter (lambda (candidate) (not (string-match "^find:.*$" candidate nil nil))) candidates))
 
 (defun consult-omni--find-preview (cand)
-  "Grep preview function."
-(funcall (consult--file-preview) 'preview cand))
+  "Preview function for `consult-omni-find'.
+"
+  (funcall (consult--file-preview) 'preview cand))
 
 (defun consult-omni--find-callback (cand)
-  "Find callback function."
+  "Callback for `consult-omni-find'."
   (consult--file-action cand)
   )
 
@@ -63,36 +64,37 @@ Similar to `consult-find-args' bur for consult-omni."
                (default-directory (or dir default-directory))
                (`(_ ,paths _) (consult--directory-prompt "" dir))
                (paths (if dir
-                        (mapcar (lambda (path) (file-truename (concat dir path))) paths)
-                      paths))
+                          (mapcar (lambda (path) (file-truename (concat dir path))) paths)
+                        paths))
                (consult-find-args (concat consult-omni-find-args
                                           (if (not hidden) " -not -iwholename *./[a-z]*")
                                           (if ignore (concat " -not -iwholename *" ignore "*"))))
                )
-   (funcall (consult--find-make-builder paths) query)
-            ))
+    (funcall (consult--find-make-builder paths) query)
+    ))
 
+;; Define the Find Source
 (consult-omni-define-source "find"
-                           :narrow-char ?f
-                           :category 'file
-                           :type 'async
-                           :require-match t
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--find-builder
-                           :transform #'consult-omni--find-transform
-                           :filter #'consult-omni--find-filter
-                           :on-preview #'consult-omni--find-preview
-                           :on-return #'identity
-                           :on-callback #'consult-omni--find-callback
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :enabled (lambda () (if (executable-find "find") t nil))
-                           :annotate nil
-                           )
+                            :narrow-char ?f
+                            :category 'file
+                            :type 'async
+                            :require-match t
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--find-builder
+                            :transform #'consult-omni--find-transform
+                            :filter #'consult-omni--find-filter
+                            :on-preview #'consult-omni--find-preview
+                            :on-return #'identity
+                            :on-callback #'consult-omni--find-callback
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :enabled (lambda () (if (executable-find "find") t nil))
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-find' module
 

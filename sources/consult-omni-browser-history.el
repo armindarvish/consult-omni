@@ -20,18 +20,16 @@
 (cl-defun consult-omni--browser-history-format-candidate (&rest args &key source query url search-url title face &allow-other-keys)
   "Formats candidates of `consult-omni-browser-history'.
 
-SOURCE is the name string of the source for candidate
+Description of Arguments:
 
-QUERY is the query string used for searching
+  SOURCE     the name string of the source for candidate
+  QUERY      the query string used for searching
+  URL        a string pointing to url of the candidate
+  SEARCH-URL a string pointing to the url for
+             the search results of QUERY on the SOURCE website
+  TITLE      the title of the candidate
+  SNIPPET    a string containing a snippet/description of candidate
 
-URL is a string pointing to url of the candidate
-
-SEARCH-URL is a string pointing to the url for
-the search results of QUERY on the SOURCE website
-
-TITLE is the title of the candidate
-
-SNIPPET is a string containing a snippet/description of candidate
 "
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
@@ -79,21 +77,22 @@ SNIPPET is a string containing a snippet/description of candidate
                               :query query)))
               results)))
 
+;; Define the Browse History Source
 (consult-omni-define-source "Browser History"
-                           :narrow-char ?H
-                           :type 'sync
-                           :require-match nil
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--browser-history-fetch-results
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :enabled (lambda () (fboundp 'browser-hist-search))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :annotate nil
-                           )
+                            :narrow-char ?H
+                            :type 'sync
+                            :require-match nil
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--browser-history-fetch-results
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (fboundp 'browser-hist-search))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-browser-history' module
 

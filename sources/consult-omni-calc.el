@@ -19,19 +19,20 @@
 (require 'calc-aent nil t)
 
 (defcustom consult-omni-calc-number-only nil
-"Only show calculator results when the query result in a nunmber?"
-:type 'boolean)
+  "Only show calculator results when the query result in a nunmber?"
+  :type 'boolean)
 
 (defcustom consult-omni-calc-message-errors nil
-"Whether to message errors for calc?
+  "Whether to message errors for calc?
 
 Setting this to non-nil will show messages
 when the calcultor cannot find results
 "
-:type 'boolean)
+  :type 'boolean)
 
 (defun consult-omni--calc-callback (cand)
-  "Copys the result as well as formula to kill ring."
+  "Copys the result as well as formula to kill ring.
+"
   (let ((equ (get-text-property 0 :query cand))
         (result  (get-text-property 0 :title cand)))
   (kill-new (concat equ " => " result))
@@ -40,7 +41,8 @@ when the calcultor cannot find results
 (cl-defun consult-omni--calc-fetch-results (input &rest args &key callback &allow-other-keys)
   "Calculate the result of possible math equations.
 
-This uses `calc-eval' to return the result of input"
+This uses `calc-eval' to return the result of input
+"
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (source "calc")
                (opts (car-safe opts))
@@ -86,25 +88,26 @@ This uses `calc-eval' to return the result of input"
        nil)
     ))
 
+;; Define the Calc Source
 (consult-omni-define-source "calc"
-                           :narrow-char ?c
-                           :category 'consult-omni-calc
-                           :type 'sync
-                           :require-match t
-                           :face 'consult-omni-date-face
-                           :request #'consult-omni--calc-fetch-results
-                           :on-preview #'ignore
-                           :on-return #'identity
-                           :on-callback #'consult-omni--calc-callback
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :enabled (lambda () (fboundp 'calc-eval))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static nil
-                           :annotate nil
-                           )
+                            :narrow-char ?c
+                            :category 'consult-omni-calc
+                            :type 'sync
+                            :require-match t
+                            :face 'consult-omni-date-face
+                            :request #'consult-omni--calc-fetch-results
+                            :on-preview #'ignore
+                            :on-return #'identity
+                            :on-callback #'consult-omni--calc-callback
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (fboundp 'calc-eval))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static nil
+                            :annotate nil
+                            )
 
 ;;; provide `consult-omni-calc' module
 

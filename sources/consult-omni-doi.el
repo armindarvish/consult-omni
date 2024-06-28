@@ -16,24 +16,25 @@
 
 (require 'consult-omni)
 
-(defvar consult-omni-doiorg-api-url "https://doi.org/api/handles/")
+(defvar consult-omni-doiorg-api-url "https://doi.org/api/handles/"
+"API URL for DOI.org")
 
-(defvar consult-omni-doiorg-search-url "https://doi.org/")
+(defvar consult-omni-doiorg-search-url "https://doi.org/"
+"Search URL for DOI.org")
 
 (defvar consult-omni--doi-search-history (list)
-  "History variables for search terms when using
-`consult-omni-doi' commands.")
+  "History variables for search terms of `consult-omni-doi'.")
 
 (defvar consult-omni--doi-selection-history (list)
-  "History variables for selected items when using
-`consult-omni-doi' commands.")
+  "History variables for selected items of `consult-omni-doi'.")
 
 (defun consult-omni--doi-to-url (doi)
-  "Converts DOI value to target url"
+  "Converts DOI value to target url.
+"
   (let ((out))
     (let* ((doi (if doi (format "%s" doi)))
            (url (concat consult-omni-doiorg-api-url doi)))
-       (consult-omni--fetch-url url consult-omni-http-retrieve-backend
+      (consult-omni--fetch-url url consult-omni-http-retrieve-backend
                                :sync t
                                :encoding 'utf-8
                                :parser #'consult-omni--json-parse-buffer
@@ -41,10 +42,10 @@
                                (lambda (attrs)
                                  (let* ((raw-results (map-nested-elt attrs '("values")))
                                         (result (car-safe (remove nil (mapcar (lambda (item)
-                                                                                     (if-let* ((type (gethash "type" item))                                                                                                        (link (if (equal type "URL") (map-nested-elt item '("data" "value")))))
-                                                                                         link))
-                                                                                   raw-results)))))
-                                  result))))))
+                                                                                (if-let* ((type (gethash "type" item))                                                                                                        (link (if (equal type "URL") (map-nested-elt item '("data" "value")))))
+                                                                                    link))
+                                                                              raw-results)))))
+                                   result))))))
 
 (cl-defun consult-omni--doiorg-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch target url of DOI.
@@ -66,20 +67,21 @@
       (list annotated-results))
     ))
 
+;; Define the DOI.org Source
 (consult-omni-define-source "doiorg"
-                           :narrow-char ?D
-                           :type 'sync
-                           :require-match t
-                           :face 'link
-                           :request #'consult-omni--doiorg-fetch-results
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--doi-search-history
-                           :select-hist 'consult-omni--doi-selection-history
-                           :enabled (lambda () (bound-and-true-p consult-omni-doiorg-search-url))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           )
+                            :narrow-char ?D
+                            :type 'sync
+                            :require-match t
+                            :face 'link
+                            :request #'consult-omni--doiorg-fetch-results
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--doi-search-history
+                            :select-hist 'consult-omni--doi-selection-history
+                            :enabled (lambda () (bound-and-true-p consult-omni-doiorg-search-url))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            )
 
 ;;; provide `consult-omni-doi' module
 

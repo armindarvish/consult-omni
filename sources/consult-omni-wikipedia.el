@@ -16,29 +16,31 @@
 
 (require 'consult-omni)
 
-(defvar consult-omni-wikipedia-search-url "https://www.wikipedia.org/search-redirect.php")
-(defvar consult-omni-wikipedia-url "https://wikipedia.org/")
-(defvar consult-omni-wikipedia-api-url "https://wikipedia.org/w/api.php")
+(defvar consult-omni-wikipedia-search-url "https://www.wikipedia.org/search-redirect.php"
+  "Search URL for Wikipedia.")
+
+(defvar consult-omni-wikipedia-url "https://wikipedia.org/"
+  "Main URL for Wikipedia")
+
+(defvar consult-omni-wikipedia-api-url "https://wikipedia.org/w/api.php"
+  "API URL for Wikipedia")
 
 (cl-defun consult-omni--wikipedia-format-candidate (&rest args &key source query url search-url title snippet date face &allow-other-keys)
   "Returns a formatted string for Wikipedia's searches.
 
-SOURCE is the name string of the source for candidate
+Description of Arguments:
 
-QUERY is the query string used for searching
+  SOURCE     the name to use (e.g. “Wikipedia”)
+  QUERY      query input from the user
+             the search results of QUERY on the SOURCE website
+  URL        the url of  candidate
+  SEARCH-URL the web search url
+             (e.g. https://www.wikipedia.org/search-redirect.php?search=query)
+  TITLE      the title of the result/paper (e.g. title of paper)
+  SNIPPET    a string containing a snippet/description of candidate
+  DATE       the date the article was last updated
+  FACE       the face to apply to TITLE
 
-URL is a string pointing to url of the candidate
-
-SEARCH-URL is the web search url e.g.:
-https://www.wikipedia.org/search-redirect.php?search=query
-
-TITLE is the title of the candidate
-
-SNIPPET is a string containing a snippet/description of candidate
-
-DATE is the date the article was last updated
-
-FACE is the face to apply to TITLE
 "
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
@@ -70,66 +72,67 @@ FACE is the face to apply to TITLE
                (count (plist-get opts :count))
                (page (plist-get opts :page))
                (count (or (and count (integerp (read count)) (string-to-number count))
-                             consult-omni-default-count))
+                          consult-omni-default-count))
                (page (or (and page (integerp (read page)) (string-to-number page))
                          consult-omni-default-page))
                (count (max count 1))
                (params `(("action" . "query")
-                 ("format" . "json")
-                 ("list" . "search")
-                 ("formatversion" . "2")
-                 ("prop" . "info")
-                 ("inprop" . "url")
-                 ("srwhat" . "text")
-                 ("srsearch" . ,(url-hexify-string query))
-                 ("srlimit" . ,(format "%s" count))
-                 ("sroffset" . ,(format "%s" page))))
+                         ("format" . "json")
+                         ("list" . "search")
+                         ("formatversion" . "2")
+                         ("prop" . "info")
+                         ("inprop" . "url")
+                         ("srwhat" . "text")
+                         ("srsearch" . ,(url-hexify-string query))
+                         ("srlimit" . ,(format "%s" count))
+                         ("sroffset" . ,(format "%s" page))))
                (headers '(("User-Agent" . "Emacs:consult-omni/0.1 (https://github.com/armindarvish/consult-omni);"))))
     (consult-omni--fetch-url consult-omni-wikipedia-api-url consult-omni-http-retrieve-backend
-      :encoding 'utf-8
-      :params params
-      :headers headers
-      :parser #'consult-omni--json-parse-buffer
-      :callback
-      (lambda (attrs)
-        (when-let* ((raw-results (map-nested-elt attrs '("query" "search")))
-                    (annotated-results
-                     (mapcar (lambda (item)
-                               (let*
-                                   ((source "Wikipedia")
-                                    (title (format "%s" (gethash "title" item)))
-                                    (url (concat consult-omni-wikipedia-url "wiki/" (string-replace " " "_" title)))
-                                    (date (gethash "timestamp" item))
-                                    (date (format-time-string "%Y-%m-%d" (date-to-time date)))
-                                    (snippet (replace-regexp-in-string "<span.*?>\\|</span>\\|&quot;" "" (format "%s" (gethash "snippet" item))))
-                                    (search-url (concat  consult-omni-wikipedia-search-url "?" "search=" query))
-                                    (decorated (consult-omni--wikipedia-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet :date date)))
-                                 (propertize decorated
-                                             :source source
-                                             :title title
-                                             :url url
-                                             :search-url search-url
-                                             :query query
-                                             :date date)))
+                             :encoding 'utf-8
+                             :params params
+                             :headers headers
+                             :parser #'consult-omni--json-parse-buffer
+                             :callback
+                             (lambda (attrs)
+                               (when-let* ((raw-results (map-nested-elt attrs '("query" "search")))
+                                           (annotated-results
+                                            (mapcar (lambda (item)
+                                                      (let*
+                                                          ((source "Wikipedia")
+                                                           (title (format "%s" (gethash "title" item)))
+                                                           (url (concat consult-omni-wikipedia-url "wiki/" (string-replace " " "_" title)))
+                                                           (date (gethash "timestamp" item))
+                                                           (date (format-time-string "%Y-%m-%d" (date-to-time date)))
+                                                           (snippet (replace-regexp-in-string "<span.*?>\\|</span>\\|&quot;" "" (format "%s" (gethash "snippet" item))))
+                                                           (search-url (concat  consult-omni-wikipedia-search-url "?" "search=" query))
+                                                           (decorated (consult-omni--wikipedia-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet :date date)))
+                                                        (propertize decorated
+                                                                    :source source
+                                                                    :title title
+                                                                    :url url
+                                                                    :search-url search-url
+                                                                    :query query
+                                                                    :date date)))
 
-                             raw-results)))
-          (funcall callback annotated-results)
-          annotated-results)))))
+                                                    raw-results)))
+                                 (funcall callback annotated-results)
+                                 annotated-results)))))
 
+;; Define the Wikipedia Source
 (consult-omni-define-source "Wikipedia"
-                           :narrow-char ?w
-                           :type 'dynamic
-                           :require-match t
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--wikipedia-fetch-results
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :enabled (lambda () (boundp  'consult-omni-wikipedia-api-url))
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :type 'dynamic
-                           :static 'both
+                            :narrow-char ?w
+                            :type 'dynamic
+                            :require-match t
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--wikipedia-fetch-results
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (boundp  'consult-omni-wikipedia-api-url))
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :type 'dynamic
+                            :static 'both
                             )
 
 ;;; provide `consult-omni-wikipedia' module
