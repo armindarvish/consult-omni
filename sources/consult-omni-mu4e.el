@@ -122,7 +122,7 @@ cand
                            :on-callback #'consult-omni--mu-callback
                            :preview-key consult-omni-preview-key
                            :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
+                           :select-hist 'consult-omni--email-select-history
                            :enabled (lambda () (if (and (executable-find "mu")
                                                    (fboundp 'consult-mu))
                                                    t nil))

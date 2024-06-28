@@ -182,8 +182,8 @@ Can be either “search” or “show”"
   (let* ((query (get-text-property 0 :query cand))
          (id (get-text-property 0 :id cand)))
     (when id
-      (when (get-buffer consult-notmuch--buffer-name)
-        (kill-buffer consult-notmuch--buffer-name))
+      (when (get-buffer consult-omni-notmuch-message-buffer-name)
+        (kill-buffer consult-omni-notmuch-message-buffer-namee))
       (notmuch-show id nil nil query consult-omni-notmuch-message-buffer-name))))
 
 (defun consult-omni--notmuch-callback (cand)
@@ -192,8 +192,8 @@ Can be either “search” or “show”"
   (let* ((query (get-text-property 0 :query cand))
          (id (get-text-property 0 :id cand)))
     (when id
-      (when (get-buffer consult-omni-notmuch--buffer-name)
-        (kill-buffer consult-omni-notmuch--buffer-name))
+      (when (get-buffer consult-omni-notmuch-message-buffer-name)
+        (kill-buffer consult-omni-notmuch-message-buffer-name))
       (notmuch-tree query nil id consult-omni-notmuch-tree-buffer-name t nil nil nil)))
 )
 
@@ -211,8 +211,7 @@ Can be either “search” or “show”"
                          consult-omni-default-page))
                (page (* count page))
                (consult-omni-notmuch-extra-command-args (unless (listp consult-omni-notmuch-extra-command-args) (list consult-omni-notmuch-extra-command-args)))
-               (cmd (append (list notmuch-command) (list consult-omni-notmuch-default-command-arg) (when count (list "--limit" (format "%s" count))) (when (and page (not (equal page 0))) (list "--offset" (format "%s" page)))  consult-omni-notmuch-extra-command-args (list query)))
-               )
+               (cmd (append (list notmuch-command) (list consult-omni-notmuch-default-command-arg) (when count (list "--limit" (format "%s" count))) (when (and page (not (equal page 0))) (list "--offset" (format "%s" page))) consult-omni-notmuch-extra-command-args (list query))))
     cmd
   ))
 
@@ -228,7 +227,7 @@ Can be either “search” or “show”"
                            :on-callback #'consult-omni--notmuch-callback
                            :preview-key consult-omni-preview-key
                            :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
+                           :select-hist 'consult-omni--email-select-history
                            :group #'consult-omni--group-function
                            :sort t
                            :static 'both

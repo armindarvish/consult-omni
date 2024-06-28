@@ -251,6 +251,9 @@ By default inherits from `consult-async-refresh-delay'. "
 (defvar consult-omni--search-history (list)
   "History variable that keeps search terms.")
 
+(defvar consult-omni--email-select-history (list)
+  "History variable that keeps selected email result.")
+
 (defvar consult-omni--calc-select-history (list)
   "History variable that keeps selected calculator result.")
 
@@ -1195,14 +1198,21 @@ for use in a static (not dynamically updated) multi-source command
                                                             response-items cat idx face))))
                              (setq current t)))
                args)
-      (let ((count 0)
-            (max consult-omni-default-timeout)
-            (step 0.05))
-        (while (and (< count max) (not current))
-          (+ count step)
-          (if (>= count max)
-              (message "consult-omni: Hmmm! %s took longer than expected." name)
-            (sit-for step))))
+
+      ;; (let ((count 0)
+      ;;       (max consult-omni-default-timeout)
+      ;;       (step 0.05))
+      ;;   (while (and (< count max) (not current))
+      ;;     (+ count step)
+      ;;     (if (>= count max)
+      ;;         (message "consult-omni: Hmmm! %s took longer than expected." name)
+      ;;       (sit-for step))))
+      (with-timeout
+           (consult-omni-default-timeout
+                              current)
+         (while (not current)
+           (sit-for 0.05)))
+
       current)))
 
 (defun consult-omni--multi-static-async-candidates (source idx input &rest args)
@@ -1304,9 +1314,13 @@ OPTIONS are similar to options in `consult--multi'.
 ARGS are sent as additional args to each source
 collection function.
 "
-(let* ((sources (consult--multi-enabled-sources sources))
-         (candidates (consult--slow-operation "Give me a few seconds. The internet is a big mess!" (consult-omni--multi-candidates-static sources input args)))
-         (selected
+  (let* ((sources (consult--multi-enabled-sources sources))
+         (candidates
+          (with-timeout (30 nil)
+            (consult--slow-operation "Give me a few seconds. The internet is a big mess!" (consult-omni--multi-candidates-static sources input args))))
+         (selected (if (or (not candidates) (and (listp candidates) (= (length candidates) 0)))
+                       (progn (message (concat (propertize "no results were found with the input " 'face 'consult-omni-prompt-face)  (propertize (format "%s" input) 'face 'warning)))
+                              nil)
           (apply #'consult--read
                  candidates
                  (append
@@ -1321,8 +1335,8 @@ collection function.
                    :lookup      (apply-partially #'consult-omni--multi-lookup sources)
                    :preview-key (consult--multi-preview-key sources)
                    :narrow      (consult--multi-narrow sources)
-                   :state       (consult--multi-state sources))))))
-    (if (plist-member (cdr selected) :match)
+                   :state       (consult--multi-state sources)))))))
+    (if (and (listp selected) (plist-member (cdr selected) :match))
         (when-let (fun (plist-get (cdr selected) :new))
           (funcall fun (car selected))
           (plist-put (cdr selected) :match 'new))

@@ -5,7 +5,7 @@
 :END:
 ** Header
 #+begin_src emacs-lisp
-;;; consult-omni.el --- Emacs Omi Search Package -*- lexical-binding: t -*-
+;;; consult-omni.el --- Emacs Omni Search Package -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2024 Armin Darvish
 
@@ -280,11 +280,14 @@ By default inherits from `consult-async-refresh-delay'. "
 (defvar consult-omni--search-history (list)
   "History variable that keeps search terms.")
 
+(defvar consult-omni--email-select-history (list)
+  "History variable that keeps selected email result.")
+
 (defvar consult-omni--calc-select-history (list)
   "History variable that keeps selected calculator result.")
 
 (defvar consult-omni--apps-select-history (list)
-  "History variable that keeps list of launched selected.")
+  "History variable that keeps list of apps launched.")
 #+end_src
 **** others
 #+begin_src emacs-lisp
@@ -1366,14 +1369,13 @@ for use in a static (not dynamically updated) multi-source command
                                                             response-items cat idx face))))
                              (setq current t)))
                args)
-      (let ((count 0)
-            (max consult-omni-default-timeout)
-            (step 0.05))
-        (while (and (< count max) (not current))
-          (+ count step)
-          (if (>= count max)
-              (message "consult-omni: Hmmm! %s took longer than expected." name)
-            (sit-for step))))
+
+      (with-timeout
+           (consult-omni-default-timeout
+                              current)
+         (while (not current)
+           (sit-for 0.05)))
+
       current)))
 #+end_src
 
@@ -1488,9 +1490,13 @@ OPTIONS are similar to options in `consult--multi'.
 ARGS are sent as additional args to each source
 collection function.
 "
-(let* ((sources (consult--multi-enabled-sources sources))
-         (candidates (consult--slow-operation "Give me a few seconds. The internet is a big mess!" (consult-omni--multi-candidates-static sources input args)))
-         (selected
+  (let* ((sources (consult--multi-enabled-sources sources))
+         (candidates
+          (with-timeout (30 nil)
+            (consult--slow-operation "Give me a few seconds. The internet is a big mess!" (consult-omni--multi-candidates-static sources input args))))
+         (selected (if (or (not candidates) (and (listp candidates) (= (length candidates) 0)))
+                       (progn (message (concat (propertize "no results were found with the input " 'face 'consult-omni-prompt-face)  (propertize (format "%s" input) 'face 'warning)))
+                              nil)
           (apply #'consult--read
                  candidates
                  (append
@@ -1505,8 +1511,8 @@ collection function.
                    :lookup      (apply-partially #'consult-omni--multi-lookup sources)
                    :preview-key (consult--multi-preview-key sources)
                    :narrow      (consult--multi-narrow sources)
-                   :state       (consult--multi-state sources))))))
-    (if (plist-member (cdr selected) :match)
+                   :state       (consult--multi-state sources)))))))
+    (if (and (listp selected) (plist-member (cdr selected) :match))
         (when-let (fun (plist-get (cdr selected) :new))
           (funcall fun (car selected))
           (plist-put (cdr selected) :match 'new))
@@ -2518,19 +2524,27 @@ macro. See `consult-omni-define-source' for more details"
 (defun consult-omni-multi (&optional initial prompt sources no-callback &rest args)
   "Interactive “multi-source dynamic search”
 
-INITIAL is the initial search prompt in the minibuffer.
-PROMPT is thean optional minibuffer prompt
-Searches all sources in SOURCES. if SOURCES is nil
-`consult-omni-multi-sources' is used.
-If NO-CALLBACK is t, only the selected candidate is returned without
-any callback action.
-
 This is an interactive command that fetches results form
 all the sources in either SOURCES or in `consult-omni-multi-sources'
 with dynamic completion meaning that the search term can be dynamically
 updated by the user and the results are fetched as
 the user types in the miinibuffer.
 
+Description of Arguments:
+INITIAL is the initial search prompt in the minibuffer.
+PROMPT is an optional minibuffer prompt
+SOURCES is a list of sources simiar to `consult-omni-multi-sources'.
+  This is a list of strings or symbols:
+  - strings can be name of a source, a key from `consult-omni-sources-alist',
+    which can be made with the convinient macro `consult-omni-define-source'
+    or by using `consult-omni--make-source-from-consult-source'.
+  - symbols can be other consult sources
+    (see `consult-buffer-sources' for example.)
+  If SOURCES is nil, `consult-omni-multi-sources' is used instead.
+If NO-CALLBACK is t, only the selected candidate is returned without
+any callback action.
+
+Other Features:
 Additional commandline arguments can be passed in the minibuffer
 entry similar to `consult-grep' by typing `--` followed by arguments.
 These additional arguments are passed to async sources
@@ -2538,22 +2552,18 @@ similar to `consult-grep' syntax. In addition, other arguments can be passed
 to all sources by using key, val pairs (.e.g “:group domain”)
 
 For example the user can enter:
-
-`#consult-omni -- :g domain'
-
+  `#consult-omni -- :g domain'
 This will run a search on all the sources for
 the term “consult-omni” and then groups the results by the “domain
 of the URL” of the results.
 
 Built-in arguments include:
-
- :g, or :group for grouping (see `consult-omni-group-by' and `consult-omni--override-group-by'. for more info)
-
- :n, or :count is passed as the value for COUNT
-to any source in `consult-omni-multi-sources'.
-
- :p, or :page is passed as the value for PAGE to any source
- in `consult-omni-multi-sources'.
+  - :g, or :group for grouping (see `consult-omni-group-by'
+    and `consult-omni--override-group-by' for more info.)
+  - :n, or :count is passed as the value for COUNT
+    to any source in `consult-omni-multi-sources'.
+  - :p, or :page is passed as the value for PAGE to any source
+    in `consult-omni-multi-sources'.
 
 Custom arguments can be passed by using “:ARG value”.
 For example, if the user types the following in the minibuffer:
@@ -2617,11 +2627,26 @@ here: URL `https://github.com/minad/consult'."
 (defun consult-omni-multi-static (&optional input prompt sources no-callback &rest args)
   "Interactive “static” multi-source search
 
-INPUT is the initial search query. Searches all sources
-in SOURCES for INPUT.
-If SOURCES is nil, `consult-omni-multi-sources' is used.
-If NO-CALLBACK is t, only the selected candidate is returned
-without any callback action.
+This commands asks user for an input (a search term)
+and fetches results from all the sources in either SOURCES
+or in `consult-omni-multi-sources' and present the result
+candidates in minibuffer completion for user to select.
+
+Description of Arguments:
+INITIAL is the initial search term. if non-nil the user is queried for one
+  with either `consult-omni-default-autosuggest-command' or
+  `consult-omni--read-search-string'
+PROMPT is an optional minibuffer prompt
+SOURCES is a list of sources simiar to `consult-omni-multi-sources'.
+  This is a list of strings or symbols:
+  - strings can be name of a source, a key from `consult-omni-sources-alist',
+    which can be made with the convinient macro `consult-omni-define-source'
+    or by using `consult-omni--make-source-from-consult-source'.
+  - symbols can be other consult sources
+    (see `consult-buffer-sources' for example.)
+  If SOURCES is nil, `consult-omni-multi-sources' is used instead.
+If NO-CALLBACK is t, only the selected candidate is returned without
+any callback action.
 "
   (interactive "P")
   (let* ((input (or input
@@ -2831,7 +2856,7 @@ Gets the preview function from `consult-omni-sources-alist'."
 *** variables
 #+begin_src emacs-lisp
 (defcustom consult-omni-embark-scholar-make-note-func  #'consult-omni-embark-scholar-default-note
-  "function for template note for scholar article"
+  "Function for makin note template for scholar articles."
   :type '(choice (function :tag "(Default) Make Note with Title, Link, Journal, Authors... " consult-omni-embark-scholar-default-note)
                  (function :tag "Custom Function" function)))
 #+end_src
@@ -2954,7 +2979,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
 ;;; Define Embark Action Functions
 
 (defun consult-omni-embark-apps-open-filemanager (cand)
-  "Open CAND's filepath sith system's file manager."
+  "Open CAND's filepath with system's file manager."
   (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand))))
       (pcase system-type
         ('darwin (call-process "open" nil 0 nil path "-R"))
@@ -2971,7 +2996,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
       (call-interactively #'find-file)))
 
 (defun consult-omni-embark-apps-open-externally (cand)
-  "Open FILE or url using system's default application."
+  "Open CAND's filepath using system's default application."
   (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
     (pcase system-type
       ('darwin (call-process "open" nil 0 nil path))
@@ -2994,7 +3019,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
       (insert (format " %s " path))))
 
 (defun consult-omni-embark-apps-copy-path-as-kill (cand)
-  "Insert the title of CAND at point"
+  "Copy the title of CAND to `kill-ring'"
   (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
        (kill-new (format " %s " path))))
 #+end_src
@@ -3030,7 +3055,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
     ))
 
 (defun consult-omni-embark-calc-insert-results (cand)
-  "Insert the title of CAND at point"
+  "Insert the results of the calculator at point"
   (if-let (results (and (stringp cand) (get-text-property 0 :title cand)))
       (insert (format " %s " results))))
 
@@ -3041,7 +3066,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
     ))
 
 (defun consult-omni-embark-calc-insert-formula (cand)
-  "Insert the title of CAND at point"
+  "Insert the results of the calculator at point"
   (if-let (formula (and (stringp cand) (get-text-property 0 :query cand)))
       (insert (format " %s " formula))))
 
@@ -3071,8 +3096,8 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
   "consult-omni external video player.
 
 Can be:
- - an elisp function that takes a URL argument (e.g. mpv-pay-url)
- - a string for external command line program
+  - an elisp function that takes a URL argument (e.g. mpv-pay-url)
+  - a string for external command line program
 "
   :type '(choice (string :tag "(Default) mpv executable command" (executable-find "mpv"))
                  (function :tag "play with mpv package" mpv-play-url)
@@ -3251,50 +3276,56 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
   :type '(repeat :tag "List of paths" directory))
 
 (defcustom consult-omni-apps-use-cache nil
-"Whether to use cache for getting list of apps?"
-:type 'boolean)
+  "Whether to use cache for getting list of apps?"
+  :type 'boolean)
 
 (defcustom consult-omni-apps-open-command-args nil
   "Command line args to open an application"
   :type 'string)
 
 (defcustom consult-omni-apps-regexp-pattern ""
-"Regexp pattern to find system applications"
-:type 'regexp)
+  "Regexp pattern to find system applications"
+  :type 'regexp)
 
 (defcustom consult-omni-apps-default-launch-function #'consult-omni--apps-lauch-app
-  "consult-omni default function to launch an app"
+  "Default function to launch an app"
   :type '(choice (function :tag "(Default) Use System Shell" consult-omni--apps-lauch-app)
                  (function :tag "Custom Function")))
 
+(defcustom consult-omni-open-with-prompt ">|  "
+  "String for prompt in `consult-omni-open-with-app'."
+  :type 'string
+)
+
+;; Set the variables per system type (Linux and MacOS only)
 (pcase system-type
   ('darwin
    (setq consult-omni-apps-paths (append (file-expand-wildcards "/Applications/Adobe*") (list "/Applications" "/Applications/Utilities/" "/System/Applications/" "/System/Applications/Utilities/" "~/Applications/")))
    (setq consult-omni-apps-regexp-pattern ".*\\.app$")
    (setq consult-omni-apps-open-command-args "open -a")
    )
-   ('gnu/linux
-    (setq consult-omni-apps-xdg-data-home (if (fboundp 'xdg-data-home) (xdg-data-home)
+  ('gnu/linux
+   (setq consult-omni-apps-xdg-data-home (if (fboundp 'xdg-data-home) (xdg-data-home)
                                            (let ((path (getenv "XDG_DATA_HOME")))
                                              (if (or (null path) (string= path ""))
                                                  nil
                                                (parse-colon-path path)))))
-     (setq consult-omni-apps-xdg-data-dirs (if (fboundp 'xdg-data-dirs) (xdg-data-dirs)
+   (setq consult-omni-apps-xdg-data-dirs (if (fboundp 'xdg-data-dirs) (xdg-data-dirs)
                                            (let ((path (getenv "XDG_DATA_DIRS")))
                                              (if (or (null path) (string= path ""))
-    nil
+                                                 nil
                                                (parse-colon-path path)))))
-     (setq consult-omni-apps-paths (remove nil (mapcar (lambda (dir)
-                                       (let ((path (and (stringp dir) (file-exists-p dir) (file-truename (expand-file-name "applications" dir)))))
-                                              (and (stringp path) path)))
-                                          (list consult-omni-apps-xdg-data-home
-                                               consult-omni-apps-xdg-data-dirs
-                                               "/usr/share"
-                                               "/usr/local/share"))))
-     (setq consult-omni-apps-regexp-pattern ".*\\.desktop$")
-     (setq consult-omni-apps-open-command-args "gtk-launch")
-    )
-)
+   (setq consult-omni-apps-paths (remove nil (mapcar (lambda (dir)
+                                                       (let ((path (and (stringp dir) (file-exists-p dir) (file-truename (expand-file-name "applications" dir)))))
+                                                         (and (stringp path) path)))
+                                                     (list consult-omni-apps-xdg-data-home
+                                                           consult-omni-apps-xdg-data-dirs
+                                                           "/usr/share"
+                                                           "/usr/local/share"))))
+   (setq consult-omni-apps-regexp-pattern ".*\\.desktop$")
+   (setq consult-omni-apps-open-command-args "gtk-launch")
+   )
+  )
 #+end_src
 
 **** other variables
@@ -3308,6 +3339,11 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
 ***** cmd args
 #+begin_src emacs-lisp
 (defun consult-omni--apps-cmd-args (app &optional file)
+  "Returns a commandline string for opening the APP
+
+Uses `consult-omni-apps-open-command-args' as the main command line program
+If FILE is non-nil, returns a command line for opeing the FILE with APP.
+"
   (append (consult--build-args consult-omni-apps-open-command-args)
           (list (format "%s" app))
           (if (and file (file-exists-p (file-truename file))) (list (format "%s" file)))))
@@ -3316,6 +3352,11 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
 ***** make process
 #+begin_src emacs-lisp
 (defun consult-omni--apps-lauch-app (app &optional file)
+  "Makes an async process for opening APP.
+
+Uses `consult-omni--apps-cmd-args' to get the command line args string.
+If FILE is non-nil, the process will open the FILE in APP.
+"
   (let* ((name (concat "consult-omni-" (file-name-base app)))
          (cmds (consult-omni--apps-cmd-args app file)))
     (make-process :name name
@@ -3328,24 +3369,30 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
 ***** open with
 #+begin_src emacs-lisp
 (defun consult-omni-open-with-app (&optional file app)
+  "Opens FILE in (external) APP interactively.
+
+If FILE is nil, user is queried to select a file.
+If APP is nil, `consult-omni-apps-static' is called to select one.
+"
   (interactive)
   (if-let* ((file (or file (read-file-name "select file:")))
             (file (file-truename file))
-            (app (or app (get-text-property 0 :app (consult-omni-apps-static ".*" "  " t)))))
-      (consult-omni--apps-lauch-app (format "%s" app)
-                                    (format "%s" (and (file-exists-p file) file)))))
+            (app (or app (get-text-property 0 :app (consult-omni-apps-static ".*" consult-omni-open-with-prompt t)))))
+      (funcall consult-omni-apps-default-launch-function
+               (format "%s" app)
+               (format "%s" (and (file-exists-p file) file)))))
 #+end_src
 ***** preview
 #+begin_src emacs-lisp
 (defun consult-omni--apps-preview (cand)
-  "Mdfind preview function."
+  "Preview function for for `consult-omni-apps'."
 (ignore))
 #+end_src
 
 ***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--apps-callback (cand)
-  "Mdfind callback function."
+  "Callback function for `consult-omni-apps'."
   (let ((app (get-text-property 0 :app cand)))
     (funcall consult-omni-apps-default-launch-function app)
   ))
@@ -3353,17 +3400,21 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
 
 ***** format
 #+begin_src emacs-lisp
-(cl-defun consult-omni--apps-format-candidates (&rest args &key source query title path face snippet visible &allow-other-keys)
-"Formats the cnaiddates of `consult-omni-apps.
+(cl-defun consult-omni--apps-format-candidates (&rest args &key source query title path snippet visible face &allow-other-keys)
+"Formats the candidates of `consult-omni-apps'.
 
-Files are entries from `consult-omni--apps-list-apps'.
-QUERY is the query input from the user"
+SOURCE is the name to use (e.g. “Apps”)
+QUERY is the query input from the user
+TITLE is the title of the App (name of an application)
+PATH is the filepath to the application
+SNIPPET is the description of the app (from Desktop Entry)
+VISIBLE is whether the applicaiton is visible (from Desktop Entry)
+FACE is the face to apply to TITLE
+"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (directory (and path (file-name-directory path)))
          (directory (and (stringp directory) (propertize directory 'face 'consult-omni-path-face)))
-         ;; (filename (and path (file-name-nondirectory path)))
-         ;; (filename (and (stringp filename) (propertize filename 'face 'consult-omni-path-face)))
          (snippet (and (stringp snippet) (consult-omni--set-string-width snippet (* 3 frame-width-percent))))
          (snippet (and (stringp snippet) (propertize snippet 'face 'consult-omni-snippet-face)))
          (match-str (and (stringp query) (consult--split-escaped query) nil))
@@ -3374,7 +3425,6 @@ QUERY is the query input from the user"
                       (unless visible "\s[Hidden App]")
                       (when snippet (concat "\t" snippet))
                       (when directory (concat "\t" directory))
-                      ;; (when filename (concat "\t" (when directory directory) filename))
                       (when source (concat "\t" source))
                       )))
      (if consult-omni-highlight-matches
@@ -3390,10 +3440,10 @@ QUERY is the query input from the user"
 ***** get list of system apps
 #+begin_src emacs-lisp
 (defun consult-omni--apps-get-desktop-apps ()
-  "Return a list of files for system apps
+  "Return a list of system applications.
 
-Finds all files that match `consult-omni-apps-regexp-pattern'
-in `consult-omni-apps-paths'.
+Finds all the desktop applications by finding files that
+match `consult-omni-apps-regexp-pattern' in `consult-omni-apps-paths'.
 "
   (if (and consult-omni-apps-use-cache consult-omni-apps-cached-apps)
       consult-omni-apps-cached-apps
@@ -3411,6 +3461,13 @@ in `consult-omni-apps-paths'.
 ***** parse app for name, comment and exec
 #+begin_src emacs-lisp
 (defun consult-omni--apps-parse-app-file (file)
+  "Parses a desktop entry FILE.
+
+Returns
+ - name: the name of the application
+ - comment: description of the application
+ - exec: the executable for application
+"
   (pcase system-type
          ('darwin
           (let ((name (file-name-base file))
@@ -3467,6 +3524,17 @@ in `consult-omni-apps-paths'.
 ***** cached items
 #+begin_src emacs-lisp
 (defun consult-omni-apps--cached-items (files query)
+  "Makes a cahced list of Desktop Applications from FILES.
+
+If `consult-omni-apps-cached-items' already exists, returns it otherwise
+makes a new one.
+
+FILES is a list of file paths to parse.
+For each file in files, if it contains the QUERY
+(a.k.a. matches the regexp pattern “.*QUERY.*”), it is parsed by
+`consult-omni--apps-parse-app-file' and added to the
+`consult-omni-apps-cached-items'
+"
 (if (and consult-omni-apps-use-cache consult-omni-apps--cached-items)
     consult-omni-apps-cached-items
 (setq consult-omni-apps-cached-items
@@ -3489,7 +3557,6 @@ in `consult-omni-apps-paths'.
                            :exec exec
                            :app app)))
            (if query
-               ;; (seq-filter (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
                (cl-remove-if-not (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
              files)
    ))))
@@ -3501,7 +3568,13 @@ in `consult-omni-apps-paths'.
 #+begin_src emacs-lisp
 
 (cl-defun consult-omni--apps-list-apps (input &rest args &key callback &allow-other-keys)
-  "get a list of applications from OS.
+  "Get a list of applications from OS.
+
+Finds apps in `consult-omni--apps-get-desktop-apps' that contain
+the query in INPUT string (matches regexp pattern “.*query.*”).
+If `consult-omni-apps-use-cache' is non-nil,
+then `consult-omni-apps-cached-items' is used list of all apps otherwise
+a new list is generated.
 "
  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
@@ -3529,7 +3602,6 @@ in `consult-omni-apps-paths'.
                            :exec exec
                            :app app)))
            (if query
-               ;; (seq-filter (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
              (cl-remove-if-not (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
              files)
    )
@@ -5720,7 +5792,7 @@ cand
                            :on-callback #'consult-omni--mu-callback
                            :preview-key consult-omni-preview-key
                            :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
+                           :select-hist 'consult-omni--email-select-history
                            :enabled (lambda () (if (and (executable-find "mu")
                                                    (fboundp 'consult-mu))
                                                    t nil))
@@ -7163,11 +7235,11 @@ FACE is the face to apply to TITLE
 ***** custom
 #+begin_src emacs-lisp
 (defcustom consult-omni-notmuch-message-buffer-name "*consult-omni-notmuch-message*"
-  "Name of notmuch preview and result buffers."
+  "Name of consult-omni-notmuch preview buffer."
   :type 'string)
 
 (defcustom consult-omni-notmuch-tree-buffer-name "*consult-omni-notmuch-tree*"
-  "Name of notmuch preview and result buffers."
+  "Name of consult-omni-notmuch tree buffer."
   :type 'string)
 
 (defcustom consult-omni-notmuch-command (or notmuch-command "notmuch")
@@ -7184,26 +7256,38 @@ Can be either “search” or “show”"
   )
 
 (defcustom consult-omni-notmuch-extra-command-args (list)
-"extra notmuch commandline arguments."
-
+"Extra notmuch commandline arguments."
  :type '(repeat (choice string)))
 
 (defcustom consult-omni-notmuch-default-count consult-omni-default-count
-   "Number of notmuch search results to retrieve."
+   "Number of notmuch search results to retrieve.
+
+By default inherits from `consult-omni-default-count'."
  :type 'integer)
 
 #+end_src
 ***** other
 #+begin_src emacs-lisp
-(setq consult-omni--notmuch-format-func-alist '(("show" . consult-omni--notmuch-show-transform)
-                                                  ("search" . consult-omni--notmuch-search-transform)))
+(defvar consult-omni--notmuch-format-func-alist '(("show" . consult-omni--notmuch-show-transform)
+                                                  ("search" . consult-omni--notmuch-search-transform))
+"Alist for transfrom function of notmuch commandline output.")
 #+end_src
 **** helper functions
 ***** transform/format
 ****** format cnadidates
 #+begin_src emacs-lisp
 (cl-defun consult-omni--notmuch-format-candidate (&rest args &key source query title from date tags face &allow-other-keys)
-  "Transform STR from notmuch search to consult-omni-notmuch style."
+"Formats a candidate for `consult-omni-notmuch' commands.
+
+SOURCE is the name to use (e.g. “YouTube”)
+QUERY is the query input from the user
+TITLE is the nootmuch title string of the message
+FROM is the notmuch sender string of the message
+DATE is the notmuch date string of the message
+TAGS is a (list of) notmuch tag string(s) for message
+FACE is the face to apply to TITLE
+
+"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
          (match-str (if (stringp query) (consult--split-escaped query) nil))
@@ -7236,6 +7320,10 @@ Can be either “search” or “show”"
 #+begin_src emacs-lisp
 
 (defun consult-omni--notmuch-search-transform (candidates &optional query)
+  "Transforms “notmuch search” output to consult-omni's style.
+
+Parses the output from command “notmuch search” and passes its components
+to  `consult-omni--notmuch-format-candidate'."
 
   (remove nil (remove "" (mapcar (lambda (item)
                         (when (and (stringp item) (string-match "thread:" item))
@@ -7272,7 +7360,10 @@ Can be either “search” or “show”"
 ****** transform search
 #+begin_src emacs-lisp
 (defun consult-omni--notmuch-show-transform (candidates &optional query)
-  "Parse output STR of notmuch show, extracting its components."
+  "Transforms “notmuch show” output to consult-omni's style.
+
+Parses the output from command “notmuch show” and passes its components
+to `consult-omni--notmuch-format-candidate'."
 
   (let ((source "notmuch") (id) (headers) (subject) (senders) (cc) (to) (count) (date) (tags) (match) (info))
     (remove nil (mapcar (lambda (item)
@@ -7334,34 +7425,38 @@ Can be either “search” or “show”"
 ****** default transform
 #+begin_src emacs-lisp
 (defun consult-omni--notmuch-get-transform-func (&rest args)
+  "Gets the appropriate transform function for notmuch commands.
+
+This is needed to get the right function for
+parsing outputs of “notmuch search”, and
+“notmuch show” accordingly.
+"
     (cdr (assoc consult-omni-notmuch-default-command-arg consult-omni--notmuch-format-func-alist)))
 #+end_src
 ***** preview
 #+begin_src emacs-lisp
 (defun consult-omni--notmuch--preview (cand)
-  "Preview function for notmuch candidates."
-  (let* ((query (get-text-property 0 :query cand))
-         (id (get-text-property 0 :id cand)))
-    (when id
-      (when (get-buffer consult-notmuch--buffer-name)
-        (kill-buffer consult-notmuch--buffer-name))
-      (notmuch-show id nil nil query consult-omni-notmuch-message-buffer-name))))
-#+end_src
-***** return
-***** callback
-#+begin_src emacs-lisp
-(defun consult-omni--notmuch-callback (cand)
-  "Callback function for notmuch candidates.
+  "Preview function for `consult-omni-notmuch' command.
 "
   (let* ((query (get-text-property 0 :query cand))
          (id (get-text-property 0 :id cand)))
     (when id
-      (when (get-buffer consult-omni-notmuch--buffer-name)
-        (kill-buffer consult-omni-notmuch--buffer-name))
+      (when (get-buffer consult-omni-notmuch-message-buffer-name)
+        (kill-buffer consult-omni-notmuch-message-buffer-namee))
+      (notmuch-show id nil nil query consult-omni-notmuch-message-buffer-name))))
+#+end_src
+***** callback
+#+begin_src emacs-lisp
+(defun consult-omni--notmuch-callback (cand)
+  "Callback function for `consult-omni-notmuch' command.
+"
+  (let* ((query (get-text-property 0 :query cand))
+         (id (get-text-property 0 :id cand)))
+    (when id
+      (when (get-buffer consult-omni-notmuch-message-buffer-name)
+        (kill-buffer consult-omni-notmuch-message-buffer-name))
       (notmuch-tree query nil id consult-omni-notmuch-tree-buffer-name t nil nil nil)))
 )
-
-
 #+end_src
 **** items
 #+begin_src emacs-lisp
@@ -7379,8 +7474,7 @@ Can be either “search” or “show”"
                          consult-omni-default-page))
                (page (* count page))
                (consult-omni-notmuch-extra-command-args (unless (listp consult-omni-notmuch-extra-command-args) (list consult-omni-notmuch-extra-command-args)))
-               (cmd (append (list notmuch-command) (list consult-omni-notmuch-default-command-arg) (when count (list "--limit" (format "%s" count))) (when (and page (not (equal page 0))) (list "--offset" (format "%s" page)))  consult-omni-notmuch-extra-command-args (list query)))
-               )
+               (cmd (append (list notmuch-command) (list consult-omni-notmuch-default-command-arg) (when count (list "--limit" (format "%s" count))) (when (and page (not (equal page 0))) (list "--offset" (format "%s" page))) consult-omni-notmuch-extra-command-args (list query))))
     cmd
   ))
 #+end_src
@@ -7398,7 +7492,7 @@ Can be either “search” or “show”"
                            :on-callback #'consult-omni--notmuch-callback
                            :preview-key consult-omni-preview-key
                            :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
+                           :select-hist 'consult-omni--email-select-history
                            :group #'consult-omni--group-function
                            :sort t
                            :static 'both
@@ -7447,9 +7541,9 @@ Can be either “search” or “show”"
 **** custom variables
 #+begin_src emacs-lisp
 (defcustom consult-omni-numi-args "numi-cli"
-"Command line arguments for mdfind.
+"Command line arguments for “numi-cli”.
 
-Similar to other command line args for consult but for mdfind.
+Similar to other command line args for consult but for numi-cli.
 See `consult-locate-args' for example."
   :type '(choice string (repeat (choice string sexp))))
 #+end_src
@@ -7459,13 +7553,13 @@ See `consult-locate-args' for example."
 #+begin_src emacs-lisp
 
 (defun consult-omni--numi-preview (cand)
-  "Mdfind preview function.")
+  "Preview function for `consult-omni-numi' command.")
 #+end_src
 
 ***** callback
 #+begin_src emacs-lisp
 (defun consult-omni--numi-callback (cand)
-  "Muni callback function."
+  "Callback function for `consult-omni-numi' command."
   (let ((result  (get-text-property 0 :title cand)))
   (kill-new result))
   )
@@ -7475,7 +7569,7 @@ See `consult-locate-args' for example."
 ***** filter
 #+begin_src emacs-lisp
 (defun consult-omni--numi-filter (candidates &optional query)
-  "Formats `consult-omni-mdfind' candidates.
+  "Filters `consult-omni-numi' candidates.
 "
   (cl-loop for candidate in candidates
            when (not (equal candidate "?"))
@@ -7485,13 +7579,11 @@ See `consult-locate-args' for example."
 **** items
 #+begin_src emacs-lisp
 (cl-defun consult-omni--numi-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “mdfind”.
+  "Makes builder command line args for “numi-cli”.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts)))
     (funcall #'consult-omni--async-builder (shell-quote-argument query) consult-omni-numi-args)
-   ;; (funcall #'consult--locate-builder (shell-quote-argument query))
-   ;; (list consult-omni-numi-args query)
             ))
 #+end_src
 
@@ -8431,27 +8523,16 @@ for details"
 "Formats a candidate for `consult-omni-youtube' commands.
 
 SOURCE is the name to use (e.g. “YouTube”)
-
 TYPE is the type of candidate (e.g. video, channel, playlist)
-
 QUERY is the query input from the user
-
 TITLE is the title of the video
-
 SNIPPET is a string containing a snippet/description of the video
-
 CHANNELTITLE is the name of the channel for the video
-
 DATE is the publish date of the video
-
 LENGTH is the duration of a  video in seconds
-
 SUBCOUNT is the subscriber count fpr a channel
-
 VIDEOCOUNT is the number of videos in a playlist
-
 VIEWCOUNT is the number of times a video is viewed
-
 FACE is the face to apply to TITLE
 "
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
