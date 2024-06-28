@@ -133,7 +133,6 @@ Description of Arguments:
                (page (or (and (integerp page) page)
                          (and page (string-to-number (format "%s" page)))
                          consult-omni-default-count))
-               ;; (count (min count 40))
                (page (+ (* page count) 1))
                (order  (if (and order (member (format "%s" order) '("date" "rating" "relevance" "upload_date" "views" "view_count"))) (format "%s" order) "relevance"))
                (type (if (and type (member (format "%s" type) '("channel" "playlist" "video" "movie" "show" "all"))) (format "%s" type) "video"))
