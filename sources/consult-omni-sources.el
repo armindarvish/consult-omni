@@ -17,7 +17,11 @@
 
 (require 'consult-omni)
 
-(defvar consult-omni-sources--all-modules-list
+(defvar consult-omni-sources--all-modules-list (list)
+  "List of all sources in consult-omni."
+  )
+
+(setq consult-omni-sources--all-modules-list
   (list 'consult-omni-apps
         'consult-omni-bing
         'consult-omni-brave-autosuggest
@@ -49,9 +53,7 @@
         'consult-omni-scopus
         'consult-omni-stackoverflow
         'consult-omni-wikipedia
-        'consult-omni-youtube)
-  "List of all sources in consult-omni."
-  )
+        'consult-omni-youtube))
 
 (defun consult-omni-sources--load-module (symbol)
   "Loads feature SYMBOL.

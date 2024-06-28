@@ -3191,7 +3191,12 @@ Can be:
 #+end_src
 **** define all source modules
 #+begin_src emacs-lisp
-(defvar consult-omni-sources--all-modules-list
+
+(defvar consult-omni-sources--all-modules-list (list)
+  "List of all sources in consult-omni."
+  )
+
+(setq consult-omni-sources--all-modules-list
   (list 'consult-omni-apps
         'consult-omni-bing
         'consult-omni-brave-autosuggest
@@ -3223,9 +3228,7 @@ Can be:
         'consult-omni-scopus
         'consult-omni-stackoverflow
         'consult-omni-wikipedia
-        'consult-omni-youtube)
-  "List of all sources in consult-omni."
-  )
+        'consult-omni-youtube))
 #+end_src
 **** add individual or list of sources
 #+begin_src emacs-lisp
