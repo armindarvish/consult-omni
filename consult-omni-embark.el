@@ -128,7 +128,7 @@ Gets the preview function from `consult-omni-sources-alist'."
 (add-to-list 'embark-keymap-alist '(consult-omni . consult-omni-embark-general-actions-map))
 
 (defcustom consult-omni-embark-scholar-make-note-func  #'consult-omni-embark-scholar-default-note
-  "function for template note for scholar article"
+  "Function for making note template for scholar articles."
   :type '(choice (function :tag "(Default) Make Note with Title, Link, Journal, Authors... " consult-omni-embark-scholar-default-note)
                  (function :tag "Custom Function" function)))
 
@@ -236,7 +236,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
 ;;; Define Embark Action Functions
 
 (defun consult-omni-embark-apps-open-filemanager (cand)
-  "Open CAND's filepath sith system's file manager."
+  "Open CAND's filepath with system's file manager."
   (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand))))
       (pcase system-type
         ('darwin (call-process "open" nil 0 nil path "-R"))
@@ -253,7 +253,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
       (call-interactively #'find-file)))
 
 (defun consult-omni-embark-apps-open-externally (cand)
-  "Open FILE or url using system's default application."
+  "Open CAND's filepath using system's default application."
   (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
     (pcase system-type
       ('darwin (call-process "open" nil 0 nil path))
@@ -276,7 +276,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
       (insert (format " %s " path))))
 
 (defun consult-omni-embark-apps-copy-path-as-kill (cand)
-  "Insert the title of CAND at point"
+  "Copy the title of CAND to `kill-ring'"
   (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
        (kill-new (format " %s " path))))
 
@@ -305,7 +305,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
     ))
 
 (defun consult-omni-embark-calc-insert-results (cand)
-  "Insert the title of CAND at point"
+  "Insert the results of the calculator at point"
   (if-let (results (and (stringp cand) (get-text-property 0 :title cand)))
       (insert (format " %s " results))))
 
@@ -316,7 +316,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
     ))
 
 (defun consult-omni-embark-calc-insert-formula (cand)
-  "Insert the title of CAND at point"
+  "Insert the results of the calculator at point"
   (if-let (formula (and (stringp cand) (get-text-property 0 :query cand)))
       (insert (format " %s " formula))))
 
@@ -338,8 +338,8 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
   "consult-omni external video player.
 
 Can be:
- - an elisp function that takes a URL argument (e.g. mpv-pay-url)
- - a string for external command line program
+  - an elisp function that takes a URL argument (e.g. mpv-pay-url)
+  - a string for external command line program
 "
   :type '(choice (string :tag "(Default) mpv executable command" (executable-find "mpv"))
                  (function :tag "play with mpv package" mpv-play-url)

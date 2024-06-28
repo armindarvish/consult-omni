@@ -1773,6 +1773,7 @@ for use in a dynamically updated multi-source command
                           (when (and filter (functionp filter)) (setq lines (funcall filter lines query)))
                           (when (and transform (functionp transform))
                             (setq lines (funcall transform lines query)))
+
                           (setq lines (mapcar (lambda (line) (propertize line :source name :title line :query query)) lines))
                           (funcall async (consult-omni--multi-propertize lines cat idx face))
                           (funcall async 'refresh))
@@ -2856,7 +2857,7 @@ Gets the preview function from `consult-omni-sources-alist'."
 *** variables
 #+begin_src emacs-lisp
 (defcustom consult-omni-embark-scholar-make-note-func  #'consult-omni-embark-scholar-default-note
-  "Function for makin note template for scholar articles."
+  "Function for making note template for scholar articles."
   :type '(choice (function :tag "(Default) Make Note with Title, Link, Journal, Authors... " consult-omni-embark-scholar-default-note)
                  (function :tag "Custom Function" function)))
 #+end_src
@@ -4821,7 +4822,13 @@ FACE is the face to apply to TITLE"
 (require 'consult-gh)
 #+end_src
 **** helper functions
-
+***** transform/format
+#+begin_src emacs-lisp
+(defun consult-omni--gh-transform (items &optional query)
+  "Transforms consult-gh candidates to consult-omni style."
+  (remove nil (mapcar (lambda (string)
+            (car (consult-gh--repo-format string (or query "") t))) items)))
+#+end_src
 ***** preview
 #+begin_src emacs-lisp
 (defun consult-omni--gh-preview (cand)
@@ -4859,7 +4866,7 @@ FACE is the face to apply to TITLE"
 (cl-defun consult-omni--gh-search-repos-builder (input &rest args &key callback &allow-other-keys)
   "makes builder command line args for “GitHub CLI”.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (if callback (seq-difference args (list :callback callback)) args)))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (count (or (and count (integerp (read count)) (string-to-number count))
@@ -4891,8 +4898,7 @@ FACE is the face to apply to TITLE"
                            :group #'consult-omni--group-function
                            :sort t
                            :static 'both
-                           :transform (lambda (items &optional query) (mapcar (lambda (string)
-                                                                (consult-gh--repo-format string (or query "") t)) items))
+                           :transform #'consult-omni--gh-transform
                            :enabled (lambda () (if (and (executable-find "gh")
                                                    (fboundp 'consult-gh-search-repos))
                                                    t nil))

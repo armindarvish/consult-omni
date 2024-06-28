@@ -18,11 +18,11 @@
 (require 'notmuch)
 
 (defcustom consult-omni-notmuch-message-buffer-name "*consult-omni-notmuch-message*"
-  "Name of notmuch preview and result buffers."
+  "Name of consult-omni-notmuch preview buffer."
   :type 'string)
 
 (defcustom consult-omni-notmuch-tree-buffer-name "*consult-omni-notmuch-tree*"
-  "Name of notmuch preview and result buffers."
+  "Name of consult-omni-notmuch tree buffer."
   :type 'string)
 
 (defcustom consult-omni-notmuch-command (or notmuch-command "notmuch")
@@ -39,19 +39,31 @@ Can be either “search” or “show”"
   )
 
 (defcustom consult-omni-notmuch-extra-command-args (list)
-"extra notmuch commandline arguments."
-
+"Extra notmuch commandline arguments."
  :type '(repeat (choice string)))
 
 (defcustom consult-omni-notmuch-default-count consult-omni-default-count
-   "Number of notmuch search results to retrieve."
+   "Number of notmuch search results to retrieve.
+
+By default inherits from `consult-omni-default-count'."
  :type 'integer)
 
-(setq consult-omni--notmuch-format-func-alist '(("show" . consult-omni--notmuch-show-transform)
-                                                  ("search" . consult-omni--notmuch-search-transform)))
+(defvar consult-omni--notmuch-format-func-alist '(("show" . consult-omni--notmuch-show-transform)
+                                                  ("search" . consult-omni--notmuch-search-transform))
+"Alist for transfrom function of notmuch commandline output.")
 
 (cl-defun consult-omni--notmuch-format-candidate (&rest args &key source query title from date tags face &allow-other-keys)
-  "Transform STR from notmuch search to consult-omni-notmuch style."
+"Formats a candidate for `consult-omni-notmuch' commands.
+
+SOURCE is the name to use (e.g. “YouTube”)
+QUERY is the query input from the user
+TITLE is the nootmuch title string of the message
+FROM is the notmuch sender string of the message
+DATE is the notmuch date string of the message
+TAGS is a (list of) notmuch tag string(s) for message
+FACE is the face to apply to TITLE
+
+"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
          (match-str (if (stringp query) (consult--split-escaped query) nil))
@@ -81,6 +93,10 @@ Can be either “search” or “show”"
      str))
 
 (defun consult-omni--notmuch-search-transform (candidates &optional query)
+  "Transforms “notmuch search” output to consult-omni's style.
+
+Parses the output from command “notmuch search” and passes its components
+to  `consult-omni--notmuch-format-candidate'."
 
   (remove nil (remove "" (mapcar (lambda (item)
                         (when (and (stringp item) (string-match "thread:" item))
@@ -115,7 +131,10 @@ Can be either “search” or “show”"
           )))
 
 (defun consult-omni--notmuch-show-transform (candidates &optional query)
-  "Parse output STR of notmuch show, extracting its components."
+  "Transforms “notmuch show” output to consult-omni's style.
+
+Parses the output from command “notmuch show” and passes its components
+to `consult-omni--notmuch-format-candidate'."
 
   (let ((source "notmuch") (id) (headers) (subject) (senders) (cc) (to) (count) (date) (tags) (match) (info))
     (remove nil (mapcar (lambda (item)
@@ -175,10 +194,17 @@ Can be either “search” or “show”"
                             nil)) candidates))))
 
 (defun consult-omni--notmuch-get-transform-func (&rest args)
+  "Gets the appropriate transform function for notmuch commands.
+
+This is needed to get the right function for
+parsing outputs of “notmuch search”, and
+“notmuch show” accordingly.
+"
     (cdr (assoc consult-omni-notmuch-default-command-arg consult-omni--notmuch-format-func-alist)))
 
 (defun consult-omni--notmuch--preview (cand)
-  "Preview function for notmuch candidates."
+  "Preview function for `consult-omni-notmuch' command.
+"
   (let* ((query (get-text-property 0 :query cand))
          (id (get-text-property 0 :id cand)))
     (when id
@@ -187,7 +213,7 @@ Can be either “search” or “show”"
       (notmuch-show id nil nil query consult-omni-notmuch-message-buffer-name))))
 
 (defun consult-omni--notmuch-callback (cand)
-  "Callback function for notmuch candidates.
+  "Callback function for `consult-omni-notmuch' command.
 "
   (let* ((query (get-text-property 0 :query cand))
          (id (get-text-property 0 :id cand)))

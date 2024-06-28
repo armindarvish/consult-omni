@@ -23,61 +23,77 @@
   :type '(repeat :tag "List of paths" directory))
 
 (defcustom consult-omni-apps-use-cache nil
-"Whether to use cache for getting list of apps?"
-:type 'boolean)
+  "Whether to use cache for getting list of apps?"
+  :type 'boolean)
 
 (defcustom consult-omni-apps-open-command-args nil
   "Command line args to open an application"
   :type 'string)
 
 (defcustom consult-omni-apps-regexp-pattern ""
-"Regexp pattern to find system applications"
-:type 'regexp)
+  "Regexp pattern to find system applications"
+  :type 'regexp)
 
 (defcustom consult-omni-apps-default-launch-function #'consult-omni--apps-lauch-app
-  "consult-omni default function to launch an app"
+  "Default function to launch an app"
   :type '(choice (function :tag "(Default) Use System Shell" consult-omni--apps-lauch-app)
                  (function :tag "Custom Function")))
 
+(defcustom consult-omni-open-with-prompt ">|  "
+  "String for prompt in `consult-omni-open-with-app'."
+  :type 'string
+)
+
+;; Set the variables per system type (Linux and MacOS only)
 (pcase system-type
   ('darwin
    (setq consult-omni-apps-paths (append (file-expand-wildcards "/Applications/Adobe*") (list "/Applications" "/Applications/Utilities/" "/System/Applications/" "/System/Applications/Utilities/" "~/Applications/")))
    (setq consult-omni-apps-regexp-pattern ".*\\.app$")
    (setq consult-omni-apps-open-command-args "open -a")
    )
-   ('gnu/linux
-    (setq consult-omni-apps-xdg-data-home (if (fboundp 'xdg-data-home) (xdg-data-home)
+  ('gnu/linux
+   (setq consult-omni-apps-xdg-data-home (if (fboundp 'xdg-data-home) (xdg-data-home)
                                            (let ((path (getenv "XDG_DATA_HOME")))
                                              (if (or (null path) (string= path ""))
                                                  nil
                                                (parse-colon-path path)))))
-     (setq consult-omni-apps-xdg-data-dirs (if (fboundp 'xdg-data-dirs) (xdg-data-dirs)
+   (setq consult-omni-apps-xdg-data-dirs (if (fboundp 'xdg-data-dirs) (xdg-data-dirs)
                                            (let ((path (getenv "XDG_DATA_DIRS")))
                                              (if (or (null path) (string= path ""))
-    nil
+                                                 nil
                                                (parse-colon-path path)))))
-     (setq consult-omni-apps-paths (remove nil (mapcar (lambda (dir)
-                                       (let ((path (and (stringp dir) (file-exists-p dir) (file-truename (expand-file-name "applications" dir)))))
-                                              (and (stringp path) path)))
-                                          (list consult-omni-apps-xdg-data-home
-                                               consult-omni-apps-xdg-data-dirs
-                                               "/usr/share"
-                                               "/usr/local/share"))))
-     (setq consult-omni-apps-regexp-pattern ".*\\.desktop$")
-     (setq consult-omni-apps-open-command-args "gtk-launch")
-    )
-)
+   (setq consult-omni-apps-paths (remove nil (mapcar (lambda (dir)
+                                                       (let ((path (and (stringp dir) (file-exists-p dir) (file-truename (expand-file-name "applications" dir)))))
+                                                         (and (stringp path) path)))
+                                                     (list consult-omni-apps-xdg-data-home
+                                                           consult-omni-apps-xdg-data-dirs
+                                                           "/usr/share"
+                                                           "/usr/local/share"))))
+   (setq consult-omni-apps-regexp-pattern ".*\\.desktop$")
+   (setq consult-omni-apps-open-command-args "gtk-launch")
+   )
+  )
 
 (defvar consult-omni-apps-cached-apps nil)
 
 (defvar consult-omni-apps-cached-items nil)
 
 (defun consult-omni--apps-cmd-args (app &optional file)
+  "Returns a commandline string for opening the APP
+
+Uses `consult-omni-apps-open-command-args' as the main command line program
+If FILE is non-nil, returns a command line for opeing the FILE with APP.
+"
   (append (consult--build-args consult-omni-apps-open-command-args)
           (list (format "%s" app))
           (if (and file (file-exists-p (file-truename file))) (list (format "%s" file)))))
 
 (defun consult-omni--apps-lauch-app (app &optional file)
+  "Makes an async process for opening APP.
+
+Uses `consult-omni--apps-cmd-args' to get the command line args string.
+If FILE is non-nil, the process will open the FILE in APP.
+"
   (let* ((name (concat "consult-omni-" (file-name-base app)))
          (cmds (consult-omni--apps-cmd-args app file)))
     (make-process :name name
@@ -88,34 +104,44 @@
     nil))
 
 (defun consult-omni-open-with-app (&optional file app)
+  "Opens FILE in (external) APP interactively.
+
+If FILE is nil, user is queried to select a file.
+If APP is nil, `consult-omni-apps-static' is called to select one.
+"
   (interactive)
   (if-let* ((file (or file (read-file-name "select file:")))
             (file (file-truename file))
-            (app (or app (get-text-property 0 :app (consult-omni-apps-static ".*" "  " t)))))
-      (consult-omni--apps-lauch-app (format "%s" app)
-                                    (format "%s" (and (file-exists-p file) file)))))
+            (app (or app (get-text-property 0 :app (consult-omni-apps-static ".*" consult-omni-open-with-prompt t)))))
+      (funcall consult-omni-apps-default-launch-function
+               (format "%s" app)
+               (format "%s" (and (file-exists-p file) file)))))
 
 (defun consult-omni--apps-preview (cand)
-  "Mdfind preview function."
+  "Preview function for for `consult-omni-apps'."
 (ignore))
 
 (defun consult-omni--apps-callback (cand)
-  "Mdfind callback function."
+  "Callback function for `consult-omni-apps'."
   (let ((app (get-text-property 0 :app cand)))
     (funcall consult-omni-apps-default-launch-function app)
   ))
 
-(cl-defun consult-omni--apps-format-candidates (&rest args &key source query title path face snippet visible &allow-other-keys)
-"Formats the cnaiddates of `consult-omni-apps.
+(cl-defun consult-omni--apps-format-candidates (&rest args &key source query title path snippet visible face &allow-other-keys)
+"Formats the candidates of `consult-omni-apps'.
 
-Files are entries from `consult-omni--apps-list-apps'.
-QUERY is the query input from the user"
+SOURCE is the name to use (e.g. “Apps”)
+QUERY is the query input from the user
+TITLE is the title of the App (name of an application)
+PATH is the filepath to the application
+SNIPPET is the description of the app (from Desktop Entry)
+VISIBLE is whether the applicaiton is visible (from Desktop Entry)
+FACE is the face to apply to TITLE
+"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (directory (and path (file-name-directory path)))
          (directory (and (stringp directory) (propertize directory 'face 'consult-omni-path-face)))
-         ;; (filename (and path (file-name-nondirectory path)))
-         ;; (filename (and (stringp filename) (propertize filename 'face 'consult-omni-path-face)))
          (snippet (and (stringp snippet) (consult-omni--set-string-width snippet (* 3 frame-width-percent))))
          (snippet (and (stringp snippet) (propertize snippet 'face 'consult-omni-snippet-face)))
          (match-str (and (stringp query) (consult--split-escaped query) nil))
@@ -126,7 +152,6 @@ QUERY is the query input from the user"
                       (unless visible "\s[Hidden App]")
                       (when snippet (concat "\t" snippet))
                       (when directory (concat "\t" directory))
-                      ;; (when filename (concat "\t" (when directory directory) filename))
                       (when source (concat "\t" source))
                       )))
      (if consult-omni-highlight-matches
@@ -138,10 +163,10 @@ QUERY is the query input from the user"
     str))
 
 (defun consult-omni--apps-get-desktop-apps ()
-  "Return a list of files for system apps
+  "Return a list of system applications.
 
-Finds all files that match `consult-omni-apps-regexp-pattern'
-in `consult-omni-apps-paths'.
+Finds all the desktop applications by finding files that
+match `consult-omni-apps-regexp-pattern' in `consult-omni-apps-paths'.
 "
   (if (and consult-omni-apps-use-cache consult-omni-apps-cached-apps)
       consult-omni-apps-cached-apps
@@ -156,6 +181,13 @@ in `consult-omni-apps-paths'.
 (setq consult-omni-apps-cached-apps (consult-omni--apps-get-desktop-apps))
 
 (defun consult-omni--apps-parse-app-file (file)
+  "Parses a desktop entry FILE.
+
+Returns
+ - name: the name of the application
+ - comment: description of the application
+ - exec: the executable for application
+"
   (pcase system-type
          ('darwin
           (let ((name (file-name-base file))
@@ -208,6 +240,17 @@ in `consult-omni-apps-paths'.
                   (list name comment exec visible)))))))
 
 (defun consult-omni-apps--cached-items (files query)
+  "Makes a cahced list of Desktop Applications from FILES.
+
+If `consult-omni-apps-cached-items' already exists, returns it otherwise
+makes a new one.
+
+FILES is a list of file paths to parse.
+For each file in files, if it contains the QUERY
+(a.k.a. matches the regexp pattern “.*QUERY.*”), it is parsed by
+`consult-omni--apps-parse-app-file' and added to the
+`consult-omni-apps-cached-items'
+"
 (if (and consult-omni-apps-use-cache consult-omni-apps--cached-items)
     consult-omni-apps-cached-items
 (setq consult-omni-apps-cached-items
@@ -230,7 +273,6 @@ in `consult-omni-apps-paths'.
                            :exec exec
                            :app app)))
            (if query
-               ;; (seq-filter (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
                (cl-remove-if-not (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
              files)
    ))))
@@ -238,7 +280,13 @@ in `consult-omni-apps-paths'.
 (setq consult-omni-apps--cached-items  (consult-omni-apps--cached-items consult-omni-apps-cached-apps ".*"))
 
 (cl-defun consult-omni--apps-list-apps (input &rest args &key callback &allow-other-keys)
-  "get a list of applications from OS.
+  "Get a list of applications from OS.
+
+Finds apps in `consult-omni--apps-get-desktop-apps' that contain
+the query in INPUT string (matches regexp pattern “.*query.*”).
+If `consult-omni-apps-use-cache' is non-nil,
+then `consult-omni-apps-cached-items' is used list of all apps otherwise
+a new list is generated.
 "
  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
@@ -266,7 +314,6 @@ in `consult-omni-apps-paths'.
                            :exec exec
                            :app app)))
            (if query
-               ;; (seq-filter (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
              (cl-remove-if-not (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
              files)
    )

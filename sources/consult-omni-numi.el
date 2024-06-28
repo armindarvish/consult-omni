@@ -17,36 +17,34 @@
 (require 'consult-omni)
 
 (defcustom consult-omni-numi-args "numi-cli"
-"Command line arguments for mdfind.
+"Command line arguments for “numi-cli”.
 
-Similar to other command line args for consult but for mdfind.
+Similar to other command line args for consult but for numi-cli.
 See `consult-locate-args' for example."
   :type '(choice string (repeat (choice string sexp))))
 
 (defun consult-omni--numi-preview (cand)
-  "Mdfind preview function.")
+  "Preview function for `consult-omni-numi' command.")
 
 (defun consult-omni--numi-callback (cand)
-  "Muni callback function."
+  "Callback function for `consult-omni-numi' command."
   (let ((result  (get-text-property 0 :title cand)))
   (kill-new result))
   )
 
 (defun consult-omni--numi-filter (candidates &optional query)
-  "Formats `consult-omni-mdfind' candidates.
+  "Filters `consult-omni-numi' candidates.
 "
   (cl-loop for candidate in candidates
            when (not (equal candidate "?"))
            collect candidate))
 
 (cl-defun consult-omni--numi-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “mdfind”.
+  "Makes builder command line args for “numi-cli”.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts)))
     (funcall #'consult-omni--async-builder (shell-quote-argument query) consult-omni-numi-args)
-   ;; (funcall #'consult--locate-builder (shell-quote-argument query))
-   ;; (list consult-omni-numi-args query)
             ))
 
 (consult-omni-define-source "Numi"

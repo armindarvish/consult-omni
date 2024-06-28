@@ -1,4 +1,4 @@
-;;; consult-omni.el --- Emacs Omi Search Package -*- lexical-binding: t -*-
+;;; consult-omni.el --- Emacs Omni Search Package -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2024 Armin Darvish
 
@@ -258,7 +258,7 @@ By default inherits from `consult-async-refresh-delay'. "
   "History variable that keeps selected calculator result.")
 
 (defvar consult-omni--apps-select-history (list)
-  "History variable that keeps list of launched selected.")
+  "History variable that keeps list of apps launched.")
 
 (defvar consult-omni-sources-alist (list)
   "Alist of all sources.
@@ -1199,14 +1199,6 @@ for use in a static (not dynamically updated) multi-source command
                              (setq current t)))
                args)
 
-      ;; (let ((count 0)
-      ;;       (max consult-omni-default-timeout)
-      ;;       (step 0.05))
-      ;;   (while (and (< count max) (not current))
-      ;;     (+ count step)
-      ;;     (if (>= count max)
-      ;;         (message "consult-omni: Hmmm! %s took longer than expected." name)
-      ;;       (sit-for step))))
       (with-timeout
            (consult-omni-default-timeout
                               current)
@@ -1559,6 +1551,7 @@ for use in a dynamically updated multi-source command
                           (when (and filter (functionp filter)) (setq lines (funcall filter lines query)))
                           (when (and transform (functionp transform))
                             (setq lines (funcall transform lines query)))
+
                           (setq lines (mapcar (lambda (line) (propertize line :source name :title line :query query)) lines))
                           (funcall async (consult-omni--multi-propertize lines cat idx face))
                           (funcall async 'refresh))
@@ -2252,19 +2245,27 @@ macro. See `consult-omni-define-source' for more details"
 (defun consult-omni-multi (&optional initial prompt sources no-callback &rest args)
   "Interactive “multi-source dynamic search”
 
-INITIAL is the initial search prompt in the minibuffer.
-PROMPT is thean optional minibuffer prompt
-Searches all sources in SOURCES. if SOURCES is nil
-`consult-omni-multi-sources' is used.
-If NO-CALLBACK is t, only the selected candidate is returned without
-any callback action.
-
 This is an interactive command that fetches results form
 all the sources in either SOURCES or in `consult-omni-multi-sources'
 with dynamic completion meaning that the search term can be dynamically
 updated by the user and the results are fetched as
 the user types in the miinibuffer.
 
+Description of Arguments:
+INITIAL is the initial search prompt in the minibuffer.
+PROMPT is an optional minibuffer prompt
+SOURCES is a list of sources simiar to `consult-omni-multi-sources'.
+  This is a list of strings or symbols:
+  - strings can be name of a source, a key from `consult-omni-sources-alist',
+    which can be made with the convinient macro `consult-omni-define-source'
+    or by using `consult-omni--make-source-from-consult-source'.
+  - symbols can be other consult sources
+    (see `consult-buffer-sources' for example.)
+  If SOURCES is nil, `consult-omni-multi-sources' is used instead.
+If NO-CALLBACK is t, only the selected candidate is returned without
+any callback action.
+
+Other Features:
 Additional commandline arguments can be passed in the minibuffer
 entry similar to `consult-grep' by typing `--` followed by arguments.
 These additional arguments are passed to async sources
@@ -2272,22 +2273,18 @@ similar to `consult-grep' syntax. In addition, other arguments can be passed
 to all sources by using key, val pairs (.e.g “:group domain”)
 
 For example the user can enter:
-
-`#consult-omni -- :g domain'
-
+  `#consult-omni -- :g domain'
 This will run a search on all the sources for
 the term “consult-omni” and then groups the results by the “domain
 of the URL” of the results.
 
 Built-in arguments include:
-
- :g, or :group for grouping (see `consult-omni-group-by' and `consult-omni--override-group-by'. for more info)
-
- :n, or :count is passed as the value for COUNT
-to any source in `consult-omni-multi-sources'.
-
- :p, or :page is passed as the value for PAGE to any source
- in `consult-omni-multi-sources'.
+  - :g, or :group for grouping (see `consult-omni-group-by'
+    and `consult-omni--override-group-by' for more info.)
+  - :n, or :count is passed as the value for COUNT
+    to any source in `consult-omni-multi-sources'.
+  - :p, or :page is passed as the value for PAGE to any source
+    in `consult-omni-multi-sources'.
 
 Custom arguments can be passed by using “:ARG value”.
 For example, if the user types the following in the minibuffer:
@@ -2348,11 +2345,26 @@ here: URL `https://github.com/minad/consult'."
 (defun consult-omni-multi-static (&optional input prompt sources no-callback &rest args)
   "Interactive “static” multi-source search
 
-INPUT is the initial search query. Searches all sources
-in SOURCES for INPUT.
-If SOURCES is nil, `consult-omni-multi-sources' is used.
-If NO-CALLBACK is t, only the selected candidate is returned
-without any callback action.
+This commands asks user for an input (a search term)
+and fetches results from all the sources in either SOURCES
+or in `consult-omni-multi-sources' and present the result
+candidates in minibuffer completion for user to select.
+
+Description of Arguments:
+INITIAL is the initial search term. if non-nil the user is queried for one
+  with either `consult-omni-default-autosuggest-command' or
+  `consult-omni--read-search-string'
+PROMPT is an optional minibuffer prompt
+SOURCES is a list of sources simiar to `consult-omni-multi-sources'.
+  This is a list of strings or symbols:
+  - strings can be name of a source, a key from `consult-omni-sources-alist',
+    which can be made with the convinient macro `consult-omni-define-source'
+    or by using `consult-omni--make-source-from-consult-source'.
+  - symbols can be other consult sources
+    (see `consult-buffer-sources' for example.)
+  If SOURCES is nil, `consult-omni-multi-sources' is used instead.
+If NO-CALLBACK is t, only the selected candidate is returned without
+any callback action.
 "
   (interactive "P")
   (let* ((input (or input

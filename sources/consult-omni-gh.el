@@ -17,6 +17,11 @@
 (require 'consult-omni)
 (require 'consult-gh)
 
+(defun consult-omni--gh-transform (items &optional query)
+  "Transforms consult-gh candidates to consult-omni style."
+  (remove nil (mapcar (lambda (string)
+            (car (consult-gh--repo-format string (or query "") t))) items)))
+
 (defun consult-omni--gh-preview (cand)
   "Preview for github repo candidates"
   (when-let ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
@@ -47,7 +52,7 @@
 (cl-defun consult-omni--gh-search-repos-builder (input &rest args &key callback &allow-other-keys)
   "makes builder command line args for “GitHub CLI”.
 "
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (if callback (seq-difference args (list :callback callback)) args)))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (count (or (and count (integerp (read count)) (string-to-number count))
@@ -77,8 +82,7 @@
                            :group #'consult-omni--group-function
                            :sort t
                            :static 'both
-                           :transform (lambda (items &optional query) (mapcar (lambda (string)
-                                                                (consult-gh--repo-format string (or query "") t)) items))
+                           :transform #'consult-omni--gh-transform
                            :enabled (lambda () (if (and (executable-find "gh")
                                                    (fboundp 'consult-gh-search-repos))
                                                    t nil))

@@ -46,27 +46,16 @@ for details"
 "Formats a candidate for `consult-omni-youtube' commands.
 
 SOURCE is the name to use (e.g. “YouTube”)
-
 TYPE is the type of candidate (e.g. video, channel, playlist)
-
 QUERY is the query input from the user
-
 TITLE is the title of the video
-
 SNIPPET is a string containing a snippet/description of the video
-
 CHANNELTITLE is the name of the channel for the video
-
 DATE is the publish date of the video
-
 LENGTH is the duration of a  video in seconds
-
 SUBCOUNT is the subscriber count fpr a channel
-
 VIDEOCOUNT is the number of videos in a playlist
-
 VIEWCOUNT is the number of times a video is viewed
-
 FACE is the face to apply to TITLE
 "
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
