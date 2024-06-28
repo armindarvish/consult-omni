@@ -37,7 +37,10 @@
                              (eq t (compare-strings
                                     file 0 file-len
                                     str (match-beginning 1) (match-end 1) nil)))
-                  (setq file (file-relative-name (match-string 1 str) (buffer-file-name)))
+                  (setq file (or (and (buffer-file-name)
+                           (file-relative-name (match-string 1 str) (file-name-directory (buffer-file-name))))
+                          (file-relative-name (match-string 1 str))))
+
                   (when (and file (stringp file) (> file-len (* frame-width-percent 2)))
                     (setq file (consult-omni--set-string-width file (* frame-width-percent 2) (* frame-width-percent 1))))
                   (setq file-len (length file))

@@ -1214,6 +1214,7 @@ for use in a static (not dynamically updated) multi-source command
   (let* ((name (plist-get source :name))
          (builder (plist-get source :items))
          (transform (consult-omni--get-source-prop name :transform))
+         (filter (consult-omni--get-source-prop name :filter))
          (props (seq-drop-while (lambda (x) (not (keywordp x))) args))
          (proc)
          (proc-buf)
@@ -1228,15 +1229,18 @@ for use in a static (not dynamically updated) multi-source command
       (when cmd
         (let* ((lines)
                (process-adaptive-read-buffering nil)
-              (out (with-temp-buffer
+               (out (with-temp-buffer
                           (set-buffer-file-coding-system 'cp1047)
                           (list (apply 'call-process (car cmd) nil (current-buffer) nil (cdr cmd))
                                 (replace-regexp-in-string "" "\n"
                                                    (buffer-string))))))
+
           (if (eq (car out) 0)
             (progn
-              (setq lines (mapcar (lambda (line) (propertize line :source name :title line :query query)) (cdr out)))
-              (when transform (setq lines (funcall transform lines query))))
+              (setq lines (mapcar (lambda (line) (propertize line :source name :title line :query query)) (split-string (cadr out) "[\r\n]+" t)))
+              (when (and lines filter (functionp filter)) (setq lines (funcall filter lines query)))
+              (when (and lines transform (functionp transform)) (setq lines (funcall transform lines query)))
+              )
             (message "process %s returned error with code %s and message %s" name (car out) (cdr out)))
 
           (consult-omni--multi-propertize lines cat idx face)
@@ -1538,9 +1542,10 @@ for use in a dynamically updated multi-source command
                               count (+ count len -1))
                         (setcdr last nil)
                         (when lines
-                          (setq lines (mapcar (lambda (line) (propertize line :source name :title line :query query)) lines))
                           (when (and filter (functionp filter)) (setq lines (funcall filter lines query)))
-                          (when (and transform (functionp transform)) (setq lines (funcall transform lines query)))
+                          (when (and transform (functionp transform))
+                            (setq lines (funcall transform lines query)))
+                          (setq lines (mapcar (lambda (line) (propertize line :source name :title line :query query)) lines))
                           (funcall async (consult-omni--multi-propertize lines cat idx face))
                           (funcall async 'refresh))
                         )))))

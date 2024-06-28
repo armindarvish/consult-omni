@@ -1390,6 +1390,7 @@ for use in a static (not dynamically updated) multi-source command
   (let* ((name (plist-get source :name))
          (builder (plist-get source :items))
          (transform (consult-omni--get-source-prop name :transform))
+         (filter (consult-omni--get-source-prop name :filter))
          (props (seq-drop-while (lambda (x) (not (keywordp x))) args))
          (proc)
          (proc-buf)
@@ -1404,15 +1405,18 @@ for use in a static (not dynamically updated) multi-source command
       (when cmd
         (let* ((lines)
                (process-adaptive-read-buffering nil)
-              (out (with-temp-buffer
+               (out (with-temp-buffer
                           (set-buffer-file-coding-system 'cp1047)
                           (list (apply 'call-process (car cmd) nil (current-buffer) nil (cdr cmd))
                                 (replace-regexp-in-string "" "\n"
                                                    (buffer-string))))))
+
           (if (eq (car out) 0)
             (progn
-              (setq lines (mapcar (lambda (line) (propertize line :source name :title line :query query)) (cdr out)))
-              (when transform (setq lines (funcall transform lines query))))
+              (setq lines (mapcar (lambda (line) (propertize line :source name :title line :query query)) (split-string (cadr out) "[\r\n]+" t)))
+              (when (and lines filter (functionp filter)) (setq lines (funcall filter lines query)))
+              (when (and lines transform (functionp transform)) (setq lines (funcall transform lines query)))
+              )
             (message "process %s returned error with code %s and message %s" name (car out) (cdr out)))
 
           (consult-omni--multi-propertize lines cat idx face)
@@ -1760,9 +1764,10 @@ for use in a dynamically updated multi-source command
                               count (+ count len -1))
                         (setcdr last nil)
                         (when lines
-                          (setq lines (mapcar (lambda (line) (propertize line :source name :title line :query query)) lines))
                           (when (and filter (functionp filter)) (setq lines (funcall filter lines query)))
-                          (when (and transform (functionp transform)) (setq lines (funcall transform lines query)))
+                          (when (and transform (functionp transform))
+                            (setq lines (funcall transform lines query)))
+                          (setq lines (mapcar (lambda (line) (propertize line :source name :title line :query query)) lines))
                           (funcall async (consult-omni--multi-propertize lines cat idx face))
                           (funcall async 'refresh))
                         )))))
@@ -4880,46 +4885,48 @@ FACE is the face to apply to TITLE"
 (defun consult-omni--grep-transform (candidates &optional query)
   "Formats candidates pf `consult-omni-grep'.
 "
-(let* ((frame-width-percent (floor (* (frame-width) 0.1)))
-      (file "")
-      (file-len 0)
-      (file-str "")
-      result)
-          (save-match-data
-            (dolist (str candidates)
-              (when (and (string-match consult--grep-match-regexp str)
-                         ;; Filter out empty context lines
-                         (or (/= (aref str (match-beginning 3)) ?-)
-                             (/= (match-end 0) (length str))))
-                ;; We share the file name across candidates to reduce
-                ;; the amount of allocated memory.
-                (unless (and (= file-len (- (match-end 1) (match-beginning 1)))
-                             (eq t (compare-strings
-                                    file 0 file-len
-                                    str (match-beginning 1) (match-end 1) nil)))
-                  (setq file (file-relative-name (match-string 1 str) (buffer-file-name)))
+  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
+         (file "")
+         (file-len 0)
+         (file-str "")
+         result)
+    (save-match-data
+      (dolist (str candidates)
+        (when (and (string-match consult--grep-match-regexp str)
+                   ;; Filter out empty context lines
+                   (or (/= (aref str (match-beginning 3)) ?-)
+                       (/= (match-end 0) (length str))))
+          ;; We share the file name across candidates to reduce
+          ;; the amount of allocated memory.
+          (unless (and (= file-len (- (match-end 1) (match-beginning 1)))
+                       (eq t (compare-strings
+                              file 0 file-len
+                              str (match-beginning 1) (match-end 1) nil)))
+             (setq file (or (and (buffer-file-name)
+                           (file-relative-name (match-string 1 str) (file-name-directory (buffer-file-name))))
+                          (file-relative-name (match-string 1 str))))
+
                   (when (and file (stringp file) (> file-len (* frame-width-percent 2)))
                     (setq file (consult-omni--set-string-width file (* frame-width-percent 2) (* frame-width-percent 1))))
                   (setq file-len (length file))
-
                   )
-                (let* ((line (propertize (match-string 2 str) 'face 'consult-line-number))
-                       (ctx (= (aref str (match-beginning 3)) ?-))
-                       (sep (if ctx "-" ":"))
-                       (content (substring str (match-end 0)))
-                       (line-len (length line)))
-                  (when (length> content consult-grep-max-columns)
-                    ;; (setq content (substring content 0 consult-grep-max-columns))
-                    (setq content  (consult-omni--set-string-width content consult-grep-max-columns))
-                    )
-                  (setq str (concat file sep line sep content))
-                  ;; Store file name in order to avoid allocations in `consult--prefix-group'
-                  (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) str)
-                  ;; (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number str)
-                  (when ctx
-                    (add-face-text-property (+ 2 file-len line-len) (length str) 'consult-grep-context 'append str))
-                  (push (propertize str :source "grep" :title query) result)))))
-          result))
+            (let* ((line (propertize (match-string 2 str) 'face 'consult-line-number))
+                   (ctx (= (aref str (match-beginning 3)) ?-))
+                   (sep (if ctx "-" ":"))
+                   (content (substring str (match-end 0)))
+                   (line-len (length line)))
+              (when (length> content consult-grep-max-columns)
+                ;; (setq content (substring content 0 consult-grep-max-columns))
+                (setq content  (consult-omni--set-string-width content consult-grep-max-columns))
+                )
+              (setq str (concat file sep line sep content))
+              ;; Store file name in order to avoid allocations in `consult--prefix-group'
+              (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) str)
+              ;; (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number str)
+              (when ctx
+                (add-face-text-property (+ 2 file-len line-len) (length str) 'consult-grep-context 'append str))
+              (push (propertize str :source "grep" :title query) result)))))
+      result))
 #+end_src
 
 
@@ -5736,110 +5743,6 @@ cand
 
 
 
-*** consult-notmuch
-:PROPERTIES:
-:header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-notmuch.el
-:END:
-**** header
-
-#+begin_src emacs-lisp
-;;; consult-omni-notmuch.el --- Consulting Notmuch Command -*- lexical-binding: t -*-
-
-;; Copyright (C) 2024 Armin Darvish
-
-;; Author: Armin Darvish
-;; Maintainer: Armin Darvish
-;; Created: 2024
-;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1") (consult-notmuch "0.8.1"))
-;; Homepage: https://github.com/armindarvish/consult-omni
-;; Keywords: convenience
-
-;;; Commentary:
-
-;;; Code:
-
-(require 'consult-omni)
-(require 'consult-notmuch)
-#+end_src
-**** helper functions
-***** transform/format
-#+begin_src emacs-lisp
-(defun consult-omni-notmuch--transformer (str &optional query)
-  "Transforms STR to notmuch display style."
-  (let ((string (if consult-notmuch-show-single-message
-      (consult-notmuch--show-transformer str)
-    (consult-notmuch--search-transformer str))))
-    (if (stringp string)
-        (propertize string :source "notmuch" :query query))
-    ))
-
-#+end_src
-***** preview
-#+begin_src emacs-lisp
-(defun consult-omni--notmuch--preview (cand)
-  "Preview function for notmuch candidates."
-  (when-let ((id (consult-notmuch--candidate-id (cdr (get-text-property 0 'multi-category cand)))))
-    (when (get-buffer consult-notmuch--buffer-name)
-      (kill-buffer consult-notmuch--buffer-name))
-    (consult-notmuch--show-id id consult-notmuch--buffer-name)))
-#+end_src
-***** return
-***** callback
-#+begin_src emacs-lisp
-(defun consult-omni--notmuch-callback (cand)
-  "Callback function for notmuch candidates.
-"
-  (consult-notmuch--show (cdr (get-text-property 0 'multi-category cand))))
-#+end_src
-**** items
-#+begin_src emacs-lisp
-(cl-defun consult-omni--notmuch-command-builder (input &rest args &key callback &allow-other-keys)
-  "makes builder command line args for “notmuch”.
-"
-  (setq consult-notmuch--partial-parse nil)
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
-               (opts (car-safe opts)))
-  (consult-notmuch--command query)
-  ))
-#+end_src
-**** define source
-#+begin_src emacs-lisp
-(consult-omni-define-source "notmuch"
-                           :narrow-char ?m
-                           :type 'async
-                           :require-match nil
-                           :category 'notmuch-result
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--notmuch-command-builder
-                           :on-preview #'consult-omni--notmuch--preview
-                           :on-return #'identity
-                           :on-callback #'consult-omni--notmuch-callback
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :transform (lambda (items &optional query) (remove nil (mapcar (lambda (string)
-                                                                (consult-omni-notmuch--transformer string query)) items)))
-                           :enabled (lambda () (if (and (executable-find "notmuch")
-                                                   (fboundp 'consult-notmuch))
-                                                   t nil))
-                           :annotate nil
-                           )
-#+end_src
-
-**** provide and footer
-#+begin_src emacs-lisp
-;;; provide `consult-omni-notmuch' module
-
-(provide 'consult-omni-notmuch)
-
-(add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-notmuch)
-;;; consult-omni-notmuch.el ends here
-#+end_src
-
 *** consult-ripgrep
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-ripgrep.el
@@ -5888,7 +5791,10 @@ cand
                              (eq t (compare-strings
                                     file 0 file-len
                                     str (match-beginning 1) (match-end 1) nil)))
-                  (setq file (file-relative-name (match-string 1 str) (buffer-file-name)))
+                  (setq file (or (and (buffer-file-name)
+                           (file-relative-name (match-string 1 str) (file-name-directory (buffer-file-name))))
+                          (file-relative-name (match-string 1 str))))
+
                   (when (and file (stringp file) (> file-len (* frame-width-percent 2)))
                     (setq file (consult-omni--set-string-width file (* frame-width-percent 2) (* frame-width-percent 1))))
                   (setq file-len (length file))
@@ -7227,6 +7133,292 @@ FACE is the face to apply to TITLE
 #+end_src
 
 
+*** notmuch
+:PROPERTIES:
+:header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-notmuch.el
+:END:
+**** header
+
+#+begin_src emacs-lisp
+;;; consult-omni-notmuch.el --- Consulting Notmuch Command -*- lexical-binding: t -*-
+
+;; Copyright (C) 2024 Armin Darvish
+
+;; Author: Armin Darvish
+;; Maintainer: Armin Darvish
+;; Created: 2024
+;; Version: 0.1
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1") (consult-notmuch "0.8.1"))
+;; Homepage: https://github.com/armindarvish/consult-omni
+;; Keywords: convenience
+
+;;; Commentary:
+
+;;; Code:
+
+(require 'consult-omni)
+(require 'notmuch)
+#+end_src
+**** variables
+***** custom
+#+begin_src emacs-lisp
+(defcustom consult-omni-notmuch-message-buffer-name "*consult-omni-notmuch-message*"
+  "Name of notmuch preview and result buffers."
+  :type 'string)
+
+(defcustom consult-omni-notmuch-tree-buffer-name "*consult-omni-notmuch-tree*"
+  "Name of notmuch preview and result buffers."
+  :type 'string)
+
+(defcustom consult-omni-notmuch-command (or notmuch-command "notmuch")
+  "Name of the notmuch binary.
+
+By default inherits from `notmuch-command'."
+  :type 'string)
+
+(defcustom consult-omni-notmuch-default-command-arg "search"
+  "Default notmuch commandline arg for finding messages.
+Can be either “search” or “show”"
+  :type  '(choice (const :tag "(Default) search" "search")
+                  (const :tag "show" "show"))
+  )
+
+(defcustom consult-omni-notmuch-extra-command-args (list)
+"extra notmuch commandline arguments."
+
+ :type '(repeat (choice string)))
+
+(defcustom consult-omni-notmuch-default-count consult-omni-default-count
+   "Number of notmuch search results to retrieve."
+ :type 'integer)
+
+#+end_src
+***** other
+#+begin_src emacs-lisp
+(setq consult-omni--notmuch-format-func-alist '(("show" . consult-omni--notmuch-show-transform)
+                                                  ("search" . consult-omni--notmuch-search-transform)))
+#+end_src
+**** helper functions
+***** transform/format
+****** format cnadidates
+#+begin_src emacs-lisp
+(cl-defun consult-omni--notmuch-format-candidate (&rest args &key source query title from date tags face &allow-other-keys)
+  "Transform STR from notmuch search to consult-omni-notmuch style."
+  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
+         (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
+         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (date (if (stringp date) (propertize date 'face 'consult-omni-date-face) "            "))
+         (from (if (stringp from) (propertize from 'face 'consult-omni-path-face) ""))
+         (from-str (and (stringp from) (consult-omni--set-string-width from (* 2 frame-width-percent))))
+         (tags (cond ((and tags (listp tags)) (format "(%s)" (mapconcat #'identity tags ", ")))
+                     ((and tags (stringp tags)) tags)
+                     (t nil)))
+         (tags (and tags (stringp tags) (propertize tags 'face 'consult-omni-keyword-face)))
+         (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
+         (title-str (if (stringp title) (propertize title 'face face)))
+         (title-str (if (stringp title-str) (consult-omni--set-string-width title-str (* 5 frame-width-percent))))
+         (str (if (string-empty-p from) ""
+                (concat (if date (format "%s" date))
+                      (if from-str (format "\s%s" from-str))
+                      "\t"
+                      (if title-str title-str)
+                      (if tags (format "\s\s%s" tags))
+                      (if source (concat "\t" source))))))
+    (if consult-omni-highlight-matches
+        (cond
+         ((and (listp match-str) (stringp str))
+          (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
+         ((and (stringp match-str) (stringp str))
+          (setq str (consult-omni--highlight-match match-str str t)))))
+     str))
+#+end_src
+****** transform show
+#+begin_src emacs-lisp
+
+(defun consult-omni--notmuch-search-transform (candidates &optional query)
+
+  (remove nil (remove "" (mapcar (lambda (item)
+                        (when (and (stringp item) (string-match "thread:" item))
+                          (let* ((source "notmuch")
+                                 (id (car (split-string item "\\ +")))
+                                 (date (substring item 24 37))
+                                 (mid (substring item 24))
+                                 (c0 (string-match "[[]" mid))
+                                 (c1 (string-match "[]]" mid))
+                                 (count (substring mid c0 (1+ c1)))
+                                 (senders (string-trim (nth 1 (split-string mid "[];]"))))
+                                 (subject (string-trim (nth 1 (split-string mid "[;]"))))
+                                 (headers (list :Subject subject :From senders))
+                                 (t0 (string-match "([^)]*)\\s-*$" mid))
+                                 (tags (split-string (substring mid (1+  t0) -1)))
+                                 (decorated (consult-omni--notmuch-format-candidate :source source :query query :title subject :from senders :date date :tags tags)))
+                            (when (and (stringp decorated) (not (string-empty-p decorated))) (propertize decorated
+                                        :source source
+                                        :query query
+                                        :title subject
+                                        :url nil
+                                        :search-url nil
+                                        :id id
+                                        :from senders
+                                        :date date
+                                        :match t
+                                        :headers headers
+                                        :count count
+                                        :tags tags
+                                        )))))
+                      candidates)
+          )))
+#+end_src
+****** transform search
+#+begin_src emacs-lisp
+(defun consult-omni--notmuch-show-transform (candidates &optional query)
+  "Parse output STR of notmuch show, extracting its components."
+
+  (let ((source "notmuch") (id) (headers) (subject) (senders) (cc) (to) (count) (date) (tags) (match) (info))
+    (remove nil (mapcar (lambda (item)
+                          (if (string-prefix-p "message}" item)
+                              (prog1
+                                  (let* ((subject (or subject (plist-get headers :Subject)))
+                                         (date  (or date (plist-get headers :Date)))
+                                         (senders (or senders (plist-get headers :From)))
+                                         (cc  (or cc (plist-get headers :Cc)))
+                                         (to  (or to (plist-get headers :To)))
+                                         (decorated (consult-omni--notmuch-format-candidate :source source :query query :title subject :from senders :date date :tags tags)))
+                                    (when (and (stringp decorated) (not (string-empty-p decorated)))
+                                      (propertize decorated
+                                                :source source
+                                                :query query
+                                                :title subject
+                                                :url nil
+                                                :search-url nil
+                                                :id id
+                                                :from senders
+                                                :date date
+                                                :match t
+                                                :headers headers
+                                                :count count
+                                                :tags tags
+                                                )))
+                                (setq id nil
+                                      headers nil
+                                      senders nil
+                                      subject nil
+                                      count nil
+                                      date nil
+                                      tags nil
+                                      match nil
+                                      info nil
+                                      ))
+                            (cond ((string-match "message{ \\(id:[^ ]+\\) .+" item)
+                                   (setq id (match-string 1 item))
+                                   (setq match t))
+                                  ((string-prefix-p "header{" item)
+                                   (setq info t))
+                                  ((and item info)
+                                   (cond ((string-match "\\(.+\\) (\\([^)]+\\)) (\\([^)]*\\))$" item)
+                                          (setq senders (match-string 1 item))
+                                          (setq date (match-string 2 item))
+                                          (setq tags (split-string (match-string 3 item))))
+                                         ((string-match "\\(Subject\\|From\\|To\\|Cc\\|Date\\): \\(.+\\)?" item)
+                                          (let ((k (intern (format ":%s" (match-string 1 item))))
+                                                (v (or (match-string 2 item) "")))
+                                            (setq headers
+                                                  (plist-put headers k v))))
+                                         )
+                                   )
+                                  ((string-prefix-p "header}" item)
+                                   (setq info nil))
+                                  )
+                            nil)) candidates))))
+#+end_src
+****** default transform
+#+begin_src emacs-lisp
+(defun consult-omni--notmuch-get-transform-func (&rest args)
+    (cdr (assoc consult-omni-notmuch-default-command-arg consult-omni--notmuch-format-func-alist)))
+#+end_src
+***** preview
+#+begin_src emacs-lisp
+(defun consult-omni--notmuch--preview (cand)
+  "Preview function for notmuch candidates."
+  (let* ((query (get-text-property 0 :query cand))
+         (id (get-text-property 0 :id cand)))
+    (when id
+      (when (get-buffer consult-notmuch--buffer-name)
+        (kill-buffer consult-notmuch--buffer-name))
+      (notmuch-show id nil nil query consult-omni-notmuch-message-buffer-name))))
+#+end_src
+***** return
+***** callback
+#+begin_src emacs-lisp
+(defun consult-omni--notmuch-callback (cand)
+  "Callback function for notmuch candidates.
+"
+  (let* ((query (get-text-property 0 :query cand))
+         (id (get-text-property 0 :id cand)))
+    (when id
+      (when (get-buffer consult-omni-notmuch--buffer-name)
+        (kill-buffer consult-omni-notmuch--buffer-name))
+      (notmuch-tree query nil id consult-omni-notmuch-tree-buffer-name t nil nil nil)))
+)
+
+
+#+end_src
+**** items
+#+begin_src emacs-lisp
+(cl-defun consult-omni--notmuch-command-builder (input &rest args &key callback &allow-other-keys)
+  "makes builder command line args for “notmuch”.
+"
+  (setq consult-notmuch--partial-parse nil)
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts))
+               (count (plist-get opts :count))
+               (page (plist-get opts :page))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-notmuch-default-count))
+               (page (or (and page (integerp (read page)) (string-to-number page))
+                         consult-omni-default-page))
+               (page (* count page))
+               (consult-omni-notmuch-extra-command-args (unless (listp consult-omni-notmuch-extra-command-args) (list consult-omni-notmuch-extra-command-args)))
+               (cmd (append (list notmuch-command) (list consult-omni-notmuch-default-command-arg) (when count (list "--limit" (format "%s" count))) (when (and page (not (equal page 0))) (list "--offset" (format "%s" page)))  consult-omni-notmuch-extra-command-args (list query)))
+               )
+    cmd
+  ))
+#+end_src
+**** define source
+#+begin_src emacs-lisp
+(consult-omni-define-source "notmuch"
+                           :narrow-char ?m
+                           :type 'async
+                           :require-match nil
+                           :category 'notmuch-result
+                           :face 'consult-omni-engine-title-face
+                           :request #'consult-omni--notmuch-command-builder
+                           :on-preview #'consult-omni--notmuch--preview
+                           :on-return #'identity
+                           :on-callback #'consult-omni--notmuch-callback
+                           :preview-key consult-omni-preview-key
+                           :search-hist 'consult-omni--search-history
+                           :select-hist 'consult-omni--selection-history
+                           :group #'consult-omni--group-function
+                           :sort t
+                           :static 'both
+                           :transform (lambda (candidates &optional query) (funcall (consult-omni--notmuch-get-transform-func) candidates query))
+                           :enabled (lambda () (if (and (bound-and-true-p notmuch-command) (executable-find notmuch-command))
+                                                   t nil))
+                           :annotate nil
+                           )
+#+end_src
+
+**** provide and footer
+#+begin_src emacs-lisp
+;;; provide `consult-omni-notmuch' module
+
+(provide 'consult-omni-notmuch)
+
+(add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-notmuch)
+;;; consult-omni-notmuch.el ends here
+#+end_src
+
 *** Numi
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-numi.el
@@ -7836,7 +8028,7 @@ FACE is the face to apply to TITLE
 (add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-scopus)
 ;;; consult-omni-scopus.el ends here
 #+end_src
-*** StAckoverflow
+*** Stackoverflow
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-stackoverflow.el
 :END:
