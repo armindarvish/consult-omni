@@ -243,7 +243,7 @@ Alternatively you can load a single source by just requiring the corresponding f
 This would add interactive commands only for searching wikipedia (e.g. =consult-omni-wikipedia= and/or =consult-omni-wikipedia-static=).
 
 *** List of Sources Provided by Default
-Here is a list of current sources. For details on how to set and use each source, refer to the [[https://github.com/armindarvish/consult-omni/wiki][wiki pages]].
+Here is a list of current sources. For details on how to set and use each source, refer to the [[https://github.com/armindarvish/consult-omni/wiki][wiki pages]] (under construction now).
 
 |--------------------------+--------------------------------------|
 | Source                   | Category                             |
@@ -285,31 +285,29 @@ Here is a list of current sources. For details on how to set and use each source
 
 ** Configuration
 consult-omni is built with the idea that the user should be able to customize everything based on their use-case, therefore the user is very much expected to learn how to configure this package. Therefore, I recommend you read through this section and understand how to configure the package according to your needs and for your specific use-case.
-In addition to these settings, some sources have their own customization variables, etc. which is discussed in the [[https://github.com/armindarvish/consult-omni/wiki][wiki pages]].
+In addition to these settings, some sources have their own customization variables, etc. which is discussed in the [[https://github.com/armindarvish/consult-omni/wiki][wiki pages]] (under construction now).
 
 
 *** Customization  Variables
 The following customizable variables are provided:
 
-**** main
-
-***** =consult-omni-sources-modules-to-load=
+**** =consult-omni-sources-modules-to-load=
 List of modules to load. By setting this you before calling =consult-omni-sources-load-modules=, you can limit the modules (sources) that are loaded and can avoid errors due to mising requirements for certain sources. For example for just loading Wikipedia:
 #+begin_src emacs-lisp
 (setq consult-omni-sources-modules-to-load (list 'consult-omni-wikipedia))
 #+end_src
 
-***** =consult-omni-default-browse-function=
+**** =consult-omni-default-browse-function=
 Default browse function for opening URLs. This can be set to external browser function by:
 #+begin_src emacs-lisp
 (setq consult-omni-default-browse-function 'browse-url)
 #+end_src
-***** =consult-omni-alternate-browse-function=
+**** =consult-omni-alternate-browse-function=
 Secondary browse function for opening URLs. This can for example be set to eww or some other browsers for quick access to an alternative browser with embark actions.
 #+begin_src emacs-lisp
 (setq consult-omni-alternate-browse-function 'eww-browse-url)
 #+end_src
-***** =consult-omni-default-preview-function=
+**** =consult-omni-default-preview-function=
 Default function to use for previewing links. This can for example be set to [[https://www.gnu.org/software/emacs/manual/html_mono/eww.html][eww]]:
 
 #+begin_src emacs-lisp
@@ -322,21 +320,21 @@ or [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Embedded-WebKit-W
 (setq consult-omni-default-preview-function #'xwidget-webkit-browse-url)
 #+end_src
 
-***** =consult-omni-show-preview=
+**** =consult-omni-show-preview=
 This turns previews on/off for all consult-omni sources. It is recommended to set this to =t= and use =preview-key= to control previews per source.
 
-***** =consult-omni-preview-key=
+**** =consult-omni-preview-key=
 This is the default preview key. A good choice might be "C-o".
 #+begin_src emacs-lisp
 (setq consult-omni-preview-key "C-o")
 #+end_src
 
-***** =consult-omni-default-format-candidate=
+**** =consult-omni-default-format-candidate=
 This variable a stores a function that is called for formating the candidates (on any source that does not have an explivit formating function). consult-omni provides two example functions:
  - =consult-omni--simple-format-candidate= shows the tile without marginalia annotation in minibuffer
  - (Default) =consult-omni--highlight-format-candidate= shows candidate with marginalia annotation and highlights the search term as well.
 
-***** =consult-omni-default-count=
+**** =consult-omni-default-count=
 By default consult-omni retrieves only *up to* this many results per source. It is recommended to keep this to a low number (e.g. 5 to 10) to keep the performance fast. The default is set to 5 because nowadays for most everyday use-cases, you probably won't need more than the top 5 results.
 
 #+begin_src emacs-lisp
@@ -346,25 +344,25 @@ By default consult-omni retrieves only *up to* this many results per source. It 
 Keep in mind that with dynamic commands of consult-omni, you can always increase the number by passing arguments to =-n=, =--count=, =:n=, or =:count= (for example by typing =search term -- -n 30=, you can retrieve up to 30 results.
 
 
-***** =consult-omni-default-page=
+**** =consult-omni-default-page=
 This is similar to going to page 2, 3,...,N on a classic search result page. If this is set to N, first (N * count/page) results are skipped and the next page of results are shown. It is recommended to keep this as default, 0, to see the top results.
 
 Keep in mind that with dynamic commands of consult-omni, you can always change the page by passing values to arguments =-p=, =--page=, =:p=, or =:page= (for example by typing =search term -- -p 2=, you can get page 2.
 
-***** =consult-omni-default-timeout=
+**** =consult-omni-default-timeout=
 Maximum time in seconds before =consult-omni= gives up in fetching results from a single source in *STATIC* commands.
-***** =consult-omni-url-use-queue=
+**** =consult-omni-url-use-queue=
 A boolean, whether to use =url-queue= or not.
-***** =consult-omni-url-queue-parallel-processes=
+**** =consult-omni-url-queue-parallel-processes=
 Number of =url-queue= processes that runs in parallel.
-***** =consult-omni-url-queue-timeout=
+**** =consult-omni-url-queue-timeout=
 Maximum time in seconds that a single =url-queue= job can live before giving up.
-***** =consult-omni-log-buffer-name=
+**** =consult-omni-log-buffer-name=
 Buffer name for logging information, which is mostly useful for debugging.
-***** =consult-omni-log-level=
+**** =consult-omni-log-level=
 This variable controls how consult-omni logs information or displays errors. It can be either =nil=, ='info=, or ='debug=, in the order of logging/showing more details.
 
-***** =consult-omni-group-by=
+**** =consult-omni-group-by=
 
 This is the field that is used to group the results. By default, results are grouped by the name of the source. But this can be changed to achieve various grouping behavior. If this is set to =nil= , the results are not grouped. It can also be set to other properties of the candidates (e.g. =:url=, =:title=, =:domain=, ...)
 
@@ -373,16 +371,16 @@ This is the field that is used to group the results. By default, results are gro
 #+end_src
 
 
-***** =consult-omni-multi-sources=
+**** =consult-omni-multi-sources=
 This is a list of source name strings (e.g. ='("Google", "Wikipedia", "chatGPT")=) that will be used in the commands =consult-omni-multi=, and =consult-omni-multi-static= (see above for description).
 
-***** =consult-omni-highlight-matches=
+**** =consult-omni-highlight-matches=
 Whether consult-omni highlights matches of the search term in the minibuffer candidates. This is useful to highlight the relevance of the search results.
 
-***** =consult-omni-default-interactive-command=
+**** =consult-omni-default-interactive-command=
 This is a convenient feature to bind your favorite consult-omni interactive command to the command called =consult-omni=, so it is easier to remember and find when you call =M-x=. You can bind this to one of the interactive commands (such as =consult-omni-multi= or =consult-omni-multi-static=) or you can bind it to a single-source command (e.g. =consult-omni-google=, =consult-omni-google-static=,  =consult-omni-google-wikipedia=, ...) or alternatively you can define your own custom command (single or multi-source) and use that instead.
 
-***** =consult-omni-http-retrieve-backend=
+**** =consult-omni-http-retrieve-backend=
 This variable controls which backend is used by consult-omni for http requests. consult-omni supports 3 different backends:
 - (Default) built-in ='url-retrieve=
 - ='request= (see [[https://github.com/tkf/emacs-request][emacs-request]])
@@ -393,14 +391,14 @@ For example to change the backend to ='plz=, you can do:
 (setq consult-omni-http-retrieve-backend 'plz)
 #+end_src
 
-***** =consult-omni-default-autosuggest-command=
+**** =consult-omni-default-autosuggest-command=
 Default autosuggest command. consult-omni provides two examples with  =consult-omni-dynamic-brave-autosuggest= and =consult-omni-dynamic-google-autosuggest=, but you can also define other custom autosuggest commands from other sources (e.g. google, Wikipedia, ...)
 
 #+begin_src emacs-lisp
 (setq consult-omni-default-autosuggest-command #'consult-omni-dynamic-brave-autosuggest)
 #+end_src
 
-***** =consult-omni-dynamic-input-debounce=
+**** =consult-omni-dynamic-input-debounce=
 In dynamic commands, the dynamic collection process is started only when there has not been new
 input for =consult-omni-dynamic-input-debounce= seconds. If you type slow or think you need time to think for what you want to search, you may want to increase this number, so you don't run searches prematurely, especially if you want to avoid running premature search terms on paid services.
 By default this inherits from consult's built-in input-debounce value, which is 0.5. Personally I find that a bit too fast for consult-omni because I do not want consult-omni to send a query to paid OpenAI API while I am still typing my query so I slow it down to 0.8 - 1s.
@@ -410,7 +408,7 @@ By default this inherits from consult's built-in input-debounce value, which is 
 #+end_src
 
 
-***** =consult-omni-dynamic-input-throttle=
+**** =consult-omni-dynamic-input-throttle=
 In dynamic commands, the dynamic collection process is started only every =consult-omni-dynamic-input-throttle= seconds. If you use API services that have limited number of queries per second, you may want to increase this number to avoid getting errors. I set this to 2x my input-debounce value:
 
 #+begin_src emacs-lisp
@@ -418,12 +416,13 @@ In dynamic commands, the dynamic collection process is started only every =consu
 #+end_src
 
 
-***** =consult-omni-dynamic-refresh-delay=
+**** =consult-omni-dynamic-refresh-delay=
 In dynamic commands, the completion UI is only updated every =consult-omni-dynamic-refresh-delay= seconds. You probably want to run this as fast as =consult-omni-dynamic-input-debounce=.
 
 #+begin_src emacs-lisp
 (setq consult-omni-dynamic-input-throttle 0.8)
 #+end_src
+
 
 
 ** Drop in Example configs
