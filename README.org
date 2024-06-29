@@ -58,7 +58,7 @@ For each module (a.k.a each source) consult-omni provides one or two interactive
 #+ATTR_ORG: :width 800px
 #+ATTR_LATEX: :width 800px
 #+ATTR_HTML: :width 800px
-https://github.com/armindarvish/consult-web/blob/screenshots/screenshots/consult-omni-wikipedia-static.gif
+[[https://github.com/armindarvish/consult-web/blob/screenshots/screenshots/consult-omni-wikipedia-static.gif]]
 
 
 - =dynamic commands=: Dynamic commands fetch the result dynamically based on the user's minibuffer input, meaning that the results get updated as the user types and if the user changes the input, the list of results get updated. Here further narrow down is still possible by using consult's async syntax (see ). Here is a screenshot
@@ -66,7 +66,7 @@ https://github.com/armindarvish/consult-web/blob/screenshots/screenshots/consult
 #+ATTR_ORG: :width 800px
 #+ATTR_LATEX: :width 800px
 #+ATTR_HTML: :width 800px
-https://github.com/armindarvish/consult-web/blob/screenshots/screenshots/consult-omni-wikipedia.gif
+[[https://github.com/armindarvish/consult-web/blob/screenshots/screenshots/consult-omni-wikipedia.gif]]
 
 
 *** Multi-source commands
