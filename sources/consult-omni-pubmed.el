@@ -222,6 +222,7 @@ for more info.
                            :category 'consult-omni-scholar
                            :face 'consult-omni-scholar-title-face
                            :request #'consult-omni--pubmed-fetch-results
+                           :on-new (apply-partially #'consult-omni-external-search-with-engine "PubMed")
                            :preview-key consult-omni-preview-key
                            :search-hist 'consult-omni--search-history
                            :select-hist 'consult-omni--selection-history

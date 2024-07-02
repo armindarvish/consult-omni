@@ -33,6 +33,12 @@ See URL `https://brave.com/search/api/' for more info"
 (when (stringp cand)
   (substring-no-properties (string-trim cand))))
 
+(defun consult-omni--brave-autosuggest-new (cand)
+  "Return CAND for NEW non-existing candidates."
+  (when (listp cand) (setq cand (car-safe cand)))
+  (or (and (stringp cand) (string-trim cand (consult--async-split-initial nil)))
+      cand))
+
 (cl-defun consult-omni--brave-autosuggest-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results for INPUT from Brave Autosuggest API.
 "
@@ -100,6 +106,7 @@ See URL `https://brave.com/search/api/' for more info"
                             :on-preview #'ignore
                             :on-return #'consult-omni--brave-autosuggest-return
                             :on-callback #'string-trim
+                            :on-new #'consult-omni--brave-autosuggest-new
                             :search-hist 'consult-omni--search-history
                             :select-hist t
                             :enabled (lambda () (bound-and-true-p consult-omni-brave-autosuggest-api-key))

@@ -37,6 +37,14 @@
   "Whether to use ripgrep when searching ntoes?"
   :type 'boolean)
 
+(defcustom consult-omni--notes-new-func #'consult-omni--notes-new-capture-org
+"Function to use to create new notes.
+
+This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
+"
+:type '(choice (function :tag "(Default) Use org-capture" consult-omni--notes-new-capture-org)
+                 (function :tag "Custom Function")))
+
 (defun consult-omni--notes-transform (candidates &optional query)
   "Formats `consult-omni-notes' candidates.
 
@@ -79,6 +87,28 @@ Adopted from `consult--grep-format'.
             (push (propertize str :source "Notes Search" :title query :file file) result)))))
     result))
 
+(defun consult-omni--notes-new-capture-org (&optional string)
+(let ((old-marker org-capture-last-stored-marker))
+  (org-capture-string string)
+  (consult-omni-propertize-by-plist string `(:title ,string :source "Notes Search" :url nil :search-url nil :query ,string :file ,(cadr (org-capture-get :target)) ) 0 1))
+)
+
+(defun consult-omni--notes-new-capture-org-roam (&optional string)
+  (when (org-roam-node-find nil string)
+  (consult-omni-propertize-by-plist string `(:title ,string :source "Notes Search" :url nil :search-url nil :query ,string :file ,(file-truename (buffer-file-name))) 0 1))
+  )
+
+(defun consult-omni--notes-new-create-denote (&optional string)
+  (if-let* ((_ (push string denote-title-history))
+           (file (denote--command-with-features #'denote nil nil t nil)))
+  (consult-omni-propertize-by-plist string `(:title ,string :source "Notes Search" :url nil :search-url nil :query ,string :file ,(file-truename file))))
+  )
+
+(defun consult-omni--notes-new (cand)
+  "New function for `consult-omni-notes'."
+  (funcall consult-omni--notes-new-func cand)
+)
+
 (cl-defun consult-omni--notes-builder (input &rest args &key callback &allow-other-keys)
   "Makes builder command line args for `consult-omni-notes'.
 "
@@ -89,8 +119,7 @@ Adopted from `consult--grep-format'.
                (dir (if dir (file-truename (format "%s" dir))))
                (dir (or dir consult-omni-notes-files))
                (count (or (and count (integerp (read count)) (string-to-number count))
-                          consult-omni-default-count))
-               )
+                          consult-omni-default-count)))
     (funcall (consult-omni--grep-make-builder (if (and consult-omni-notes-use-rg (executable-find "rg")) #'consult--ripgrep-make-builder #'consult--grep-make-builder) dir) query)
     ))
 
@@ -105,11 +134,11 @@ Adopted from `consult--grep-format'.
                             :on-preview #'consult-omni--grep-preview
                             :on-return #'identity
                             :on-callback #'consult-omni--grep-callback
+                            :on-new #'consult-omni--notes-new
                             :preview-key 'any
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            ;;:group #'consult--prefix-group
                             :sort t
                             :static 'both
                             :annotate nil

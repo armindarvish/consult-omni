@@ -78,9 +78,7 @@ Description of Arguments:
   SUBCOUNT     the subscriber count fpr a channel
   VIDEOCOUNT   the number of videos in a playlist
   VIEWCOUNT    the number of times a video is viewed
-  FACE         the face to apply to TITLE
-
-"
+  FACE         the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
          (match-str (if (stringp query) (consult--split-escaped query) nil))
@@ -449,6 +447,7 @@ This is a version with  statistics (e.g. view counts)
                             :category 'consult-omni-video
                             :face 'consult-omni-engine-title-face
                             :request consult-omni-youtube-search-command
+                            :on-new (apply-partially #'consult-omni-external-search-with-engine "YouTube")
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history

@@ -81,6 +81,7 @@ for some limited documentation"
                             :require-match t
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--duckduckgoapi-fetch-results
+                            :on-new (apply-partially #'consult-omni-external-search-with-engine "DuckDuckGo")
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
