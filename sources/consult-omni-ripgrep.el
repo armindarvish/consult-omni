@@ -101,7 +101,6 @@ Adopted from `consult--grep-format'.
                                                     t nil))
                             :sort t
                             :static 'both
-                            :transform #'consult-omni--ripgrep-transform
                             :annotate nil
                             )
 

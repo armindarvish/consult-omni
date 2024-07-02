@@ -49,8 +49,7 @@ Similar to `consult-locate-args' bur for consult-omni."
           candidates))
 
 (defun consult-omni--locate-filter (candidates &optional query)
-  "Filters candidates for `consult-omni-find'.
-"
+  "Filters candidates for `consult-omni-locate'."
   (seq-filter (lambda (candidate) (not (string-match "^locate:.*$" candidate nil nil))) candidates))
 
 (cl-defun consult-omni--locate-builder (input &rest args &key callback &allow-other-keys)

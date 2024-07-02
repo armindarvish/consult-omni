@@ -25,19 +25,89 @@
           (consult--buffer-action buff))
         )))
 
-;; make consult-omni sources from `consult-buffer-sources'
-(cl-loop for source in consult-buffer-sources
-         do (if (symbolp source) (consult-omni--make-source-from-consult-source source
-                                                                                :type 'sync
-                                                                                :on-preview #'consult-omni--consult-buffer-preview
-                                                                                :on-return #'identity
-                                                                                :on-callback #'consult--buffer-action
-                                                                                :search-hist 'consult-omni--search-history
-                                                                                :select-hist 'consult-omni--selection-history
-                                                                                :static 'both
-                                                                                :preview-key 'consult-omni-preview-key
-                                                                                :group #'consult-omni--group-function
-                                                                                )))
+(consult-omni--make-source-from-consult-source 'consult--source-buffer
+                                               :type 'sync
+                                               :on-preview #'consult-omni--consult-buffer-preview
+                                               :on-return #'identity
+                                               :on-callback #'consult--buffer-action
+                                               :search-hist 'consult-omni--search-history
+                                               :select-hist 'consult-omni--selection-history
+                                               :static 'both
+                                               :preview-key 'consult-omni-preview-key
+                                               :on-new #'consult--buffer-action
+                                               :group #'consult-omni--group-function)
+
+(consult-omni--make-source-from-consult-source 'consult--source-modified-buffer
+                                               :type 'sync
+                                               :on-preview #'consult-omni--consult-buffer-preview
+                                               :on-return #'identity
+                                               :on-callback #'consult--buffer-action
+                                               :search-hist 'consult-omni--search-history
+                                               :select-hist 'consult-omni--selection-history
+                                               :static 'both
+                                               :preview-key 'consult-omni-preview-key
+                                               :on-new #'consult--buffer-action
+                                               :group #'consult-omni--group-function)
+
+(consult-omni--make-source-from-consult-source 'consult--source-hidden-buffer
+                                               :type 'sync
+                                               :on-preview #'consult-omni--consult-buffer-preview
+                                               :on-return #'identity
+                                               :on-callback #'consult--buffer-action
+                                               :search-hist 'consult-omni--search-history
+                                               :select-hist 'consult-omni--selection-history
+                                               :static 'both
+                                               :preview-key 'consult-omni-preview-key
+                                               :on-new #'consult--buffer-action
+                                               :group #'consult-omni--group-function)
+
+(consult-omni--make-source-from-consult-source 'consult--source-project-buffer
+                                               :type 'sync
+                                               :on-preview #'consult-omni--consult-buffer-preview
+                                               :on-return #'identity
+                                               :on-callback #'consult--buffer-action
+                                               :search-hist 'consult-omni--search-history
+                                               :select-hist 'consult-omni--selection-history
+                                               :static 'both
+                                               :preview-key 'consult-omni-preview-key
+                                               :on-new #'consult--buffer-action
+                                               :group #'consult-omni--group-function)
+
+(consult-omni--make-source-from-consult-source 'consult--source-recent-file
+                                               :type 'sync
+                                               :on-preview #'consult-omni--consult-buffer-preview
+                                               :on-return #'identity
+                                               :on-callback #'consult--file-action
+                                               :search-hist 'consult-omni--search-history
+                                               :select-hist 'consult-omni--selection-history
+                                               :static 'both
+                                               :preview-key 'consult-omni-preview-key
+                                               :on-new #'consult--file-action
+                                               :group #'consult-omni--group-function)
+
+(consult-omni--make-source-from-consult-source 'consult--source-project-recent-file
+                                               :type 'sync
+                                               :on-preview #'consult-omni--consult-buffer-preview
+                                               :on-return #'identity
+                                               :on-callback #'consult--file-action
+                                               :search-hist 'consult-omni--search-history
+                                               :select-hist 'consult-omni--selection-history
+                                               :static 'both
+                                               :preview-key 'consult-omni-preview-key
+                                               :on-new #'consult--file-action
+                                               :group #'consult-omni--group-function)
+
+(consult-omni--make-source-from-consult-source 'consult--source-bookmark
+                                               :type 'sync
+                                               :on-preview #'consult-omni--consult-buffer-preview
+                                               :on-return #'identity
+                                               :on-callback #'consult--bookmark-action
+                                               :search-hist 'consult-omni--search-history
+                                               :select-hist 'consult-omni--selection-history
+                                               :static 'both
+                                               :preview-key 'consult-omni-preview-key
+                                               :on-new #'bookmark-set
+                                               :group #'consult-omni--group-function)
 
 ;;; provide `consult-omni-buffer' module
 

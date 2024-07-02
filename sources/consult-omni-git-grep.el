@@ -1,4 +1,4 @@
-;;; consult-omni-grep.el --- Consulting Grep Command -*- lexical-binding: t -*-
+;;; consult-omni-git-grep.el --- Consulting Git Grep Command -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2024 Armin Darvish
 
@@ -15,20 +15,13 @@
 ;;; Code:
 
 (require 'consult-omni)
+(require 'consult-omni-grep)
 
-(defun consult-omni--grep-make-builder (make-builder &optional dir)
-  "General builder for grep and similar process.
+(defun consult-omni--git-grep-transform (candidates &optional query)
+  "Formats candidates of `consult-omni-ripgrep'.
+
+Adopted from `consult--grep-format'.
 "
-  (pcase-let* ((`(_ ,paths ,dir) (consult--directory-prompt "" dir))
-               (paths (if dir
-                          (mapcar (lambda (path) (file-truename (concat dir path))) paths)
-                        paths))
-               )
-    (funcall make-builder paths)
-    ))
-
-(defun consult-omni--grep-transform (candidates &optional query)
-  "Formats candidates pf `consult-omni-grep'."
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (file "")
          (file-len 0)
@@ -53,6 +46,7 @@
             (when (and file (stringp file) (> file-len (* frame-width-percent 2)))
               (setq file (consult-omni--set-string-width file (* frame-width-percent 2) (* frame-width-percent 1))))
             (setq file-len (length file))
+
             )
           (let* ((line (propertize (match-string 2 str) 'face 'consult-line-number))
                  (ctx (= (aref str (match-beginning 3)) ?-))
@@ -69,23 +63,11 @@
             ;; (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number str)
             (when ctx
               (add-face-text-property (+ 2 file-len line-len) (length str) 'consult-grep-context 'append str))
-            (push (propertize str :source "grep" :title query) result)))))
+            (push (propertize str :source "gitgrep" :title query) result)))))
     result))
 
-(defun consult-omni--grep-preview (cand)
-  "Grep preview function.
-"
-  (funcall  (consult--jump-state) 'preview (consult--grep-position (cdr (get-text-property 0 'multi-category cand))))
-  )
-
-(defun consult-omni--grep-callback (cand)
-  "Grep callback function.
-"
-  (funcall  (consult--jump-state) 'return (consult--grep-position (cdr (get-text-property 0 'multi-category cand))))
-  )
-
-(cl-defun consult-omni--grep-builder (input &rest args &key callback &allow-other-keys)
-  "Makes builder command line args for “grep”.
+(cl-defun consult-omni--git-grep-builder (input &rest args &key callback &allow-other-keys)
+  "Makes builder command line args for “ripgrep”.
 "
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
@@ -96,17 +78,17 @@
                           consult-omni-default-count))
                (default-directory (or dir default-directory))
                )
-    (funcall (consult-omni--grep-make-builder #'consult--grep-make-builder dir) query)
+    (funcall (consult-omni--grep-make-builder #'consult--git-grep-make-builder dir) query)
     ))
 
-;; Define the Grep Source
-(consult-omni-define-source "grep"
+;; Define the Ripgrep Source
+(consult-omni-define-source "gitgrep"
                             :narrow-char ?r
                             :type 'async
                             :require-match t
                             :face 'consult-omni-engine-title-face
-                            :request #'consult-omni--grep-builder
-                            :transform #'consult-omni--grep-transform
+                            :request #'consult-omni--git-grep-builder
+                            :transform #'consult-omni--git-grep-transform
                             :on-preview #'consult-omni--grep-preview
                             :on-return #'identity
                             :on-callback #'consult-omni--grep-callback
@@ -114,18 +96,17 @@
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
+                            :enabled (lambda () (if (and (executable-find "git")
+                                                         (fboundp 'consult-git-grep))
+                                                    t nil))
                             :sort t
                             :static 'both
-                            :transform #'consult-omni--ripgrep-transform
-                            :enabled (lambda () (if (and (executable-find "grep")
-                                                         (fboundp 'consult-grep))
-                                                    t nil))
                             :annotate nil
                             )
 
-;;; provide `consult-omni-grep' module
+;;; provide `consult-omni-git-grep' module
 
-(provide 'consult-omni-grep)
+(provide 'consult-omni-git-grep)
 
-(add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-grep)
-;;; consult-omni-grep.el ends here
+(add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-git-grep)
+;;; consult-omni-git-grep.el ends here

@@ -34,22 +34,26 @@
         'consult-omni-doi
         'consult-omni-duckduckgo
         'consult-omni-elfeed
+        'consult-omni-fd
         'consult-omni-find
         'consult-omni-gh
+        'consult-omni-git-grep
         'consult-omni-google
         'consult-omni-google-autosuggest
-        'consult-omni-grep
-        'consult-omni-ripgrep
         'consult-omni-gptel
+        'consult-omni-grep
         'consult-omni-invidious
         'consult-omni-line-multi
         'consult-omni-locate
+        'consult-omni-man
         'consult-omni-mdfind
         'consult-omni-mu4e
         'consult-omni-notes
         'consult-omni-notmuch
         'consult-omni-numi
+        'consult-omni-org-agenda
         'consult-omni-pubmed
+        'consult-omni-ripgrep
         'consult-omni-scopus
         'consult-omni-stackoverflow
         'consult-omni-wikipedia
