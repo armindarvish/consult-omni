@@ -2133,8 +2133,7 @@ DOCSTRING    the docstring for the function that is returned."
 
 All other input variables are passed to `consult-omni-define-source'
 macro. See `consult-omni-define-source' for more details."
-  (if (boundp consult-source)
-      (let* ((source (eval consult-source))
+      (let* ((source (if (plistp consult-source) consult-source (and (boundp consult-source) (eval consult-source))))
              (source (if (plistp source) source (eval source)))
              (name (and (plistp source) (substring-no-properties (plist-get source :name))))
              (narrow-char (or narrow-char (and (plistp source) (plist-get source :narrow))))
@@ -2176,8 +2175,7 @@ macro. See `consult-omni-define-source' for more details."
                                             :sort ',sort
                                             :static ',static
                                             :annotate ',annotate
-                                            :require-match ',require-match))))
-    (display-warning :warning (format "consult-omni: %s is not available. Make sure `consult-notes' is loaded and set up properly" consult-source))))
+                                            :require-match ',require-match)))))
 
 (defun consult-omni-multi (&optional initial prompt sources no-callback &rest args)
   "Interactive “multi-source dynamic search”

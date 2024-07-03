@@ -54,7 +54,7 @@
 
 ;; make consult-omni sources from consult-notes sources
 (when consult-notes-org-headings-mode
-  (consult-omni--make-source-from-consult-source 'consult-notes-org-headings--source
+  (consult-omni--make-source-from-consult-source (plist-put consult-notes-org-headings--source :name "Consult Notes Headings")
                                                  :category 'file
                                                  :type 'sync
                                                  :face 'consult-omni-notes-title-face
@@ -67,7 +67,7 @@
                                                  :select-hist 'consult-omni--selection-history
                                                  :preview-key 'consult-preview-key
                                                  :group #'consult-omni--group-function
-                                                 :enabled (lambda () consult-notes-org-headings-mode)
+                                                 :enabled (lambda () (bound-and-true-p consult-notes-org-headings-mode))
                                                  :static 'both))
 
 (when consult-notes-org-roam-mode

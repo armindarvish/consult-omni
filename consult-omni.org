@@ -2410,8 +2410,7 @@ DOCSTRING    the docstring for the function that is returned."
 
 All other input variables are passed to `consult-omni-define-source'
 macro. See `consult-omni-define-source' for more details."
-  (if (boundp consult-source)
-      (let* ((source (eval consult-source))
+      (let* ((source (if (plistp consult-source) consult-source (and (boundp consult-source) (eval consult-source))))
              (source (if (plistp source) source (eval source)))
              (name (and (plistp source) (substring-no-properties (plist-get source :name))))
              (narrow-char (or narrow-char (and (plistp source) (plist-get source :narrow))))
@@ -2453,8 +2452,7 @@ macro. See `consult-omni-define-source' for more details."
                                             :sort ',sort
                                             :static ',static
                                             :annotate ',annotate
-                                            :require-match ',require-match))))
-    (display-warning :warning (format "consult-omni: %s is not available. Make sure `consult-notes' is loaded and set up properly" consult-source))))
+                                            :require-match ',require-match)))))
 #+end_src
 
 ** Frontend Interactive commands
@@ -5899,7 +5897,7 @@ nil))
 #+begin_src emacs-lisp
 ;; make consult-omni sources from consult-notes sources
 (when consult-notes-org-headings-mode
-  (consult-omni--make-source-from-consult-source 'consult-notes-org-headings--source
+  (consult-omni--make-source-from-consult-source (plist-put consult-notes-org-headings--source :name "Consult Notes Headings")
                                                  :category 'file
                                                  :type 'sync
                                                  :face 'consult-omni-notes-title-face
@@ -5912,7 +5910,7 @@ nil))
                                                  :select-hist 'consult-omni--selection-history
                                                  :preview-key 'consult-preview-key
                                                  :group #'consult-omni--group-function
-                                                 :enabled (lambda () consult-notes-org-headings-mode)
+                                                 :enabled (lambda () (bound-and-true-p consult-notes-org-headings-mode))
                                                  :static 'both))
 #+end_src
 
