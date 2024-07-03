@@ -8101,6 +8101,17 @@ See `consult-omni--org-agenda-around' for more details."
 **** helper functions
 
 ***** transform dates and queries
+
+****** regexp for date ranges
+#+begin_src emacs-lisp
+(defun consult-omni--org-agenda-date-range-regexp (date-strings)
+"Makes a regexp matching DATE-STRINGS trings.
+
+DATE-STRINGS is a list of date strings."
+  (mapconcat #'identity date-strings "\\|")
+)
+#+end_src
+
 ****** previous day
 #+begin_src emacs-lisp
 (defun consult-omni--org-agenda-previous-day (date)
@@ -8181,6 +8192,7 @@ otherwise get the date for DAYS days after DATE."
   (butlast (cdr (cl-loop for d from 0 to 6
            collect (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time (date-to-time (consult-omni--org-agenda-begin-week date))) (make-decoded-time :day d))))))))
 #+end_src
+
 ****** around day
 #+begin_src emacs-lisp
 (defun consult-omni--org-agenda-around (date days)
@@ -8201,9 +8213,9 @@ For example to get the date for tommorrow, next week, ..."
      ((equal query "=yesterday") (consult-omni--org-agenda-previous-day (current-time)))
      ((equal query "=today") (format-time-string "%Y-%m-%d" (current-time)))
      ((equal query "=tomorrow") (consult-omni--org-agenda-next-day (current-time)))
-     ((equal query "=this week") (mapconcat #'identity (consult-omni--org-agenda-week-of (current-time)) "\\|"))
-     ((equal query "=next week") (mapconcat #'identity (consult-omni--org-agenda-next-week (current-time)) "\\|"))
-     ((equal query "=next work week") (mapconcat #'identity (consult-omni--org-agenda-next-work-week (current-time)) "\\|"))
+     ((equal query "=this week") (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-week-of (current-time))))
+     ((equal query "=next week") (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-next-week (current-time))))
+     ((equal query "=next work week") (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-next-work-week (current-time))))
      ((equal query "=this month") (format-time-string "%Y-%m" (current-time)))
      ((equal query "=this year") (format-time-string "%Y" (current-time)))
      ((string-match "=\\([0-9]+\\) day[s]? ago" query)
@@ -8212,7 +8224,7 @@ For example to get the date for tommorrow, next week, ..."
       (consult-omni--org-agenda-relative-day (current-time) (string-to-number (match-string 1 query)) nil))
      ((string-match "=around \\(.*\\)?" query)
       (when-let ((date (consult-omni--org-agenda-transform-query (concat "=" (match-string 1  query)))))
-        (mapconcat #'identity (consult-omni--org-agenda-around (or (car-safe date) date) consult-omni-org-agenda-number-of-days-around) "\\|")))
+        (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-around (or (car-safe date) date) consult-omni-org-agenda-number-of-days-around))))
      (t nil))))
 #+end_src
 ***** format agenda items

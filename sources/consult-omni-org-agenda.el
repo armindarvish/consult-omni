@@ -23,6 +23,13 @@ agenda items for +/- days around a given date will be listed.
 See `consult-omni--org-agenda-around' for more details."
   :type 'integer)
 
+(defun consult-omni--org-agenda-date-range-regexp (date-strings)
+"Makes a regexp matching DATE-STRINGS trings.
+
+DATE-STRINGS is a list of date strings."
+  (mapconcat #'identity date-strings "\\|")
+)
+
 (defun consult-omni--org-agenda-previous-day (date)
   "Get the date for one day before DATE"
   (if (stringp date) (setq date  (date-to-time date)))
@@ -95,9 +102,9 @@ For example to get the date for tommorrow, next week, ..."
      ((equal query "=yesterday") (consult-omni--org-agenda-previous-day (current-time)))
      ((equal query "=today") (format-time-string "%Y-%m-%d" (current-time)))
      ((equal query "=tomorrow") (consult-omni--org-agenda-next-day (current-time)))
-     ((equal query "=this week") (mapconcat #'identity (consult-omni--org-agenda-week-of (current-time)) "\\|"))
-     ((equal query "=next week") (mapconcat #'identity (consult-omni--org-agenda-next-week (current-time)) "\\|"))
-     ((equal query "=next work week") (mapconcat #'identity (consult-omni--org-agenda-next-work-week (current-time)) "\\|"))
+     ((equal query "=this week") (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-week-of (current-time))))
+     ((equal query "=next week") (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-next-week (current-time))))
+     ((equal query "=next work week") (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-next-work-week (current-time))))
      ((equal query "=this month") (format-time-string "%Y-%m" (current-time)))
      ((equal query "=this year") (format-time-string "%Y" (current-time)))
      ((string-match "=\\([0-9]+\\) day[s]? ago" query)
@@ -106,7 +113,7 @@ For example to get the date for tommorrow, next week, ..."
       (consult-omni--org-agenda-relative-day (current-time) (string-to-number (match-string 1 query)) nil))
      ((string-match "=around \\(.*\\)?" query)
       (when-let ((date (consult-omni--org-agenda-transform-query (concat "=" (match-string 1  query)))))
-        (mapconcat #'identity (consult-omni--org-agenda-around (or (car-safe date) date) consult-omni-org-agenda-number-of-days-around) "\\|")))
+        (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-around (or (car-safe date) date) consult-omni-org-agenda-number-of-days-around))))
      (t nil))))
 
 (cl-defun consult-omni--org-agenda-format-candidate (&rest args &key source query title buffer todo prio tags filepath snippet sched dead face &allow-other-keys)
