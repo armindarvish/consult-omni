@@ -23,19 +23,15 @@ Similar to `consult-man-args' bur for consult-omni."
   :type '(choice string (repeat (choice string sexp))))
 
 (defun consult-omni--man-preview (cand)
-  "Preview for `consult-omni-man'.
-"
-  (when-let ((Man-notify-method 'quiet)
+  "Preview for `consult-omni-man'."
+  (when-let* ((Man-notify-method 'quiet)
              (path (get-text-property 0 :path cand)))
-    (funcall (consult--buffer-preview) 'preview (man path)
-  )))
+    (funcall (consult--buffer-preview) 'preview (man path))))
 
 (defun consult-omni--man-callback (cand)
-  "Callback for `consult-omni-man'.
-"
+  "Callback for `consult-omni-man'."
   (when-let ((path (get-text-property 0 :path cand)))
-    (man path)
-  ))
+    (man path)))
 
 (defun consult-omni--man-transform (candidates &optional query)
   "Formats candidates of `consult-omni-man'."
@@ -70,10 +66,8 @@ Similar to `consult-man-args' bur for consult-omni."
 (cl-defun consult-omni--man-builder (input &rest args &key callback &allow-other-keys)
   "Makes builder command line args for “man”."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
-               (consult-man-args consult-omni-man-args)
-               )
-    (funcall #'consult--man-builder query)
-    ))
+               (consult-man-args consult-omni-man-args))
+    (funcall #'consult--man-builder query)))
 
 ;; Define the Man Source
 (consult-omni-define-source "man"
@@ -94,8 +88,7 @@ Similar to `consult-man-args' bur for consult-omni."
                             :enabled (lambda () (if (executable-find "man") t nil))
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-man' module
 

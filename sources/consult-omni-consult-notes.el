@@ -18,18 +18,15 @@
 (require 'consult-notes nil t)
 
 (defun consult-omni--org-roam-note-preview (cand)
-  "Preview function for org-roam files.
-"
+  "Preview function for org-roam files."
   (if cand
       (let* ((title (get-text-property 0 :title cand))
              (node (org-roam-node-from-title-or-alias title)))
         (if (org-roam-node-p node)
-            (consult--file-action (org-roam-node-file node))
-          ))))
+            (consult--file-action (org-roam-node-file node))))))
 
 (defun consult-omni--org-headings-preview (cand)
-  "Preview function for org headings.
-"
+  "Preview function for org headings."
   (if cand
       (let* ((title (get-text-property 0 :title cand))
              (marker (get-text-property 0 'consult--candidate title)))
@@ -37,15 +34,13 @@
             (consult--jump marker)))))
 
 (defun consult-omni--org-roam-note-callback (cand &rest args)
-  "Callback function for org-roam files.
-"
+  "Callback function for org-roam files."
   (let* ((title (get-text-property 0 :title cand))
          (node (org-roam-node-from-title-or-alias title)))
     (org-roam-node-open node)))
 
 (defun consult-omni--org-headings-callback (cand &rest args)
-  "Callback function for org headings.
-"
+  "Callback function for org headings."
   (if cand
       (let* ((title (get-text-property 0 :title cand))
              (marker (get-text-property 0 'consult--candidate title)))
@@ -55,9 +50,7 @@
               (if buff (with-current-buffer buff
                          (if pos (goto-char pos))
                          (funcall consult--buffer-display buff)
-                         (recenter nil t)
-                         )))
-          ))))
+                         (recenter nil t))))))))
 
 ;; make consult-omni sources from consult-notes sources
 (when consult-notes-org-headings-mode
@@ -75,8 +68,7 @@
                                                  :preview-key 'consult-preview-key
                                                  :group #'consult-omni--group-function
                                                  :enabled (lambda () consult-notes-org-headings-mode)
-                                                 :static 'both
-                                                 ))
+                                                 :static 'both))
 
 (when consult-notes-org-roam-mode
   (cl-loop for source in '(consult-notes-org-roam--refs consult-notes-org-roam--nodes)
@@ -89,13 +81,11 @@
                                                              :on-preview #'consult-omni--org-roam-note-preview
                                                              :on-return #'identity
                                                              :on-callback #'consult-omni--org-roam-note-callback
-
                                                              :preview-key 'consult-preview-key
                                                              :static 'both
                                                              :group #'consult-omni--group-function
                                                              :enabled (lambda () consult-notes-org-roam-mode)
-                                                             :annotate nil
-                                                             )))
+                                                             :annotate nil)))
 
 ;;; provide `consult-omni-consult-notes' module
 

@@ -17,13 +17,11 @@
 (require 'consult-omni)
 
 (defun consult-omni--consult-buffer-preview (cand)
-  "Preview function for `consult-omni--buffer'.
-"
+  "Preview function for `consult-omni--buffer'."
   (if cand
       (let* ((title (get-text-property 0 :title cand)))
         (when-let ((buff (get-buffer title)))
-          (consult--buffer-action buff))
-        )))
+          (consult--buffer-action buff)))))
 
 (consult-omni--make-source-from-consult-source 'consult--source-buffer
                                                :type 'sync

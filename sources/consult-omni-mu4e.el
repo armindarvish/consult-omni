@@ -23,10 +23,7 @@
 Description of Arguments:
 
   CAND      a candidate from consult-mu
-  HIGHLIGHT when non-nil highlights the query term in minibuffer
-
-"
-
+  HIGHLIGHT when non-nil highlights the query term in minibuffer"
   (let* ((string (car cand))
          (info (cadr cand))
          (msg (plist-get info :msg))
@@ -35,10 +32,8 @@ Description of Arguments:
          (headers-template (consult-mu--headers-template))
          (str (if headers-template
                  (consult-mu--expand-headers-template msg headers-template)
-                  string)
-         )
-         (str (propertize str :msg msg :query query :type :dynamic :source "mu4e" :title string))
-         )
+                  string))
+         (str (propertize str :msg msg :query query :type :dynamic :source "mu4e" :title string)))
          (if (and consult-mu-highlight-matches highlight)
                      (cond
                       ((listp match-str)
@@ -61,49 +56,37 @@ Description of Arguments:
               (buffer consult-mu-view-buffer-name))
     (add-to-list 'consult-mu--view-buffers-list buffer)
     (funcall (consult--buffer-preview) 'preview
-             (consult-mu--view msg t consult-mu-mark-previewed-as-read match-str)
-             )
+             (consult-mu--view msg t consult-mu-mark-previewed-as-read match-str))
     (with-current-buffer consult-mu-view-buffer-name
-      (unless (one-window-p) (delete-other-windows))
-      ))
-  )
+      (unless (one-window-p) (delete-other-windows)))))
 
 (defun consult-omni--mu-return (cand)
   "Return function for `consult-omni-mu4e'."
   (save-mark-and-excursion
-    (consult-mu--execute-all-marks)
-    )
+    (consult-mu--execute-all-marks))
   (setq consult-mu--override-group nil)
-  cand
-  )
+  cand)
 
 (defun consult-omni--mu-callback (cand)
-  "Callback function for `consult-omni-mu4e'.
-"
+  "Callback function for `consult-omni-mu4e'."
   (let* ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
          (msg (plist-get info :msg))
          (query (plist-get info :query))
-         (match-str (car (consult--command-split query)))
-         )
+         (match-str (car (consult--command-split query))))
     (consult-mu--view msg nil consult-mu-mark-viewed-as-read match-str)
-    (consult-mu-overlays-toggle consult-mu-view-buffer-name)
-    )
-  )
+    (consult-mu-overlays-toggle consult-mu-view-buffer-name)))
 
 (cl-defun consult-omni--mu-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Makes builder command line args for “mu4e”.
-"
+  "Makes builder command line args for “mu4e”."
   (save-mark-and-excursion
-    (consult-mu--execute-all-marks)
-    )
+    (consult-mu--execute-all-marks))
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
                (mu-input (format "%s -- --maxnum %s" query count))
-               (messages)
-               )
+               (messages))
     (consult-mu--update-headers mu-input nil nil :dynamic)
     (with-current-buffer consult-mu-headers-buffer-name
       (goto-char (point-min))
@@ -111,8 +94,7 @@ Description of Arguments:
                              (cl-loop until (eobp)
                                       collect (let ((msg (ignore-errors (mu4e-message-at-point))))
                                                 (consult-omni-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
-                                      do (forward-line 1)))
-            ))
+                                      do (forward-line 1)))))
     (when (and messages callback)
       (funcall callback messages))))
 
@@ -137,8 +119,7 @@ Description of Arguments:
                             :group #'consult-omni--group-function
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-mu4e' module
 

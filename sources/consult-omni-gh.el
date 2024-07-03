@@ -20,11 +20,11 @@
 (defun consult-omni--gh-transform (items &optional query)
   "Transforms consult-gh candidates to consult-omni style."
   (remove nil (mapcar (lambda (string)
-                        (car (consult-gh--repo-format string (or query "") t))) items)))
+                        (car (consult-gh--repo-format string (or query "") t)))
+                      items)))
 
 (defun consult-omni--gh-preview (cand)
-  "Preview for `consult-omni-github'.
-"
+  "Preview for `consult-omni-github'."
   (when-let ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
              (repo (plist-get info :repo))
              (query (plist-get info :query))
@@ -37,23 +37,19 @@
           (cond
            ((listp match-str)
             (mapcar (lambda (item)
-                      (highlight-regexp item 'consult-gh-preview-match-face)) match-str))
+                      (highlight-regexp item 'consult-gh-preview-match-face))
+                    match-str))
            ((stringp match-str)
-            (highlight-regexp match-str 'consult-gh-preview-match-face))
-           )))
+            (highlight-regexp match-str 'consult-gh-preview-match-face)))))
     (funcall (consult--buffer-preview) 'preview
-             buffer
-             )
-    ))
+             buffer)))
 
 (defun consult-omni--gh-callback (cand)
-  "Callback for `consult-omni-github'.
-"
+  "Callback for `consult-omni-github'."
   (funcall consult-gh-repo-action (cons cand (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))))
 
 (cl-defun consult-omni--gh-search-repos-builder (input &rest args &key callback &allow-other-keys)
-  "Makes builder command line args for “GitHub CLI”.
-"
+  "Makes builder command line args for “GitHub CLI”."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (if callback (seq-difference args (list :callback callback)) args)))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -70,27 +66,27 @@
 
 ;; Define the GitHub Source
 (consult-omni-define-source "GitHub"
-                           :narrow-char ?h
-                           :type 'async
-                           :require-match nil
-                           :category 'consult-gh-repos
-                           :face 'consult-omni-engine-title-face
-                           :request #'consult-omni--gh-search-repos-builder
-                           :on-preview #'consult-omni--gh-preview
-                           :on-return #'identity
-                           :on-callback #'consult-omni--gh-callback
-                           :preview-key consult-omni-preview-key
-                           :search-hist 'consult-omni--search-history
-                           :select-hist 'consult-omni--selection-history
-                           :group #'consult-omni--group-function
-                           :sort t
-                           :static 'both
-                           :transform #'consult-omni--gh-transform
-                           :enabled (lambda () (if (and (executable-find "gh")
-                                                   (fboundp 'consult-gh-search-repos))
-                                                   t nil))
-                           :annotate nil
-                           )
+                            :narrow-char ?h
+                            :type 'async
+                            :require-match nil
+                            :category 'consult-gh-repos
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--gh-search-repos-builder
+                            :on-preview #'consult-omni--gh-preview
+                            :on-return #'identity
+                            :on-callback #'consult-omni--gh-callback
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :group #'consult-omni--group-function
+                            :sort t
+                            :static 'both
+                            :transform #'consult-omni--gh-transform
+                            :enabled (lambda () (if (and (executable-find "gh")
+                                                         (fboundp 'consult-gh-search-repos))
+                                                    t
+                                                  nil))
+                            :annotate nil)
 
 ;;; provide `consult-omni-gh' module
 

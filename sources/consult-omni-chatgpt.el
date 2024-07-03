@@ -21,8 +21,7 @@
 
 See URL `https://openai.com/product' and
 URL `https://platform.openai.com/docs/introduction'
-for details.
-"
+for details."
 :group 'consult-omni
 :type '(choice (const :tag "API Key" string)
                (function :tag "Custom Function")))
@@ -42,9 +41,7 @@ Description of Arguments:
              the search results of QUERY on the SOURCE website
   TITLE      the title of the candidate (e.g. response from chatgpt)
   MODEL      the OpenAI model used
-  FACE       the face to apply to TITLE
-
-"
+  FACE       the face to apply to TITLE"
   (let* ((source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (title-str (consult-omni--set-string-width title (floor (* (frame-width) 0.4))))
          (title-str (propertize title-str 'face (or face 'consult-omni-ai-title-face)))
@@ -52,8 +49,7 @@ Description of Arguments:
                       (propertize " " 'display '(space :align-to center))
                       (if model (propertize (format "model: %s" model) 'face 'consult-omni-path-face))
                       (if source (concat "\t" source))))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
-         )
+         (match-str (if (stringp query) (consult--split-escaped query) nil)))
     (if consult-omni-highlight-matches
         (cond
          ((listp match-str)
@@ -63,8 +59,7 @@ Description of Arguments:
     str))
 
 (defun consult-omni--chatgpt-response-preview (response &optional query)
-  "Returns a buffer with formatted RESPONSE from chatGPT
-"
+  "Returns a buffer with formatted RESPONSE from chatGPT"
   (save-excursion
     (let ((buff (get-buffer-create "*consult-omni-chatgpt-response*")))
       (with-current-buffer buff
@@ -73,28 +68,21 @@ Description of Arguments:
         (if response (insert (format "# chatGPT:\n\n %s\n\n" response)))
         (if (featurep 'mardown-mode)
             (require 'markdown-mode)
-          (markdown-mode)
-          )
-        (point-marker))
-      )))
-
+          (markdown-mode))
+        (point-marker)))))
 
 (defun consult-omni--chatgpt-preview (cand)
-  "Shows a preview buffer with chatGPT response from CAND
-"
+  "Shows a preview buffer with chatGPT response from CAND"
   (when-let ((buff (get-buffer "*consult-omni-chatgpt-response*")))
     (kill-buffer buff))
-
   (if (listp cand) (setq cand (or (car-safe cand) cand)))
   (when-let*  ((query  (get-text-property 0 :query cand))
                (response (or (get-text-property 0 :title cand) cand))
                (marker (consult-omni--chatgpt-response-preview response query)))
-    (consult--jump marker)
-    ))
+    (consult--jump marker)))
 
 (cl-defun consult-omni--chatgpt-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Fetches chat response for INPUT from chatGPT.
-"
+  "Fetches chat response for INPUT from chatGPT."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (model (or (plist-get opts :model) "gpt-3.5-turbo"))
@@ -147,8 +135,7 @@ Description of Arguments:
                             :group #'consult-omni--group-function
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-chatgpt' module
 

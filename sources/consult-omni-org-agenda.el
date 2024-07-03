@@ -17,17 +17,18 @@
 (require 'consult-omni)
 
 (defun consult-omni--org-agenda-next-day (date)
+  "Get the date for the next day after DATE"
   (if (stringp date) (setq date  (date-to-time date)))
   (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time date) (make-decoded-time :day 1)))))
 
 (defun consult-omni--org-agenda-week-of (date)
+  "Get the dates one week starting at DATE"
   (if (stringp date) (setq date  (date-to-time date)))
-(cl-loop for d from 0 to 7
-         collect (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time date) (make-decoded-time :day d))))
-))
+  (cl-loop for d from 0 to 7
+           collect (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time date) (make-decoded-time :day d))))))
 
 (cl-defun consult-omni--org-agenda-format-candidate (&rest args &key source query title buffer todo prio tags filepath snippet sched dead face &allow-other-keys)
-  "Formats a candidate for `consult-omni-youtube' commands.
+  "Formats a candidate for `consult-omni-org-agenda' commands.
 
 Description of Arguments:
 
@@ -44,8 +45,7 @@ Description of Arguments:
          (prio (and (stringp prio) (propertize (format "[#%s]" prio) 'face 'consult-omni-prompt-face)))
          (todo (and (stringp todo) (propertize todo 'face (or (and org-todo-keyword-faces (cdr (assoc todo org-todo-keyword-faces)))
                                                               (and (member todo org-done-keywords) 'org-done)
- 'org-todo))))
-
+                                                              'org-todo))))
          (tags (and tags (stringp tags) (propertize tags 'face 'consult-omni-keyword-face)))
          (snippet (and snippet (stringp snippet) (propertize snippet 'face 'consult-omni-snippet-face)))
          (snippet (if (stringp snippet) (consult-omni--set-string-width (replace-regexp-in-string "\n" "  " snippet) (* 2 frame-width-percent))))
@@ -53,7 +53,7 @@ Description of Arguments:
          (fraction (and dead (- 1 (min (/ (float (- (org-agenda--timestamp-to-absolute dead) (org-today))) (max (org-get-wdays dead) 1)) 1.0))))
          (dead-face (and dead
                          (org-agenda-deadline-face
-			     fraction)))
+			  fraction)))
          (dead (or (and dead (stringp dead) (propertize dead 'face (or dead-face 'consult-omni-warning-face))) (make-string 15 ?\s)))
          (date (concat (and (stringp sched) sched) (and (stringp sched) " ") (and (stringp dead) dead)))
          (face (or (consult-omni--get-source-prop source :face) face))
@@ -61,7 +61,7 @@ Description of Arguments:
          (title (if (and face (stringp title)) (propertize title 'face face) title))
          (title-str (if (and (stringp tags) (stringp title)) (concat title " " tags) title))
          (title-str (and (stringp title-str)
- (consult-omni--set-string-width title-str (* 5 frame-width-percent))))
+                         (consult-omni--set-string-width title-str (* 5 frame-width-percent))))
          (str (concat title-str
                       (and todo-str "\t") todo-str
                       (and buffer "\s") buffer
@@ -80,7 +80,9 @@ Description of Arguments:
   "Return a list of Org heading candidates.
 
 If PREFIX is non-nil, prefix the candidates with the buffer name.
-MATCH, SCOPE and SKIP are as in `org-map-entries'."
+MATCH, SCOPE and SKIP are as in `org-map-entries'.
+
+Adopted from `consult-org--headings'."
   (let (buffer
         (source "Org Agenda"))
     (apply
@@ -98,8 +100,8 @@ MATCH, SCOPE and SKIP are as in `org-map-entries'."
                                 (concat ":" (string-join tags ":") ":"))
                             tags))
                     (title (org-format-outline-path
-                           (org-get-outline-path 'with-self 'use-cache)
-                           most-positive-fixnum))
+                            (org-get-outline-path 'with-self 'use-cache)
+                            most-positive-fixnum))
                     (prio (and (characterp prio) (char-to-string prio)))
                     (marker (point-marker))
                     (props (org-entry-properties))
@@ -113,47 +115,42 @@ MATCH, SCOPE and SKIP are as in `org-map-entries'."
                             ((equal query "this month") (format-time-string "%Y-%m" (current-time)))
                             ((equal query "this year") (format-time-string "%Y" (current-time)))
                             (t query))))
- (org-format-timestamp (org-timestamp-from-time (org-today)) "%Y")
+         (org-format-timestamp (org-timestamp-from-time (org-today)) "%Y")
          (if (string-match-p (concat ".*" query ".*") (concat todo " " prio " " _hl " " sched " " dead " " tags))
-           (propertize (consult-omni--org-agenda-format-candidate :source source :query query :title title :buffer buffer :todo todo :prio prio :tags tags :filepath filepath :snippet snippet :sched sched :dead dead) :source source :title title :query query :url nil :search-url nil :tags tags :filepath filepath :marker marker))))
+             (propertize (consult-omni--org-agenda-format-candidate :source source :query query :title title :buffer buffer :todo todo :prio prio :tags tags :filepath filepath :snippet snippet :sched sched :dead dead) :source source :title title :query query :url nil :search-url nil :tags tags :filepath filepath :marker marker))))
      match 'agenda skip)))
 
 (defun consult-omni--org-agenda-preview (cand)
   "Preview function for `consult-omni-org-agenda'."
  (if-let ((marker (get-text-property 0 :marker cand)))
-            (consult--jump marker)
-          )
-)
+            (consult--jump marker)))
 
 (defun consult-omni--org-agenda-callback (cand)
   "Callback function for `consult-omni-org-agenda'."
   (if-let ((marker (get-text-property 0 :marker cand)))
-            (consult--jump marker)
-          ))
+            (consult--jump marker)))
 
 (defun consult-omni--org-agenda-new (cand)
   "New function for `consult-omni-org-agenda'."
   (let ((title (substring-no-properties cand))
         (old-marker org-capture-last-stored-marker))
   (org-capture-string title)
-  (consult-omni-propertize-by-plist title `(:title ,title :source "Org Agenda" :url nil :search-url nil :query ,title :sched nil :dead nil :tags nil :filepath ,(cadr (org-capture-get :target)) :marker ,(unless (equal ,old-marker ,org-capture-last-stored-marker) org-capture-last-stored-marker)) 0 1))
-  )
+  (consult-omni-propertize-by-plist title `(:title ,title :source "Org Agenda" :url nil :search-url nil :query ,title :sched nil :dead nil :tags nil :filepath ,(cadr (org-capture-get :target)) :marker ,(unless (equal ,old-marker ,org-capture-last-stored-marker) org-capture-last-stored-marker)) 0 1)))
 
 (cl-defun consult-omni--org-agenda-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Fetches chat response for INPUT from gptel."
+  "Fetches org-agenda items for `consult-omni-org-agenda'."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (match (or (and (plist-member opts :match) (plist-get opts :match))
                           (and (plist-member opts :filter) (plist-get opts :filter))))
-               (source "Org Headings")
                (annotated-results (delq nil (consult-omni--org-agenda-items query match))))
     (when annotated-results
       (when (functionp callback)
         (funcall callback annotated-results))
       annotated-results
-      )
-    ))
+      )))
 
+;; Define the Org Agenda Source
 (consult-omni-define-source "Org Agenda"
                             :narrow-char ?o
                             :category 'org-heading
@@ -170,8 +167,7 @@ MATCH, SCOPE and SKIP are as in `org-map-entries'."
                             :enabled (lambda () (bound-and-true-p org-agenda-files))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            )
+                            :static 'both)
 
 ;;; provide `consult-omni-org-agenda' module
 

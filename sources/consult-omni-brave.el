@@ -29,8 +29,7 @@ See URL `https://brave.com/search/api/' for more info"
 (defvar consult-omni-brave-url "https://api.search.brave.com/res/v1/web/search")
 
 (cl-defun consult-omni--brave-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Retrieve search results from Brave for INPUT.
-"
+  "Retrieve search results from Brave for INPUT."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -89,8 +88,7 @@ See URL `https://brave.com/search/api/' for more info"
                             :enabled (lambda () (bound-and-true-p consult-omni-brave-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            )
+                            :static 'both)
 
 ;;; provide `consult-omni-brave' module
 

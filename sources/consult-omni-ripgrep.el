@@ -20,8 +20,7 @@
 (defun consult-omni--ripgrep-transform (candidates &optional query)
   "Formats candidates of `consult-omni-ripgrep'.
 
-Adopted from `consult--grep-format'.
-"
+Adopted from `consult--grep-format'."
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (file "")
          (file-len 0)
@@ -42,12 +41,9 @@ Adopted from `consult--grep-format'.
             (setq file (or (and (buffer-file-name)
                                 (file-relative-name (match-string 1 str) (file-name-directory (buffer-file-name))))
                            (file-relative-name (match-string 1 str))))
-
             (when (and file (stringp file) (> file-len (* frame-width-percent 2)))
               (setq file (consult-omni--set-string-width file (* frame-width-percent 2) (* frame-width-percent 1))))
-            (setq file-len (length file))
-
-            )
+            (setq file-len (length file)))
           (let* ((line (propertize (match-string 2 str) 'face 'consult-line-number))
                  (ctx (= (aref str (match-beginning 3)) ?-))
                  (sep (if ctx "-" ":"))
@@ -55,8 +51,7 @@ Adopted from `consult--grep-format'.
                  (line-len (length line)))
             (when (length> content consult-grep-max-columns)
               ;; (setq content (substring content 0 consult-grep-max-columns))
-              (setq content  (consult-omni--set-string-width content consult-grep-max-columns))
-              )
+              (setq content  (consult-omni--set-string-width content consult-grep-max-columns)))
             (setq str (concat file sep line sep content))
             ;; Store file name in order to avoid allocations in `consult--prefix-group'
             (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) str)
@@ -67,8 +62,7 @@ Adopted from `consult--grep-format'.
     result))
 
 (cl-defun consult-omni--ripgrep-builder (input &rest args &key callback &allow-other-keys)
-  "Makes builder command line args for “ripgrep”.
-"
+  "Makes builder command line args for “ripgrep”."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -76,10 +70,8 @@ Adopted from `consult--grep-format'.
                (dir (if dir (file-truename (format "%s" dir))))
                (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (default-directory (or dir default-directory))
-               )
-    (funcall (consult-omni--grep-make-builder #'consult--ripgrep-make-builder dir) query)
-    ))
+               (default-directory (or dir default-directory)))
+    (funcall (consult-omni--grep-make-builder #'consult--ripgrep-make-builder dir) query)))
 
 ;; Define the Ripgrep Source
 (consult-omni-define-source "ripgrep"
@@ -101,8 +93,7 @@ Adopted from `consult--grep-format'.
                                                     t nil))
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-ripgrep' module
 

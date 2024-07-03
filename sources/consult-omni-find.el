@@ -27,30 +27,25 @@ Similar to `consult-find-args' bur for consult-omni."
   :type '(choice string (repeat (choice string sexp))))
 
 (defun consult-omni--find-transform (candidates &optional query)
-  "Formats candidates of `consult-omni-find'.
-"
+  "Formats candidates of `consult-omni-find'."
   (mapcar (lambda (candidate)
             (string-trim (string-remove-prefix (file-truename default-directory) candidate)))
           candidates))
 
 (defun consult-omni--find-filter (candidates &optional query)
-  "Filters for candidates of `consult-omni-find'.
-"
+  "Filters for candidates of `consult-omni-find'."
   (seq-filter (lambda (candidate) (not (string-match "^find:.*$" candidate nil nil))) candidates))
 
 (defun consult-omni--find-preview (cand)
-  "Preview function for `consult-omni-find'.
-"
+  "Preview function for `consult-omni-find'."
   (funcall (consult--file-preview) 'preview cand))
 
 (defun consult-omni--find-callback (cand)
   "Callback for `consult-omni-find'."
-  (consult--file-action cand)
-  )
+  (consult--file-action cand))
 
 (cl-defun consult-omni--find-builder (input &rest args &key callback &allow-other-keys)
-  "Makes builder command line args for “find”.
-"
+  "Makes builder command line args for “find”."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -68,10 +63,8 @@ Similar to `consult-find-args' bur for consult-omni."
                         paths))
                (consult-find-args (concat consult-omni-find-args
                                           (if (not hidden) " -not -iwholename *./[a-z]*")
-                                          (if ignore (concat " -not -iwholename *" ignore "*"))))
-               )
-    (funcall (consult--find-make-builder paths) query)
-    ))
+                                          (if ignore (concat " -not -iwholename *" ignore "*")))))
+    (funcall (consult--find-make-builder paths) query)))
 
 ;; Define the Find Source
 (consult-omni-define-source "find"
@@ -93,8 +86,7 @@ Similar to `consult-find-args' bur for consult-omni."
                             :sort t
                             :static 'both
                             :enabled (lambda () (if (executable-find "find") t nil))
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-find' module
 

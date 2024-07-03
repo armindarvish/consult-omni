@@ -28,9 +28,7 @@ Description of Arguments:
   SEARCH-URL a string pointing to the url for
              the search results of QUERY on the SOURCE website
   TITLE      the title of the candidate
-  SNIPPET    a string containing a snippet/description of candidate
-
-"
+  SNIPPET    a string containing a snippet/description of candidate"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (match-str (and (stringp query) (consult--split-escaped query) nil))
@@ -58,8 +56,7 @@ Description of Arguments:
     str))
 
 (cl-defun consult-omni--browser-history-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Fetch search results for INPUT from browser history.
-"
+  "Fetch search results for INPUT from browser history."
  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (browser (or (plist-get opts :browser) browser-hist-default-browser))
@@ -91,8 +88,7 @@ Description of Arguments:
                             :group #'consult-omni--group-function
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-browser-history' module
 

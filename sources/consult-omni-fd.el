@@ -34,18 +34,15 @@ Similar to `consult-fd-args' bur for consult-omni."
           candidates))
 
 (defun consult-omni--fd-preview (cand)
-  "Preview function for `consult-omni-find'.
-"
+  "Preview function for `consult-omni-find'."
   (funcall (consult--file-preview) 'preview cand))
 
 (defun consult-omni--fd-callback (cand)
   "Callback for `consult-omni-find'."
-  (consult--file-action cand)
-  )
+  (consult--file-action cand))
 
 (cl-defun consult-omni--fd-builder (input &rest args &key callback &allow-other-keys)
-  "Makes builder command line args for “fd”.
-"
+  "Makes builder command line args for “fd”."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -66,8 +63,7 @@ Similar to `consult-fd-args' bur for consult-omni."
                                           (and hidden (list "--hidden"))
                                           (and case-sensitive (list "--case-sensitive"))
                                           (and exclude (list (concat "--exclude " exclude))))))
-    (funcall (consult--fd-make-builder paths) query)
-    ))
+    (funcall (consult--fd-make-builder paths) query)))
 
 ;; Define the Find Source
 (consult-omni-define-source "fd"
@@ -87,9 +83,11 @@ Similar to `consult-fd-args' bur for consult-omni."
                             :group #'consult-omni--group-function
                             :sort t
                             :static 'both
-                            :enabled (lambda () (if (or (executable-find "fdfind") (executable-find "fd")) t nil))
-                            :annotate nil
-                            )
+                            :enabled (lambda () (if (or (executable-find "fdfind")
+                                                        (executable-find "fd"))
+                                                    t
+                                                  nil))
+                            :annotate nil)
 
 ;;; provide `consult-omni-fd' module
 

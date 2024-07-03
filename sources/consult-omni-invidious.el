@@ -22,8 +22,7 @@
 "URL to fetch “Invidious” API servers")
 
 (defun consult-omni--invidious-get-servers (&optional rotate)
-  "Get list of Invidious API servers.
-"
+  "Get list of Invidious API servers."
   (when (and consult-omni-invidious-servers rotate)
     (setq consult-omni-invidious-servers
           (nconc (cdr consult-omni-invidious-servers)
@@ -41,14 +40,11 @@
                :callback (lambda (attrs)
                            (delq nil (mapcar (lambda (item)
                                                (when (equal (gethash "api" (cadr item)) t)
-                                                 (gethash "uri" (cadr item))
-                                                 )
-
-                                               ) attrs))
-                           ))))))
+                                                 (gethash "uri" (cadr item))))
+                                             attrs))))))))
 
 (cl-defun consult-omni--invidious-format-candidate (&rest args &key source type query title snippet channeltitle date subcount videocount viewcount length face &allow-other-keys)
-"Formats a candidate for `consult-omni-invidious' commands.
+  "Formats a candidate for `consult-omni-invidious' commands.
 
 Description of Arguments:
 
@@ -64,9 +60,7 @@ Description of Arguments:
   VIDEOCOUNT   the number of videos in a playlist
   VIEWCOUNT    the number of times a video is viewed
   LENGTH       the duration of a  video in seconds
-  FACE         the face to apply to TITLE
-
-"
+  FACE         the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
          (match-str (if (stringp query) (consult--split-escaped query) nil))
@@ -74,14 +68,16 @@ Description of Arguments:
          (viewcount-str (and viewcount (consult-omni--numbers-human-readable (or viewcount 0) "views")))
          (subcount-str (and subcount (consult-omni--numbers-human-readable (or subcount 0) "subs")))
          (stats (and type
-                    (stringp type)
-                    (propertize
-                     (consult-omni--set-string-width (pcase type
-                      ("video" (format "%s" (or viewcount-str "0 views")))
-                      ("playlist" (format "%s" (or videocount-str "0 videos")))
-                      ("channel" (format "%s" (or subcount-str "0 subscriptions")))
-                      (_ "")) 10)
-                     'face 'consult-omni-domain-face)))
+                     (stringp type)
+                     (propertize
+                      (consult-omni--set-string-width
+                       (pcase type
+                         ("video" (format "%s" (or viewcount-str "0 views")))
+                         ("playlist" (format "%s" (or videocount-str "0 videos")))
+                         ("channel" (format "%s" (or subcount-str "0 subscriptions")))
+                         (_ ""))
+                       10)
+                      'face 'consult-omni-domain-face)))
          (length (or
                   (and (numberp length) (seconds-to-string length))
                   (and (equal type "playlist") "[PLAYLIST]")
@@ -102,8 +98,7 @@ Description of Arguments:
                       (when length (concat "\s" length))
                       (unless (string-empty-p stats) (concat "\s" stats))
                       (when snippet (concat "\s\s" snippet))
-                      (concat "\t" source)))
-         )
+                      (concat "\t" source))))
     (if consult-omni-highlight-matches
         (cond
          ((listp match-str)
@@ -176,15 +171,16 @@ Description of Arguments:
                                                       (date (gethash "published" item))
                                                       (date (when date (format-time-string "%Y-%m-%d" (seconds-to-time date))))
                                                       (url (cond
-                                                            ((and playlistid videoid) (consult-omni--make-url-string consult-omni-youtube-watch-url `(("v" . ,videoid)
-                                                                                                                                                      ("list" . ,playlistid))))
+                                                            ((and playlistid videoid)
+                                                             (consult-omni--make-url-string
+                                                              consult-omni-youtube-watch-url
+                                                              `(("v" . ,videoid)
+                                                                ("list" . ,playlistid))))
                                                             (playlistid (consult-omni--make-url-string consult-omni-youtube-watch-url `(("list" . ,playlistid))))
                                                             (videoid (consult-omni--make-url-string consult-omni-youtube-watch-url `(("v" . ,videoid))))
-
                                                             (channelid (concat consult-omni-youtube-channel-url channelid))))
                                                       (search-url (consult-omni--make-url-string server-url params))
                                                       (description (gethash "description" item))
-
                                                       (decorated (consult-omni--invidious-format-candidate :source source :type item-type :query query :title title :snippet description :channeltitle channeltitle :date date :subcount subcount :videocount videocount :viewcount viewcount :length videolength)))
                                                    (propertize decorated
                                                                :source source
@@ -200,12 +196,10 @@ Description of Arguments:
                                                                :views viewcount
                                                                :videocount videocount
                                                                :subscriptions subcount)))
-
                                                raw-results)))
                                  (when (and annotated-results (functionp callback))
                                    (funcall callback annotated-results))
-                                 annotated-results)
-                               ))))
+                                 annotated-results)))))
 
 ;; Define the Invidious Source
 (consult-omni-define-source "Invidious"
@@ -222,8 +216,7 @@ Description of Arguments:
                             :group #'consult-omni--group-function
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-invidious' module
 

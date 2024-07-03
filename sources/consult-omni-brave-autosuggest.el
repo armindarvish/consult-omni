@@ -28,8 +28,7 @@ See URL `https://brave.com/search/api/' for more info"
 "API URL for Brave AutoSuggest")
 
 (defun consult-omni--brave-autosuggest-return (cand)
-  "Return the string of CAND with no properties
-"
+  "Return the string of CAND with no properties"
 (when (stringp cand)
   (substring-no-properties (string-trim cand))))
 
@@ -40,8 +39,7 @@ See URL `https://brave.com/search/api/' for more info"
       cand))
 
 (cl-defun consult-omni--brave-autosuggest-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Fetch search results for INPUT from Brave Autosuggest API.
-"
+  "Fetch search results for INPUT from Brave Autosuggest API."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -58,8 +56,7 @@ See URL `https://brave.com/search/api/' for more info"
                (headers `(("User-Agent" . "Emacs:consult-omni/0.1 (Emacs consult-omni package; https://github.com/armindarvish/consult-omni)")
                           ("Accept" . "application/json")
                           ("Accept-Encoding" . "gzip")
-                          ("X-Subscription-Token" . ,(consult-omni-expand-variable-function consult-omni-brave-autosuggest-api-key))
-                          )))
+                          ("X-Subscription-Token" . ,(consult-omni-expand-variable-function consult-omni-brave-autosuggest-api-key)))))
     (consult-omni--fetch-url consult-omni-brave-autosuggest-api-url consult-omni-http-retrieve-backend
                              :encoding 'utf-8
                              :params params
@@ -90,7 +87,6 @@ See URL `https://brave.com/search/api/' for more info"
                                                                     :url url
                                                                     :search-url search-url
                                                                     :query query)))
-
                                                     raw-results)))
                                  (funcall callback annotated-results)
                                  annotated-results)))))
@@ -111,8 +107,7 @@ See URL `https://brave.com/search/api/' for more info"
                             :select-hist t
                             :enabled (lambda () (bound-and-true-p consult-omni-brave-autosuggest-api-key))
                             :sort t
-                            :static nil
-                            )
+                            :static nil)
 
 ;;; provide `consult-omni-brave-autosuggest' module
 

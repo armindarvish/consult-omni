@@ -69,7 +69,6 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                                                                     :url url
                                                                     :search-url search-url
                                                                     :query query)))
-
                                                     raw-results)))
                                  (funcall callback annotated-results)
                                  annotated-results)))))
@@ -90,8 +89,7 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                             :group #'consult-omni--group-function
                             :enabled (lambda () (bound-and-true-p consult-omni-google-autosuggest-api-url))
                             :sort t
-                            :static nil
-                            )
+                            :static nil)
 
 ;;; provide `consult-omni-google-autosuggest' module
 

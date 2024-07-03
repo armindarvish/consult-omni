@@ -17,18 +17,17 @@
 (require 'consult-omni)
 
 (defun consult-omni--grep-make-builder (make-builder &optional dir)
-  "General builder for grep and similar process.
-"
+  "General builder for grep and similar process."
   (pcase-let* ((`(_ ,paths ,dir) (consult--directory-prompt "" dir))
                (paths (if dir
                           (mapcar (lambda (path) (file-truename (concat dir path))) paths)
-                        paths))
-               )
-    (funcall make-builder paths)
-    ))
+                        paths)))
+    (funcall make-builder paths)))
 
 (defun consult-omni--grep-transform (candidates &optional query)
-  "Formats candidates pf `consult-omni-grep'."
+  "Formats candidates pf `consult-omni-grep'.
+
+Adopted from `consult--grep-format'."
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (file "")
          (file-len 0)
@@ -49,11 +48,9 @@
             (setq file (or (and (buffer-file-name)
                                 (file-relative-name (match-string 1 str) (file-name-directory (buffer-file-name))))
                            (file-relative-name (match-string 1 str))))
-
             (when (and file (stringp file) (> file-len (* frame-width-percent 2)))
               (setq file (consult-omni--set-string-width file (* frame-width-percent 2) (* frame-width-percent 1))))
-            (setq file-len (length file))
-            )
+            (setq file-len (length file)))
           (let* ((line (propertize (match-string 2 str) 'face 'consult-line-number))
                  (ctx (= (aref str (match-beginning 3)) ?-))
                  (sep (if ctx "-" ":"))
@@ -61,8 +58,7 @@
                  (line-len (length line)))
             (when (length> content consult-grep-max-columns)
               ;; (setq content (substring content 0 consult-grep-max-columns))
-              (setq content  (consult-omni--set-string-width content consult-grep-max-columns))
-              )
+              (setq content  (consult-omni--set-string-width content consult-grep-max-columns)))
             (setq str (concat file sep line sep content))
             ;; Store file name in order to avoid allocations in `consult--prefix-group'
             (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) str)
@@ -73,20 +69,15 @@
     result))
 
 (defun consult-omni--grep-preview (cand)
-  "Grep preview function.
-"
-  (funcall  (consult--jump-state) 'preview (consult--grep-position (cdr (get-text-property 0 'multi-category cand))))
-  )
+  "Grep preview function."
+  (funcall  (consult--jump-state) 'preview (consult--grep-position (cdr (get-text-property 0 'multi-category cand)))))
 
 (defun consult-omni--grep-callback (cand)
-  "Grep callback function.
-"
-  (funcall  (consult--jump-state) 'return (consult--grep-position (cdr (get-text-property 0 'multi-category cand))))
-  )
+  "Grep callback function."
+  (funcall  (consult--jump-state) 'return (consult--grep-position (cdr (get-text-property 0 'multi-category cand)))))
 
 (cl-defun consult-omni--grep-builder (input &rest args &key callback &allow-other-keys)
-  "Makes builder command line args for “grep”.
-"
+  "Makes builder command line args for “grep”."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -94,10 +85,8 @@
                (dir (if dir (file-truename (format "%s" dir))))
                (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (default-directory (or dir default-directory))
-               )
-    (funcall (consult-omni--grep-make-builder #'consult--grep-make-builder dir) query)
-    ))
+               (default-directory (or dir default-directory)))
+    (funcall (consult-omni--grep-make-builder #'consult--grep-make-builder dir) query)))
 
 ;; Define the Grep Source
 (consult-omni-define-source "grep"
@@ -120,8 +109,7 @@
                             :enabled (lambda () (if (and (executable-find "grep")
                                                          (fboundp 'consult-grep))
                                                     t nil))
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-grep' module
 
