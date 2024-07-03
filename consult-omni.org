@@ -197,6 +197,10 @@ This variable is a list of strings or symbols;
   "Should `consult-omni' highlight search queries in the minibuffer?"
   :type 'boolean)
 
+(defcustom consult-omni-highlight-match-ignore-case t
+  "Should `consult-omni' ignore case when highlighting matches?"
+  :type 'boolean)
+
 (defcustom consult-omni-default-interactive-command #'consult-omni-multi
   "Which command should `consult-omni' call?"
   :type '(choice (function :tag "(Default) multi-source dynamic search"  consult-omni-multi)
@@ -549,19 +553,21 @@ Case is ignored, if ignore-case is non-nil.
 If IGNORE-CASE is non-nil, it uses case-insensitive match.
 This is provided for convinience, if needed in formating candidates
 or preview buffers."
-  (with-current-buffer (or (get-buffer buffer) (current-buffer))
-    (remove-overlays (point-min) (point-max) 'consult-omni-overlay t)
-    (goto-char (point-min))
-    (let ((case-fold-search ignore-case)
-          (consult-omni-overlays (list)))
+  (let ((buffer (or (and buffer (get-buffer buffer)) (current-buffer))))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (save-mark-and-excursion
+          (remove-overlays (point-min) (point-max) 'consult-omni-overlay t)
+          (goto-char (point-min))
+          (let ((case-fold-search ignore-case)
+                (consult-omni-overlays (list)))
       (while (search-forward match-str nil t)
         (when-let* ((m (match-data))
                     (beg (car m))
                     (end (cadr m))
-                    (overlay (make-overlay beg end))
-                    )
+                    (overlay (make-overlay beg end)))
           (overlay-put overlay 'consult-omni-overlay t)
-          (overlay-put overlay 'face 'consult-omni-highlight-match-face))))))
+          (overlay-put overlay 'face 'consult-omni-highlight-match-face)))))))))
 
 (defun consult-omni-overlays-toggle (&optional buffer)
   "Toggles overlay highlights in consult-omni view/preview buffers."
@@ -652,6 +658,43 @@ Ommits keys in IGNORE-KEYS."
       (funcall var)
     var))
 #+end_src
+**** pulse
+***** pulse-regexp
+#+begin_src emacs-lisp
+(defun consult-omni--pulse-regexp (regexp)
+  "Finds and pulses REGEXP"
+  (goto-char (point-min))
+  (while (re-search-forward regexp nil t)
+    (when-let* ((m (match-data))
+           (beg (car m))
+           (end (cadr m))
+           (ov (make-overlay beg end))
+           (pulse-delay 0.075)
+           )
+      (pulse-momentary-highlight-overlay ov 'highlight))
+    ))
+#+end_src
+***** pulse-region
+#+begin_src emacs-lisp
+(defun consult-omni--pulse-region (beg end)
+  "Finds and pulses region from BEG to END"
+  (let ((ov (make-overlay beg end))
+        (pulse-delay 0.075)
+        )
+      (pulse-momentary-highlight-overlay ov 'highlight))
+    )
+
+#+end_src
+***** pulse line
+#+begin_src emacs-lisp
+(defun consult-omni--pulse-line ()
+"Pulses line at point momentarily"
+(let* ((pulse-delay 0.055)
+      (ov (make-overlay (car (bounds-of-thing-at-point 'line)) (cdr (bounds-of-thing-at-point 'line)))))
+(pulse-momentary-highlight-overlay ov 'highlight))
+)
+#+end_src
+
 *** http requests
 **** backends
 ***** url retrieve  backend
@@ -4881,48 +4924,8 @@ Similar to `consult-find-args' bur for consult-omni."
 ****** transform
 #+begin_src emacs-lisp
 (defun consult-omni--git-grep-transform (candidates &optional query)
-  "Formats candidates of `consult-omni-git-grep'.
-
-Adopted from `consult--grep-format'."
-  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
-         (file "")
-         (file-len 0)
-         (file-str "")
-         result)
-    (save-match-data
-      (dolist (str candidates)
-        (when (and (string-match consult--grep-match-regexp str)
-                   ;; Filter out empty context lines
-                   (or (/= (aref str (match-beginning 3)) ?-)
-                       (/= (match-end 0) (length str))))
-          ;; We share the file name across candidates to reduce
-          ;; the amount of allocated memory.
-          (unless (and (= file-len (- (match-end 1) (match-beginning 1)))
-                       (eq t (compare-strings
-                              file 0 file-len
-                              str (match-beginning 1) (match-end 1) nil)))
-            (setq file (or (and (buffer-file-name)
-                                (file-relative-name (match-string 1 str) (file-name-directory (buffer-file-name))))
-                           (file-relative-name (match-string 1 str))))
-            (when (and file (stringp file) (> file-len (* frame-width-percent 2)))
-              (setq file (consult-omni--set-string-width file (* frame-width-percent 2) (* frame-width-percent 1))))
-            (setq file-len (length file)))
-          (let* ((line (propertize (match-string 2 str) 'face 'consult-line-number))
-                 (ctx (= (aref str (match-beginning 3)) ?-))
-                 (sep (if ctx "-" ":"))
-                 (content (substring str (match-end 0)))
-                 (line-len (length line)))
-            (when (length> content consult-grep-max-columns)
-              ;; (setq content (substring content 0 consult-grep-max-columns))
-              (setq content  (consult-omni--set-string-width content consult-grep-max-columns)))
-            (setq str (concat file sep line sep content))
-            ;; Store file name in order to avoid allocations in `consult--prefix-group'
-            (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) str)
-            ;; (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number str)
-            (when ctx
-              (add-face-text-property (+ 2 file-len line-len) (length str) 'consult-grep-context 'append str))
-            (push (propertize str :source "git-grep" :title query) result)))))
-    result))
+  "Formats candidates of `consult-omni-git-grep'."
+  (consult-omni--grep-format candidates :source "git-grep" :query query :regexp-pattern consult--grep-match-regexp))
 #+end_src
 
 ***** items
@@ -5004,6 +5007,53 @@ Adopted from `consult--grep-format'."
 (require 'consult-omni)
 #+end_src
 ***** helper functions
+****** format
+#+begin_src emacs-lisp
+(cl-defun consult-omni--grep-format (candidates &rest args &key source query regexp-pattern)
+  "Formats candidates for grep based commands.
+
+Adopted from `consult--grep-format'."
+(let* ((frame-width-percent (floor (* (frame-width) 0.1)))
+         (file "")
+         (file-len 0)
+         (file-str)
+         (cand)
+         result)
+    (save-match-data
+      (dolist (str candidates)
+        (when (and (not (string-prefix-p "Error" str))
+                   (not (string-prefix-p "Syntax Error" str))
+                   (string-match regexp-pattern str)
+                   ;; Filter out empty context lines
+                   (or (/= (aref str (match-beginning 3)) ?-)
+                       (/= (match-end 0) (length str))))
+          ;; We share the file name across candidates to reduce
+          ;; the amount of allocated memory.
+          (unless (and (= file-len (- (match-end 1) (match-beginning 1)))
+                       (eq t (compare-strings
+                              file 0 file-len
+                              str (match-beginning 1) (match-end 1) nil)))
+            (setq file (file-truename (match-string 1 str)))
+            (if (and file (stringp file) (> file-len (* frame-width-percent 2)))
+              (setq file-str (consult-omni--set-string-width (string-remove-prefix (file-truename default-directory) file) (* frame-width-percent 2) (* frame-width-percent 1)))
+              (setq file-str (string-remove-prefix (file-truename default-directory) file)))
+            (setq file-len (length file-str)))
+          (let* ((line (match-string 2 str))
+                 (ctx (= (aref str (match-beginning 3)) ?-))
+                 (sep (if ctx "-" ":"))
+                 (content (substring str (match-end 0)))
+                 (line-len (length line)))
+            (when (length> content consult-grep-max-columns)
+              (setq content  (consult-omni--set-string-width content consult-grep-max-columns)))
+             (setq cand (concat file-str sep line sep content))
+            ;; Store file name in order to avoid allocations in `consult--prefix-group'
+            (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) cand)
+            (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number cand)
+            (when ctx
+              (add-face-text-property (+ 2 file-len line-len) (length str) 'consult-grep-context 'append cand))
+            (push (propertize cand :source source :title cand :query query :file file :pos line :content content) result)))))
+    result))
+#+end_src
 ****** grep-builder
 #+begin_src emacs-lisp
 (defun consult-omni--grep-make-builder (make-builder &optional dir)
@@ -5020,66 +5070,53 @@ Adopted from `consult--grep-format'."
 ****** transform
 #+begin_src emacs-lisp
 (defun consult-omni--grep-transform (candidates &optional query)
-  "Formats candidates pf `consult-omni-grep'.
-
-Adopted from `consult--grep-format'."
-  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
-         (file "")
-         (file-len 0)
-         (file-str "")
-         result)
-    (save-match-data
-      (dolist (str candidates)
-        (when (and (string-match consult--grep-match-regexp str)
-                   ;; Filter out empty context lines
-                   (or (/= (aref str (match-beginning 3)) ?-)
-                       (/= (match-end 0) (length str))))
-          ;; We share the file name across candidates to reduce
-          ;; the amount of allocated memory.
-          (unless (and (= file-len (- (match-end 1) (match-beginning 1)))
-                       (eq t (compare-strings
-                              file 0 file-len
-                              str (match-beginning 1) (match-end 1) nil)))
-            (setq file (or (and (buffer-file-name)
-                                (file-relative-name (match-string 1 str) (file-name-directory (buffer-file-name))))
-                           (file-relative-name (match-string 1 str))))
-            (when (and file (stringp file) (> file-len (* frame-width-percent 2)))
-              (setq file (consult-omni--set-string-width file (* frame-width-percent 2) (* frame-width-percent 1))))
-            (setq file-len (length file)))
-          (let* ((line (propertize (match-string 2 str) 'face 'consult-line-number))
-                 (ctx (= (aref str (match-beginning 3)) ?-))
-                 (sep (if ctx "-" ":"))
-                 (content (substring str (match-end 0)))
-                 (line-len (length line)))
-            (when (length> content consult-grep-max-columns)
-              ;; (setq content (substring content 0 consult-grep-max-columns))
-              (setq content  (consult-omni--set-string-width content consult-grep-max-columns)))
-            (setq str (concat file sep line sep content))
-            ;; Store file name in order to avoid allocations in `consult--prefix-group'
-            (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) str)
-            ;; (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number str)
-            (when ctx
-              (add-face-text-property (+ 2 file-len line-len) (length str) 'consult-grep-context 'append str))
-            (push (propertize str :source "grep" :title query) result)))))
-    result))
+  "Formats candidates for `consult-omni-grep'."
+  (consult-omni--grep-format candidates :source "grep" :query query :regexp-pattern consult--grep-match-regexp))
 #+end_src
-
-
-
 ****** preview
 #+begin_src emacs-lisp
 
 (defun consult-omni--grep-preview (cand)
-  "Grep preview function."
-  (funcall  (consult--jump-state) 'preview (consult--grep-position (cdr (get-text-property 0 'multi-category cand)))))
+  "Preview function for `consult-omni-grep'."
+  (let ((file (get-text-property 0 :file cand))
+        (pos (get-text-property 0 :pos cand))
+        (content (get-text-property 0 :content cand))
+        (query (get-text-property 0 :query cand)))
+    (with-current-buffer (funcall #'consult--file-action file)
+      (if (buffer-narrowed-p) (widen))
+      (and (stringp pos) (goto-line (string-to-number pos)))
+      (when (derived-mode-p 'org-mode)
+        (org-fold-show-entry))
+      (recenter nil t)
+      (when consult-omni-highlight-matches
+        (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
+        (add-to-history 'search-ring (isearch-string-propertize query)))
+     (consult-omni--pulse-line))
+nil))
 
 #+end_src
 
 ****** callback
 #+begin_src emacs-lisp
+
 (defun consult-omni--grep-callback (cand)
-  "Grep callback function."
-  (funcall  (consult--jump-state) 'return (consult--grep-position (cdr (get-text-property 0 'multi-category cand)))))
+  "Callback function for `consult-omni-grep'."
+  (let ((file (get-text-property 0 :file cand))
+        (pos (get-text-property 0 :pos cand))
+        (content (get-text-property 0 :content cand))
+        (query (get-text-property 0 :query cand)))
+    (with-current-buffer (funcall #'consult--file-action file)
+       (if (buffer-narrowed-p) (widen))
+       (and (stringp pos) (goto-line (string-to-number pos)))
+       (when (derived-mode-p 'org-mode)
+        (org-fold-show-entry))
+       (recenter nil t)
+      (when consult-omni-highlight-matches
+        (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
+        (add-to-history 'search-ring (isearch-string-propertize query))
+        (consult-omni-overlays-toggle))
+      (consult-omni--pulse-line))
+nil))
 #+end_src
 
 ***** items
@@ -5545,48 +5582,8 @@ See `consult-locate-args' for example."
 ****** transform
 #+begin_src emacs-lisp
 (defun consult-omni--ripgrep-transform (candidates &optional query)
-  "Formats candidates of `consult-omni-ripgrep'.
-
-Adopted from `consult--grep-format'."
-  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
-         (file "")
-         (file-len 0)
-         (file-str "")
-         result)
-    (save-match-data
-      (dolist (str candidates)
-        (when (and (string-match consult--grep-match-regexp str)
-                   ;; Filter out empty context lines
-                   (or (/= (aref str (match-beginning 3)) ?-)
-                       (/= (match-end 0) (length str))))
-          ;; We share the file name across candidates to reduce
-          ;; the amount of allocated memory.
-          (unless (and (= file-len (- (match-end 1) (match-beginning 1)))
-                       (eq t (compare-strings
-                              file 0 file-len
-                              str (match-beginning 1) (match-end 1) nil)))
-            (setq file (or (and (buffer-file-name)
-                                (file-relative-name (match-string 1 str) (file-name-directory (buffer-file-name))))
-                           (file-relative-name (match-string 1 str))))
-            (when (and file (stringp file) (> file-len (* frame-width-percent 2)))
-              (setq file (consult-omni--set-string-width file (* frame-width-percent 2) (* frame-width-percent 1))))
-            (setq file-len (length file)))
-          (let* ((line (propertize (match-string 2 str) 'face 'consult-line-number))
-                 (ctx (= (aref str (match-beginning 3)) ?-))
-                 (sep (if ctx "-" ":"))
-                 (content (substring str (match-end 0)))
-                 (line-len (length line)))
-            (when (length> content consult-grep-max-columns)
-              ;; (setq content (substring content 0 consult-grep-max-columns))
-              (setq content  (consult-omni--set-string-width content consult-grep-max-columns)))
-            (setq str (concat file sep line sep content))
-            ;; Store file name in order to avoid allocations in `consult--prefix-group'
-            (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) str)
-            ;; (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number str)
-            (when ctx
-              (add-face-text-property (+ 2 file-len line-len) (length str) 'consult-grep-context 'append str))
-            (push (propertize str :source "ripgrep" :title query) result)))))
-    result))
+  "Formats candidates of `consult-omni-ripgrep'."
+(consult-omni--grep-format candidates :source "ripgrep" :query query :regexp-pattern consult--grep-match-regexp))
 #+end_src
 
 ***** items
@@ -5640,6 +5637,185 @@ Adopted from `consult--grep-format'."
 (add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-ripgrep)
 ;;; consult-omni-ripgrep.el ends here
 #+end_src
+
+
+**** consult-ripgrep-all
+:PROPERTIES:
+:header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-rga.el
+:END:
+***** header
+#+begin_src emacs-lisp
+;;; consult-omni-rga.el --- Consulting Rga Command -*- lexical-binding: t -*-
+
+;; Copyright (C) 2024 Armin Darvish
+
+;; Author: Armin Darvish
+;; Maintainer: Armin Darvish
+;; Created: 2024
+;; Version: 0.1
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1"))
+;; Homepage: https://github.com/armindarvish/consult-omni
+;; Keywords: convenience
+
+;;; Commentary:
+
+;;; Code:
+
+(require 'consult-omni)
+(require 'consult-omni-grep)
+#+end_src
+***** variables
+****** custom
+#+begin_src emacs-lisp
+(defconst consult-omni-rga-match-regexp "\\`\\(?:\\./\\)?\\([^\n\0]+\\)\0\\([0-9]+\\)\\([-:]\\)\\([pP]age\s\\)?\\([0-9]+\\)?\\(.*\\)[-:\0]"
+  "Regexp used to match file and line of grep output.")
+
+(defcustom consult-omni-rga-args
+"rga --null --line-buffered --color=never --max-columns=1000 --path-separator /\
+   --smart-case --no-heading --line-number --with-filename"
+  "Command line arguments for rga (ripgrep-all), see `consult-omni-rga'.
+The dynamically computed arguments are appended.
+Can be either a string, or a list of strings or expressions."
+  :type '(choice string (repeat (choice string sexp))))
+
+#+end_src
+****** other
+***** helper functions
+****** transform
+#+begin_src emacs-lisp
+(defun consult-omni--rga-transform (candidates &optional query)
+  "Formats candidates of `consult-omni-rga'."
+(consult-omni--grep-format candidates :source "rga" :query query :regexp-pattern consult-omni-rga-match-regexp))
+#+end_src
+
+****** preview
+#+begin_src emacs-lisp
+
+(defun consult-omni--rga-preview (cand)
+  "Preview function for `consult-omni-rga'."
+  (let ((file (get-text-property 0 :file cand))
+        (pos (get-text-property 0 :pos cand))
+        (page (get-text-property 0 :page cand))
+        (content (get-text-property 0 :content cand))
+        (query (get-text-property 0 :query cand)))
+    (with-current-buffer (funcall #'consult--file-action file)
+     (cond
+     ((string-suffix-p ".pdf" file)
+      (pcase major-mode
+        ('doc-view-mode
+         (and (stringp page) (doc-view-goto-page (string-to-number page))))
+        ('pdf-view-mode
+         (and (stringp page) (pdf-view-goto-page (string-to-number page)))
+         (let ((matches (pdf-isearch-search-page query)))
+           (add-to-history 'search-ring (isearch-string-propertize query))
+           (when (listp matches)
+             (pdf-isearch-hl-matches (car-safe matches) matches t)
+             (pdf-isearch-focus-match (car-safe matches)))))
+        (_ nil)))
+     (t
+      (if (buffer-narrowed-p) (widen))
+      (and (stringp pos) (goto-line (string-to-number pos)))
+      (when (derived-mode-p 'org-mode)
+        (org-fold-show-entry))
+      (recenter nil t)
+      (when consult-omni-highlight-matches
+        (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
+        (add-to-history 'search-ring (isearch-string-propertize query)))
+      (consult-omni--pulse-line)
+      )))
+nil))
+#+end_src
+
+****** callback
+#+begin_src emacs-lisp
+(defun consult-omni--rga-callback (cand)
+  "Callback function for `consult-omni-rga'."
+  (let ((file (get-text-property 0 :file cand))
+        (pos (get-text-property 0 :pos cand))
+        (page (get-text-property 0 :page cand))
+        (content (get-text-property 0 :content cand))
+        (query (get-text-property 0 :query cand)))
+    (funcall  #'consult--file-action file)
+    (cond
+     ((string-suffix-p ".pdf" file)
+      (pcase major-mode
+        ('doc-view-mode
+         (and (stringp page) (doc-view-goto-page (string-to-number page))))
+        ('pdf-view-mode
+         (and (stringp page) (pdf-view-goto-page (string-to-number page)))
+         (let ((matches (pdf-isearch-search-page query)))
+           (add-to-history 'search-ring (isearch-string-propertize query))
+           (when (listp matches)
+             (pdf-isearch-hl-matches (car-safe matches) matches t)
+             (pdf-isearch-focus-match (car-safe matches)))))
+        (_ nil)))
+     (t
+      (if (buffer-narrowed-p) (widen))
+      (and (stringp pos) (goto-line (string-to-number pos)))
+      (when (derived-mode-p 'org-mode)
+        (org-fold-show-entry))
+      (recenter nil t)
+      (when consult-omni-highlight-matches
+        (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
+        (add-to-history 'search-ring (isearch-string-propertize query))
+        (consult-omni-overlays-toggle))
+      (consult-omni--pulse-line)
+      ))))
+#+end_src
+
+***** items
+#+begin_src emacs-lisp
+(cl-defun consult-omni--rga-builder (input &rest args &key callback &allow-other-keys)
+  "Makes builder command line args for “ripgrep”."
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts))
+               (count (plist-get opts :count))
+               (dir (plist-get opts :dir))
+               (dir (if dir (file-truename (format "%s" dir))))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-default-count))
+               (default-directory (or dir default-directory))
+               (consult-ripgrep-args "rga --null --line-buffered --color=never --max-columns=1000 --path-separator /\ --smart-case --no-heading --line-number --with-filename"))
+    (funcall (consult-omni--grep-make-builder #'consult--ripgrep-make-builder dir) query)))
+#+end_src
+
+
+***** define source
+#+begin_src emacs-lisp
+
+;; Define the Ripgrep Source
+(consult-omni-define-source "rga"
+                            :narrow-char ?r
+                            :type 'async
+                            :require-match t
+                            :face 'consult-omni-engine-title-face
+                            :request #'consult-omni--rga-builder
+                            :transform #'consult-omni--rga-transform
+                            :on-preview #'consult-omni--rga-preview
+                            :on-return #'identity
+                            :on-callback #'consult-omni--rga-callback
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :group #'consult-omni--group-function
+                            :enabled (lambda () (if (and (executable-find "rga")
+                                                        (fboundp 'consult--ripgrep-make-builder))
+                                                    t nil))
+                            :sort t
+                            :static 'both
+                            :annotate nil)
+#+end_src
+
+***** provide and footer
+#+begin_src emacs-lisp
+;;; provide `consult-omni-rga' module
+
+(provide 'consult-omni-rga)
+
+(add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-rga)
+;;; consult-omni-rga.el ends here
+#+end_src
+
 
 
 *** consult-notes

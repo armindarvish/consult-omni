@@ -178,6 +178,10 @@ This variable is a list of strings or symbols;
   "Should `consult-omni' highlight search queries in the minibuffer?"
   :type 'boolean)
 
+(defcustom consult-omni-highlight-match-ignore-case t
+  "Should `consult-omni' ignore case when highlighting matches?"
+  :type 'boolean)
+
 (defcustom consult-omni-default-interactive-command #'consult-omni-multi
   "Which command should `consult-omni' call?"
   :type '(choice (function :tag "(Default) multi-source dynamic search"  consult-omni-multi)
@@ -487,19 +491,21 @@ Case is ignored, if ignore-case is non-nil.
 If IGNORE-CASE is non-nil, it uses case-insensitive match.
 This is provided for convinience, if needed in formating candidates
 or preview buffers."
-  (with-current-buffer (or (get-buffer buffer) (current-buffer))
-    (remove-overlays (point-min) (point-max) 'consult-omni-overlay t)
-    (goto-char (point-min))
-    (let ((case-fold-search ignore-case)
-          (consult-omni-overlays (list)))
+  (let ((buffer (or (and buffer (get-buffer buffer)) (current-buffer))))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (save-mark-and-excursion
+          (remove-overlays (point-min) (point-max) 'consult-omni-overlay t)
+          (goto-char (point-min))
+          (let ((case-fold-search ignore-case)
+                (consult-omni-overlays (list)))
       (while (search-forward match-str nil t)
         (when-let* ((m (match-data))
                     (beg (car m))
                     (end (cadr m))
-                    (overlay (make-overlay beg end))
-                    )
+                    (overlay (make-overlay beg end)))
           (overlay-put overlay 'consult-omni-overlay t)
-          (overlay-put overlay 'face 'consult-omni-highlight-match-face))))))
+          (overlay-put overlay 'face 'consult-omni-highlight-match-face)))))))))
 
 (defun consult-omni-overlays-toggle (&optional buffer)
   "Toggles overlay highlights in consult-omni view/preview buffers."
@@ -576,6 +582,34 @@ Ommits keys in IGNORE-KEYS."
   (if (functionp var)
       (funcall var)
     var))
+
+(defun consult-omni--pulse-regexp (regexp)
+  "Finds and pulses REGEXP"
+  (goto-char (point-min))
+  (while (re-search-forward regexp nil t)
+    (when-let* ((m (match-data))
+           (beg (car m))
+           (end (cadr m))
+           (ov (make-overlay beg end))
+           (pulse-delay 0.075)
+           )
+      (pulse-momentary-highlight-overlay ov 'highlight))
+    ))
+
+(defun consult-omni--pulse-region (beg end)
+  "Finds and pulses region from BEG to END"
+  (let ((ov (make-overlay beg end))
+        (pulse-delay 0.075)
+        )
+      (pulse-momentary-highlight-overlay ov 'highlight))
+    )
+
+(defun consult-omni--pulse-line ()
+"Pulses line at point momentarily"
+(let* ((pulse-delay 0.055)
+      (ov (make-overlay (car (bounds-of-thing-at-point 'line)) (cdr (bounds-of-thing-at-point 'line)))))
+(pulse-momentary-highlight-overlay ov 'highlight))
+)
 
 (defun consult-omni--url-log (string)
   "Logs the response from `consult-omni-url-retrieve-sync'
