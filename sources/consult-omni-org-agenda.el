@@ -102,7 +102,7 @@ For example to get the date for tommorrow, next week, ..."
      ((equal query "=this year") (format-time-string "%Y" (current-time)))
      ((string-match "=\\([0-9]+\\) day[s]? ago" query)
       (consult-omni--org-agenda-relative-day (current-time) (string-to-number (match-string 1 query)) t))
-     ((string-match "=\\([0-9]+\\) day[s]? from now" query)
+     ((string-match "=\\([-+]?[0-9]+\\) day[s]? from now" query)
       (consult-omni--org-agenda-relative-day (current-time) (string-to-number (match-string 1 query)) nil))
      ((string-match "=around \\(.*\\)?" query)
       (when-let ((date (consult-omni--org-agenda-transform-query (concat "=" (match-string 1  query)))))

@@ -8100,7 +8100,7 @@ See `consult-omni--org-agenda-around' for more details."
 #+end_src
 **** helper functions
 
-***** date strings and regexps
+***** transform dates and queries
 ****** previous day
 #+begin_src emacs-lisp
 (defun consult-omni--org-agenda-previous-day (date)
@@ -8208,7 +8208,7 @@ For example to get the date for tommorrow, next week, ..."
      ((equal query "=this year") (format-time-string "%Y" (current-time)))
      ((string-match "=\\([0-9]+\\) day[s]? ago" query)
       (consult-omni--org-agenda-relative-day (current-time) (string-to-number (match-string 1 query)) t))
-     ((string-match "=\\([0-9]+\\) day[s]? from now" query)
+     ((string-match "=\\([-+]?[0-9]+\\) day[s]? from now" query)
       (consult-omni--org-agenda-relative-day (current-time) (string-to-number (match-string 1 query)) nil))
      ((string-match "=around \\(.*\\)?" query)
       (when-let ((date (consult-omni--org-agenda-transform-query (concat "=" (match-string 1  query)))))
