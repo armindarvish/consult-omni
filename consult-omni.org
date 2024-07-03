@@ -4074,6 +4074,14 @@ Description of Arguments:
   "Only show calculator results when the query result in a nunmber?"
   :type 'boolean)
 
+(defcustom consult-omni-calc-regexp-pattern "^=\\(.*\\)?"
+  "Regexp to detect calculator formula?
+
+The first capturing group will be used as input for `calc-eval'.
+If there is no capture group, the user's query will be used when matching."
+  :type '(choice (regexp :tag "(Default) formula after =" "^=\\(.*\\)?")
+                 (regexp :tag "Any string with digits, operators or brackets" "\\(.*[[:digit:]\/\*\+-=%^&$\(\{\[].*\\)")))
+
 (defcustom consult-omni-calc-message-errors nil
   "Whether to message errors for calc?
 
@@ -4117,7 +4125,8 @@ This uses `calc-eval' to return the result of input"
                (calc-eval-error t)
                (result)
                (annotated-result))
-    (when (string-match "[[:digit:]\/\*\+-=%^&$\(\{\[]" query nil t)
+    (when (string-match consult-omni-calc-regexp-pattern query nil)
+      (setq query (or (match-string 1 query) query))
       (condition-case err
           (if convert
               (cl-letf* (((symbol-function 'calc-convert-units)
