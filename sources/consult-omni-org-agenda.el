@@ -16,16 +16,98 @@
 
 (require 'consult-omni)
 
+(defcustom consult-omni-org-agenda-number-of-days-around 7
+  "Number of days to use for listing agenda items around a date.
+
+agenda items for +/- days around a given date will be listed.
+See `consult-omni--org-agenda-around' for more details."
+  :type 'integer)
+
+(defun consult-omni--org-agenda-previous-day (date)
+  "Get the date for one day before DATE"
+  (if (stringp date) (setq date  (date-to-time date)))
+  (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time date) (make-decoded-time :day -1)))))
+
 (defun consult-omni--org-agenda-next-day (date)
   "Get the date for the next day after DATE"
   (if (stringp date) (setq date  (date-to-time date)))
   (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time date) (make-decoded-time :day 1)))))
 
+(defun consult-omni--org-agenda-relative-day (date days past)
+  "Get the date for DAYS relative to DATE
+
+if PAST is non-nil get the date for DAYS days before DATE,
+otherwise get the date for DAYS days after DATE."
+  (if (stringp date) (setq date  (date-to-time date)))
+  (setq days (or (and (numberp days) days)
+                 (and (stringp days) (string-to-number days))))
+  (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time date) (make-decoded-time :day (if past (- 0 days) days))))))
+
+(defun consult-omni--org-agenda-begin-week (date)
+  "Get the date of the first day of the week for DATE"
+  (if (stringp date) (setq date  (date-to-time date)))
+  (let ((day-of-week (decoded-time-weekday (decode-time date))))
+    (consult-omni--org-agenda-relative-day date day-of-week t)))
+
+(defun consult-omni--org-agenda-begin-work-week (date)
+  "Get the date of the first working day of the week for DATE"
+  (consult-omni--org-agenda-next-day (consult-omni--org-agenda-begin-week date)))
+
+(defun consult-omni--org-agenda-next-week (date)
+  "Get the list of dates for the calendar week after DATE"
+  (consult-omni--org-agenda-week-of (consult-omni--org-agenda-relative-day date 7 nil)))
+
+(defun consult-omni--org-agenda-next-work-week (date)
+  "Get the list of dates for the work week after DATE"
+  (consult-omni--org-agenda-work-week-of (consult-omni--org-agenda-relative-day date 7 nil)))
+
 (defun consult-omni--org-agenda-week-of (date)
   "Get the dates one week starting at DATE"
-  (if (stringp date) (setq date  (date-to-time date)))
-  (cl-loop for d from 0 to 7
+  (if (stringp date) (setq date (date-to-time date)))
+  (cl-loop for d from 0 to 6
+           collect (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time (date-to-time (consult-omni--org-agenda-begin-week date))) (make-decoded-time :day d))))))
+
+(defun consult-omni--org-agenda-week-from (date)
+  "Get the dates one week starting at DATE"
+  (if (stringp date) (setq date (date-to-time date)))
+  (cl-loop for d from 0 to 6
            collect (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time date) (make-decoded-time :day d))))))
+
+(defun consult-omni--org-agenda-work-week-of (date)
+  "Get the dates one week starting at DATE"
+  (if (stringp date) (setq date (date-to-time date)))
+  (butlast (cdr (cl-loop for d from 0 to 6
+           collect (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time (date-to-time (consult-omni--org-agenda-begin-week date))) (make-decoded-time :day d))))))))
+
+(defun consult-omni--org-agenda-around (date days)
+  "Get the dates for (+/-)DAYS around  DATE"
+  (if (stringp date) (setq date (date-to-time date)))
+  (cl-loop for d from (- 0 days) to days
+           collect (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time (date-to-time (consult-omni--org-agenda-begin-week date))) (make-decoded-time :day d))))))
+
+(defun consult-omni--org-agenda-transform-query (query)
+  "Transform QUERY to what the user means.
+
+Tries to guess the dates based on user input query.
+For example to get the date for tommorrow, next week, ..."
+  (when (string-prefix-p "=" query)
+    (cond
+     ((equal query "=yesterday") (consult-omni--org-agenda-previous-day (current-time)))
+     ((equal query "=today") (format-time-string "%Y-%m-%d" (current-time)))
+     ((equal query "=tomorrow") (consult-omni--org-agenda-next-day (current-time)))
+     ((equal query "=this week") (mapconcat #'identity (consult-omni--org-agenda-week-of (current-time)) "\\|"))
+     ((equal query "=next week") (mapconcat #'identity (consult-omni--org-agenda-next-week (current-time)) "\\|"))
+     ((equal query "=next work week") (mapconcat #'identity (consult-omni--org-agenda-next-work-week (current-time)) "\\|"))
+     ((equal query "=this month") (format-time-string "%Y-%m" (current-time)))
+     ((equal query "=this year") (format-time-string "%Y" (current-time)))
+     ((string-match "=\\([0-9]+\\) day[s]? ago" query)
+      (consult-omni--org-agenda-relative-day (current-time) (string-to-number (match-string 1 query)) t))
+     ((string-match "=\\([0-9]+\\) day[s]? from now" query)
+      (consult-omni--org-agenda-relative-day (current-time) (string-to-number (match-string 1 query)) nil))
+     ((string-match "=around \\(.*\\)?" query)
+      (when-let ((date (consult-omni--org-agenda-transform-query (concat "=" (match-string 1  query)))))
+        (mapconcat #'identity (consult-omni--org-agenda-around (or (car-safe date) date) consult-omni-org-agenda-number-of-days-around) "\\|")))
+     (t nil))))
 
 (cl-defun consult-omni--org-agenda-format-candidate (&rest args &key source query title buffer todo prio tags filepath snippet sched dead face &allow-other-keys)
   "Formats a candidate for `consult-omni-org-agenda' commands.
@@ -108,13 +190,7 @@ Adopted from `consult-org--headings'."
                     (sched (cdr (assoc "TIMESTAMP" props)))
                     (dead (cdr (assoc "DEADLINE" props)))
                     (snippet nil)
-                    (query (cond
-                            ((equal query "today") (format-time-string "%Y-%m-%d" (current-time)))
-                            ((equal query "tomorrow") (consult-omni--org-agenda-next-day (current-time)))
-                            ((equal query "this week") (mapconcat #'identity (consult-omni--org-agenda-week-of (current-time)) "\\|"))
-                            ((equal query "this month") (format-time-string "%Y-%m" (current-time)))
-                            ((equal query "this year") (format-time-string "%Y" (current-time)))
-                            (t query))))
+                    (query (or (consult-omni--org-agenda-transform-query query) query)))
          (org-format-timestamp (org-timestamp-from-time (org-today)) "%Y")
          (if (string-match-p (concat ".*" query ".*") (concat todo " " prio " " _hl " " sched " " dead " " tags))
              (propertize (consult-omni--org-agenda-format-candidate :source source :query query :title title :buffer buffer :todo todo :prio prio :tags tags :filepath filepath :snippet snippet :sched sched :dead dead) :source source :title title :query query :url nil :search-url nil :tags tags :filepath filepath :marker marker))))
