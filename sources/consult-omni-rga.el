@@ -1,4 +1,4 @@
-;;; consult-omni-rga.el --- Consulting Rga Command -*- lexical-binding: t -*-
+;;; consult-omni-rga.el --- Consulting Ripgrep-all Command -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2024 Armin Darvish
 

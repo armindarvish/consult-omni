@@ -17,7 +17,7 @@
 (require 'consult-omni)
 (require 'consult-notes nil t)
 
-(defun consult-omni--org-roam-note-preview (cand)
+(defun consult-omni--consult-notes-org-roam-note-preview (cand)
   "Preview function for org-roam files."
   (if cand
       (let* ((title (get-text-property 0 :title cand))
@@ -25,7 +25,7 @@
         (if (org-roam-node-p node)
             (consult--file-action (org-roam-node-file node))))))
 
-(defun consult-omni--org-headings-preview (cand)
+(defun consult-omni--consult-notes-org-headings-preview (cand)
   "Preview function for org headings."
   (if cand
       (let* ((title (get-text-property 0 :title cand))
@@ -33,13 +33,13 @@
         (if marker
             (consult--jump marker)))))
 
-(defun consult-omni--org-roam-note-callback (cand &rest args)
+(defun consult-omni--consult-notes-org-roam-note-callback (cand &rest args)
   "Callback function for org-roam files."
   (let* ((title (get-text-property 0 :title cand))
          (node (org-roam-node-from-title-or-alias title)))
     (org-roam-node-open node)))
 
-(defun consult-omni--org-headings-callback (cand &rest args)
+(defun consult-omni--consult-notes-org-headings-callback (cand &rest args)
   "Callback function for org headings."
   (if cand
       (let* ((title (get-text-property 0 :title cand))
@@ -60,9 +60,9 @@
                                                  :face 'consult-omni-notes-title-face
                                                  :search-hist 'consult-omni--search-history
                                                  :select-hist 'consult-omni--selection-history
-                                                 :on-preview #'consult-omni--org-headings-preview
+                                                 :on-preview #'consult-omni--consult-notes-org-headings-preview
                                                  :on-return #'identity
-                                                 :on-callback #'consult-omni--org-headings-callback
+                                                 :on-callback #'consult-omni--consult-notes-org-headings-callback
                                                  :search-hist 'consult-omni--search-history
                                                  :select-hist 'consult-omni--selection-history
                                                  :preview-key 'consult-preview-key
@@ -78,9 +78,9 @@
                                                              :face 'consult-omni-notes-title-face
                                                              :search-hist 'consult-omni--search-history
                                                              :select-hist 'consult-omni--selection-history
-                                                             :on-preview #'consult-omni--org-roam-note-preview
+                                                             :on-preview #'consult-omni--consult-notes-org-roam-note-preview
                                                              :on-return #'identity
-                                                             :on-callback #'consult-omni--org-roam-note-callback
+                                                             :on-callback #'consult-omni--consult-notes-org-roam-note-callback
                                                              :preview-key 'consult-preview-key
                                                              :static 'both
                                                              :group #'consult-omni--group-function
