@@ -53,6 +53,7 @@
         'consult-omni-org-agenda
         'consult-omni-pubmed
         'consult-omni-ripgrep
+        'consult-omni-rga
         'consult-omni-scopus
         'consult-omni-stackoverflow
         'consult-omni-wikipedia

@@ -28,9 +28,7 @@ Adopted from `consult--grep-format'."
          result)
     (save-match-data
       (dolist (str candidates)
-        (when (and (not (string-prefix-p "Error" str))
-                   (not (string-prefix-p "Syntax Error" str))
-                   (string-match regexp-pattern str)
+        (when (and (string-match regexp-pattern str)
                    ;; Filter out empty context lines
                    (or (/= (aref str (match-beginning 3)) ?-)
                        (/= (match-end 0) (length str))))
