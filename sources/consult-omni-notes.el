@@ -16,6 +16,7 @@
 
 (require 'consult-omni)
 (require 'consult-omni-grep)
+(require 'consult-omni-ripgrep-all)
 
 (defcustom consult-omni-notes-files (apply #'append
                                            (when (bound-and-true-p consult-notes-file-dir-sources)
@@ -33,55 +34,69 @@
   "List of all note files for consult-omni-notes."
   :type '(repeat :tag "list of files" string))
 
-(defcustom consult-omni-notes-use-rg t
-  "Whether to use ripgrep when searching ntoes?"
+(defcustom consult-omni-notes-backend-command "rga"
+  "What command-line program to use for searching files?
+
+Can be either:
+  grep  uses grep as backend command
+  rg    uses ripgrep as backend command
+  rga   uses ripgrep-all as backend command"
   :type 'boolean)
 
+(defcustom consult-omni--notes-new-func #'consult-omni--notes-new-capture-org
+"Function to use to create new notes.
+
+This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)"
+:type '(choice (function :tag "(Default) Use org-capture" consult-omni--notes-new-capture-org)
+                 (function :tag "Custom Function")))
+
 (defun consult-omni--notes-transform (candidates &optional query)
-  "Formats `consult-omni-notes' candidates.
+  "Formats `consult-omni-notes' candidates."
 
-Adopted from `consult--grep-format'.
-"
-  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
-         (file "")
-         (file-len 0)
-         (file-str "")
-         result)
-    (save-match-data
-      (dolist (str candidates)
-        (when (and (string-match consult--grep-match-regexp str)
-                   ;; Filter out empty context lines
-                   (or (/= (aref str (match-beginning 3)) ?-)
-                       (/= (match-end 0) (length str))))
-          ;; We share the file name across candidates to reduce
-          ;; the amount of allocated memory.
-          (unless (and (= file-len (- (match-end 1) (match-beginning 1)))
-                       (eq t (compare-strings
-                              file 0 file-len
-                              str (match-beginning 1) (match-end 1) nil)))
-            (setq file (match-string 1 str))
-            (setq file-len (length file))
-            )
-          (let* ((line (propertize (match-string 2 str) 'face 'consult-line-number))
-                 (ctx (= (aref str (match-beginning 3)) ?-))
-                 (sep (if ctx "-" ":"))
-                 (content (substring str (match-end 0)))
-                 (line-len (length line)))
-            (when (length> content consult-grep-max-columns)
-              (setq content  (consult-omni--set-string-width content consult-grep-max-columns))
-              )
-            (setq str (concat file sep line sep content))
+(if-let ((regexp-pattern (cond
+                       ((and (equal consult-omni-notes-backend-command "rga") (executable-find consult-omni-notes-backend-command))
+                                consult-omni-ripgrep-all-match-regexp)
+                       ((and (or (equal consult-omni-notes-backend-command "rg") (equal consult-omni-notes-backend-command "grep")) (executable-find consult-omni-notes-backend-command))
+                          consult--grep-match-regexp)
+                       (t nil))))
+(consult-omni--grep-format candidates :source "Notes Search" :query query :regexp-pattern regexp-pattern)
+))
 
-            ;; Store file name in order to avoid allocations in `consult--prefix-group'
-            (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) str)
-            (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number str)
+(defun consult-omni--notes-preview (cand)
+  "Preview function for `consult-omni-ripgrep-all'."
+  (if (equal consult-omni-notes-backend-command "rga")
+      (consult-omni--ripgrep-all-preview cand)
+    (consult-omni--grep-preview cand)))
 
-            (push (propertize str :source "Notes Search" :title query :file file) result)))))
-    result))
+(defun consult-omni--notes-callback (cand)
+  "Callback function for `consult-omni-ripgrep-all'."
+  (if (equal consult-omni-notes-backend-command "rga")
+      (consult-omni--ripgrep-all-callback cand)
+    (consult-omni--grep-callback cand)))
+
+(defun consult-omni--notes-new-capture-org (&optional string)
+  "Makes new org note"
+(let ((old-marker org-capture-last-stored-marker))
+  (org-capture-string string)
+  (consult-omni-propertize-by-plist string `(:title ,string :source "Notes Search" :url nil :search-url nil :query ,string :file ,(cadr (org-capture-get :target))) 0 1)))
+
+(defun consult-omni--notes-new-capture-org-roam (&optional string)
+ "Makes new org-roam note"
+  (when (org-roam-node-find nil string)
+  (consult-omni-propertize-by-plist string `(:title ,string :source "Notes Search" :url nil :search-url nil :query ,string :file ,(file-truename (buffer-file-name))) 0 1)))
+
+(defun consult-omni--notes-new-create-denote (&optional string)
+  "Makes new denote note"
+  (if-let* ((_ (push string denote-title-history))
+           (file (denote--command-with-features #'denote nil nil t nil)))
+  (consult-omni-propertize-by-plist string `(:title ,string :source "Notes Search" :url nil :search-url nil :query ,string :file ,(file-truename file)))))
+
+(defun consult-omni--notes-new (cand)
+  "New function for `consult-omni-notes'."
+  (funcall consult-omni--notes-new-func cand))
 
 (cl-defun consult-omni--notes-builder (input &rest args &key callback &allow-other-keys)
-  "Makes builder command line args for `consult-omni-notes'.
-"
+  "Makes builder command line args for `consult-omni-notes'."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -90,9 +105,13 @@ Adopted from `consult--grep-format'.
                (dir (or dir consult-omni-notes-files))
                (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               )
-    (funcall (consult-omni--grep-make-builder (if (and consult-omni-notes-use-rg (executable-find "rg")) #'consult--ripgrep-make-builder #'consult--grep-make-builder) dir) query)
-    ))
+               (backend-builder (cond
+                       ((and (or (equal consult-omni-notes-backend-command "rga") (equal consult-omni-notes-backend-command "rg")) (executable-find consult-omni-notes-backend-command))
+                                #'consult--ripgrep-make-builder)
+                       ((and (equal consult-omni-notes-backend-command "grep") (executable-find "grep")) #'consult--ripgrep-make-builder)
+                       (t nil))))
+  (when backend-builder
+    (funcall (consult-omni--grep-make-builder backend-builder dir) query))))
 
 ;; Define the Notes Search Source
 (consult-omni-define-source "Notes Search"
@@ -102,18 +121,17 @@ Adopted from `consult--grep-format'.
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--notes-builder
                             :transform #'consult-omni--notes-transform
-                            :on-preview #'consult-omni--grep-preview
+                            :on-preview #'consult-omni--notes-preview
                             :on-return #'identity
-                            :on-callback #'consult-omni--grep-callback
-                            :preview-key 'any
+                            :on-callback #'consult-omni--notes-callback
+                            :on-new #'consult-omni--notes-new
+                            :preview-key (or consult-omni-preview-key any)
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            ;;:group #'consult--prefix-group
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-notes' module
 

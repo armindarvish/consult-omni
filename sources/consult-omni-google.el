@@ -44,8 +44,7 @@ URL `https://developers.google.com/custom-search/v1/introduction' for details"
   "Fetches search results for INPUT from “Google Custom Search” service.
 
 Refer to URL `https://programmablesearchengine.google.com/about/' and
-URL `https://developers.google.com/custom-search/' for more info.
-"
+URL `https://developers.google.com/custom-search/' for more info."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -88,7 +87,6 @@ URL `https://developers.google.com/custom-search/' for more info.
                                                       (title (format "%s" (gethash "title" item)))
                                                       (snippet (string-trim (format "%s" (gethash "snippet" item))))
                                                       (search-url (consult-omni--make-url-string consult-omni-google-search-url params '("key" "cx" "gl")))
-
                                                       (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet)))
                                                    (propertize decorated
                                                                :source source
@@ -97,7 +95,6 @@ URL `https://developers.google.com/custom-search/' for more info.
                                                                :search-url search-url
                                                                :query query
                                                                :snippet snippet)))
-
                                                raw-results)))
                                  (when (and annotated-results (functionp callback))
                                    (funcall callback annotated-results))
@@ -110,6 +107,7 @@ URL `https://developers.google.com/custom-search/' for more info.
                             :require-match t
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--google-fetch-results
+                            :on-new (apply-partially #'consult-omni-external-search-with-engine "Google")
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
@@ -117,8 +115,7 @@ URL `https://developers.google.com/custom-search/' for more info.
                             :group #'consult-omni--group-function
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-google' module
 

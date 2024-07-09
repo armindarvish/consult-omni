@@ -29,8 +29,7 @@
   "History variables for selected items of `consult-omni-doi'.")
 
 (defun consult-omni--doi-to-url (doi)
-  "Converts DOI value to target url.
-"
+  "Converts DOI value to target url."
   (let ((out))
     (let* ((doi (if doi (format "%s" doi)))
            (url (concat consult-omni-doiorg-api-url doi)))
@@ -41,15 +40,17 @@
                                :callback
                                (lambda (attrs)
                                  (let* ((raw-results (map-nested-elt attrs '("values")))
-                                        (result (car-safe (remove nil (mapcar (lambda (item)
-                                                                                (if-let* ((type (gethash "type" item))                                                                                                        (link (if (equal type "URL") (map-nested-elt item '("data" "value")))))
-                                                                                    link))
-                                                                              raw-results)))))
+                                        (result (car-safe (remove nil
+                                                                  (mapcar
+                                                                   (lambda (item)
+                                                                     (if-let* ((type (gethash "type" item))
+                                                                               (link (if (equal type "URL") (map-nested-elt item '("data" "value")))))
+                                                                         link))
+                                                                   raw-results)))))
                                    result))))))
 
 (cl-defun consult-omni--doiorg-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Fetch target url of DOI.
-"
+  "Fetch target url of DOI."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (source "doiorg")
@@ -64,8 +65,7 @@
                                               :search-url search-url
                                               :query query)))
     (when url
-      (list annotated-results))
-    ))
+      (list annotated-results))))
 
 ;; Define the DOI.org Source
 (consult-omni-define-source "doiorg"
@@ -80,8 +80,7 @@
                             :enabled (lambda () (bound-and-true-p consult-omni-doiorg-search-url))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            )
+                            :static 'both)
 
 ;;; provide `consult-omni-doi' module
 

@@ -51,9 +51,7 @@ Description of Arguments:
   DATE       a date string of candidate
   ANSWERED   whether the question is answered on StackOveflow
   SCORE      score of the question on StackOverflow
-  FACE       the face to apply to TITLE
-
-"
+  FACE       the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (date (and (stringp date) (propertize date 'face 'consult-omni-date-face)))
@@ -79,8 +77,7 @@ Description of Arguments:
 
 (cl-defun consult-omni--stackoverflow-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results for INPUT from StackOverflow.
-See URL `https://api.stackexchange.com/' for more info.
-"
+See URL `https://api.stackexchange.com/' for more info."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -133,7 +130,6 @@ See URL `https://api.stackexchange.com/' for more info.
                                                                :answered answered
                                                                :score score
                                                                )))
-
                                                raw-results)))
                                  (when (and annotated-results (functionp callback))
                                    (funcall callback annotated-results))
@@ -153,8 +149,7 @@ See URL `https://api.stackexchange.com/' for more info.
                             :group #'consult-omni--group-function
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-stackoverflow' module
 

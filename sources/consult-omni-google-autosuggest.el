@@ -19,6 +19,12 @@
 (defvar consult-omni-google-autosuggest-api-url "http://suggestqueries.google.com/complete/search"
 "API URL for Google AutoSuggest")
 
+(defun consult-omni--google-autosuggest-new (cand)
+  "Return CAND for NEW non-existing candidates."
+  (when (listp cand) (setq cand (car-safe cand)))
+  (or (and (stringp cand) (string-trim cand (consult--async-split-initial nil)))
+      cand))
+
 (cl-defun consult-omni--google-autosuggest-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results for INPUT from Google Autosuggest.
 
@@ -63,7 +69,6 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                                                                     :url url
                                                                     :search-url search-url
                                                                     :query query)))
-
                                                     raw-results)))
                                  (funcall callback annotated-results)
                                  annotated-results)))))
@@ -78,13 +83,13 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                             :on-preview #'ignore
                             :on-return #'identity
                             :on-callback #'string-trim
+                            :on-new #'consult-omni--google-autosuggest-new
                             :search-hist 'consult-omni--search-history
                             :select-hist t
                             :group #'consult-omni--group-function
                             :enabled (lambda () (bound-and-true-p consult-omni-google-autosuggest-api-url))
                             :sort t
-                            :static nil
-                            )
+                            :static nil)
 
 ;;; provide `consult-omni-google-autosuggest' module
 

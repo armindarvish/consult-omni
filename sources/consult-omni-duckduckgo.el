@@ -17,12 +17,10 @@
 (require 'consult-omni)
 
 (defvar consult-omni-duckduckgo-api-url "http://api.duckduckgo.com/"
-  "API URL for DuckDuckGo."
-  )
+  "API URL for DuckDuckGo.")
 
 (defvar consult-omni-duckduckgo-search-url "https://duckduckgo.com/"
-  "Search URL for DuckDuckGo."
-  )
+  "Search URL for DuckDuckGo.")
 
 (cl-defun consult-omni--duckduckgoapi-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results got INPUT from DuckDuckGo limited API.
@@ -68,7 +66,6 @@ for some limited documentation"
                                                                                          :search-url search-url
                                                                                          :query query
                                                                                          ))))
-
                                                            raw-results))))
                                  (when (and annotated-results (functionp callback))
                                    (funcall callback annotated-results))
@@ -81,6 +78,7 @@ for some limited documentation"
                             :require-match t
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--duckduckgoapi-fetch-results
+                            :on-new (apply-partially #'consult-omni-external-search-with-engine "DuckDuckGo")
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
@@ -88,8 +86,7 @@ for some limited documentation"
                             :group #'consult-omni--group-function
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-duckduckgo' module
 

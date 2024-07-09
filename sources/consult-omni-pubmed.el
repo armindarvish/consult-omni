@@ -48,9 +48,7 @@ Description of Arguments:
   DATE       the publish date of the result/paper
   JOURNAL    the journal that the result/paper is published in
   DOI        the doi of the result/paper
-  FACE       the face to apply to TITLE
-
-"
+  FACE       the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
          (date (if (stringp date) (propertize date 'face 'consult-omni-date-face) nil))
@@ -71,8 +69,7 @@ Description of Arguments:
                       (if journal (format "\t%s" journal))
                       (if date (format "\s\s%s" date))
                       (if authors (format "\s\s%s" authors))
-                      (if source (concat "\t" source))))
-         )
+                      (if source (concat "\t" source)))))
     (if consult-omni-highlight-matches
         (cond
          ((listp match-str)
@@ -87,8 +84,7 @@ Description of Arguments:
 DB is passed as db in query parameters. (This is the database to search.)
 
 Refer to URL `https://www.ncbi.nlm.nih.gov/books/NBK25501/'
-for more info.
-"
+for more info."
 
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :db db))))
                (opts (car-safe opts))
@@ -106,8 +102,7 @@ for more info.
                          ("usehistory" . "y")
                          ("retmax" . ,(format "%s" count))
                          ("retstart" . ,(format "%s" page))
-                         ("retmode" . "json")
-                         ))
+                         ("retmode" . "json")))
                (headers `(("tool" . "consult-omni")
                           ("email" . "contact@armindarvish.com")
                           ("api_key" . ,(consult-omni-expand-variable-function consult-omni-pubmed-api-key)))))
@@ -123,9 +118,7 @@ for more info.
               (webenv (gethash "webenv" results))
               (qk (gethash "querykey" results))
               (idlist (gethash "idlist" results)))
-         `(:webenv ,webenv :qk ,qk :idlist ,idlist)
-         )))
-    ))
+         `(:webenv ,webenv :qk ,qk :idlist ,idlist))))))
 
 (cl-defun consult-omni--pubmed-esummary-fetch-results (input &rest args &key callback webenv qk db &allow-other-keys)
   "Fetches “esummary” results for INPUT from PubMed Entrez Utilities service.
@@ -137,9 +130,7 @@ Description of Arguments:
   DB     passed as db in query parameters. (This is the databes to search.)
 
 Refer to URL `https://www.ncbi.nlm.nih.gov/books/NBK25501/'
-for more info.
-"
-
+for more info."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback :webenv webenv :qk qk :db db))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -159,8 +150,7 @@ for more info.
                          ("WebEnv" . ,webenv)
                          ("retmax" . ,(format "%s" retmax))
                          ("retstart" . ,(format "%s" retstart))
-                         ("retmode" . "json")
-                         ))
+                         ("retmode" . "json")))
                (headers `(("tool" . "consult-omni")
                           ("email" . "contact@armindarvish.com")
                           ("api_key" . ,(consult-omni-expand-variable-function consult-omni-pubmed-api-key)))))
@@ -174,45 +164,42 @@ for more info.
                                (let* ((results (gethash "result" attrs))
                                       (uids (gethash "uids" results))
                                       (annotated-results
-                                       (mapcar (lambda (uid)
-                                                 (let*
-                                                     ((source "PubMed")
-                                                      (url (url-unhex-string (concat consult-omni-pubmed-search-url (format "%s" uid))))
-                                                      (search-url (consult-omni--make-url-string consult-omni-pubmed-search-url `(("term" . ,(replace-regexp-in-string " " "+" query)))))
-                                                      (data (gethash uid results))
-                                                      (title (gethash "title" data))
-                                                      (pubdate (date-to-time (gethash "pubdate" data)))
-                                                      (date (format-time-string "%Y-%m-%d" pubdate))
-                                                      (journal (gethash "fulljournalname" data))
-                                                      (authors (mapcar (lambda (item) (gethash "name" item)) (gethash "authors" data)))
-                                                      (ids (gethash "articleids" data))
-                                                      (doi (car (remove nil (mapcar (lambda (item) (if (equal (gethash "idtype" item) "doi") (gethash "value" item))) ids))))
-
-                                                      (decorated (consult-omni-dynamic--pubmed-format-candidate :source source :query query :url url :search-url search-url :title title :authors authors :date date :journal journal :doi doi)))
-                                                   (propertize decorated
-                                                               :source source
-                                                               :url url
-                                                               :title title
-                                                               :search-url search-url
-                                                               :query query
-                                                               :journal journal
-                                                               :authors authors
-                                                               :date date
-                                                               :doi doi)))
-                                               uids)))
+                                       (mapcar
+                                        (lambda (uid)
+                                          (let*
+                                              ((source "PubMed")
+                                               (url (url-unhex-string (concat consult-omni-pubmed-search-url (format "%s" uid))))
+                                               (search-url (consult-omni--make-url-string consult-omni-pubmed-search-url `(("term" . ,(replace-regexp-in-string " " "+" query)))))
+                                               (data (gethash uid results))
+                                               (title (gethash "title" data))
+                                               (pubdate (date-to-time (gethash "pubdate" data)))
+                                               (date (format-time-string "%Y-%m-%d" pubdate))
+                                               (journal (gethash "fulljournalname" data))
+                                               (authors (mapcar (lambda (item) (gethash "name" item)) (gethash "authors" data)))
+                                               (ids (gethash "articleids" data))
+                                               (doi (car (remove nil (mapcar (lambda (item) (if (equal (gethash "idtype" item) "doi") (gethash "value" item))) ids))))
+                                               (decorated (consult-omni-dynamic--pubmed-format-candidate :source source :query query :url url :search-url search-url :title title :authors authors :date date :journal journal :doi doi)))
+                                            (propertize decorated
+                                                        :source source
+                                                        :url url
+                                                        :title title
+                                                        :search-url search-url
+                                                        :query query
+                                                        :journal journal
+                                                        :authors authors
+                                                        :date date
+                                                        :doi doi)))
+                                        uids)))
                                  (when (and annotated-results (functionp callback))
-                                   (funcall callback annotated-results)
-                                   )
+                                   (funcall callback annotated-results))
                                  annotated-results)))))
 
 (cl-defun consult-omni--pubmed-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Fetches results for INPUT from PubMed using Entrez Utilities service.
-"
+  "Fetches results for INPUT from PubMed using Entrez Utilities service."
   (let* ((esearch (consult-omni--pubmed-esearch-fetch-results input))
          (webenv (plist-get esearch :webenv))
          (qk (plist-get esearch :qk)))
-    (consult-omni--pubmed-esummary-fetch-results input :callback callback :webenv webenv :qk qk)
-    ))
+    (consult-omni--pubmed-esummary-fetch-results input :callback callback :webenv webenv :qk qk)))
 
 ;; Define the PubMed Source
 (consult-omni-define-source "PubMed"
@@ -222,6 +209,7 @@ for more info.
                            :category 'consult-omni-scholar
                            :face 'consult-omni-scholar-title-face
                            :request #'consult-omni--pubmed-fetch-results
+                           :on-new (apply-partially #'consult-omni-external-search-with-engine "PubMed")
                            :preview-key consult-omni-preview-key
                            :search-hist 'consult-omni--search-history
                            :select-hist 'consult-omni--selection-history
@@ -229,8 +217,7 @@ for more info.
                            :group #'consult-omni--group-function
                            :sort t
                            :static 'both
-                           :annotate nil
-                           )
+                           :annotate nil)
 
 ;;; provide `consult-omni-pubmed' module
 

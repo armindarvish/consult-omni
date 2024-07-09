@@ -19,8 +19,7 @@
   "Key for Bing (Microsoft Azure) search API
 
 See URL `https://www.microsoft.com/en-us/bing/apis/bing-web-search-api' and URL `https://learn.microsoft.com/en-us/bing/search-apis/bing-web-search/search-the-web'
-for details.
-"
+for details."
   :group 'consult-omni
   :type '(choice (const :tag "API Key" string)
                  (function :tag "Custom Function")))
@@ -30,8 +29,7 @@ for details.
 (cl-defun consult-omni--bing-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches search results for INPUT from Bing web search api.
 
-Refer to URL `https://programmablesearchengine.google.com/about/' and `https://developers.google.com/custom-search/' for more info.
-"
+Refer to URL `https://programmablesearchengine.google.com/about/' and `https://developers.google.com/custom-search/' for more info."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -70,7 +68,6 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                                                               :search-url search-url
                                                               :query query
                                                               :snippet snippet)))
-
                                               raw-results)))
                                 (when (and annotated-results (functionp callback))
                                   (funcall callback annotated-results))
@@ -83,6 +80,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                             :require-match t
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--bing-fetch-results
+                            :on-new (apply-partially #'consult-omni-external-search-with-engine "Bing")
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
@@ -90,8 +88,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                             :group #'consult-omni--group-function
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-bing' module
 

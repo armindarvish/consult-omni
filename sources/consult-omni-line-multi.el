@@ -18,18 +18,15 @@
 (require 'consult-omni)
 
 (defun consult-omni--line-multi-candidates (input &optional buffers)
-  "Wrapper around consult--line-multi-candidates for consult-omni.
-"
+  "Wrapper around consult--line-multi-candidates for consult-omni."
   (let  ((buffers (or buffers (consult--buffer-query :directory (consult--normalize-directory default-directory) :sort 'alpha-current))))
     (consult--line-multi-candidates buffers input)))
 
 (defun consult-omni--line-multi-preview (cand)
-  "Preview function for consult-omni-line-multi.
-"
+  "Preview function for consult-omni-line-multi."
   (let* ((marker (car (get-text-property 0 :marker cand)))
          (query (get-text-property 0 :query cand)))
-    (consult--jump marker)
-    ))
+    (consult--jump marker)))
 
 (cl-defun consult-omni--line-multi-format-candidate (&rest args &key source query marker title face &allow-other-keys)
   "Formats the cnaiddates of `consult-omni-line-multi'.
@@ -40,9 +37,7 @@ Description of Arguments:
   QUERY      query input from the user
   MARKER     the marker pointing to results of line multi search
   TITLE      the title of the candidate (e.g. response from chatgpt)
-  FACE       the face to apply to TITLE
-
-"
+  FACE       the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (marker (car marker))
@@ -50,15 +45,16 @@ Description of Arguments:
          (pos (marker-position marker))
          (buff (and buff (propertize (format "%s" buff) 'face 'consult-omni-domain-face)))
          (pos (and pos (propertize (format "%s" pos) 'face 'consult-omni-path-face)))
-         (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
+         (match-str (if (stringp query)
+                        (consult--split-escaped (car (consult--command-split query)))
+                      nil))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 6 frame-width-percent)))
          (str (concat title-str
                       (when buff (concat "\t" buff))
                       (when pos (concat "\s\s" pos ))
-                      (when source (concat "\t" source))))
-         )
+                      (when source (concat "\t" source)))))
     (if consult-omni-highlight-matches
         (cond
          ((listp match-str)
@@ -69,9 +65,9 @@ Description of Arguments:
 
 (cl-defun consult-omni--line-multi-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches search results for INPUT from `consult-line-multi'."
-(unless (functionp 'consult-omni--line-multi-candidates)
-  (error "consult-omni: consult-omni-line-multi not available. Make sure `consult' is loaded properly"))
-(pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+  (unless (functionp 'consult-omni--line-multi-candidates)
+    (error "consult-omni: consult-omni-line-multi not available. Make sure `consult' is loaded properly"))
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (items (consult-omni--line-multi-candidates query))
                (annotated-results (mapcar (lambda (item)
@@ -79,13 +75,14 @@ Description of Arguments:
                                                    (marker  (consult--get-location item))
                                                    (title (substring-no-properties item 0 -1))
                                                    (decorated (consult-omni--line-multi-format-candidate :source source :query query :marker marker :title title)))
-                                           (propertize decorated
-                                                       :source source
-                                                       :title title
-                                                       :url nil
-                                                       :marker marker
-                                                       :query query
-                                                       ))) items)))
+                                              (propertize decorated
+                                                          :source source
+                                                          :title title
+                                                          :url nil
+                                                          :marker marker
+                                                          :query query
+                                                          )))
+                                          items)))
     annotated-results))
 
 ;; Define the Buffers Text Search Source
@@ -106,8 +103,7 @@ Description of Arguments:
                             :group #'consult-omni--group-function
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-line-multi' module
 

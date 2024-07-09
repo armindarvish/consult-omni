@@ -73,9 +73,7 @@ Description of Arguments:
   BACKEND  the backend to use for gptel. see `gptel-backend' for details.
   STREAM   boolean to determine whether to use strem or not.
            see`gptel-stream' for details.
-  FACE     the face to apply to TITLE
-
-"
+  FACE     the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (match-str (and (stringp query) (consult--split-escaped query) nil))
@@ -88,8 +86,7 @@ Description of Arguments:
          (str (concat title-str
                       (when backend (concat "\t" backend))
                       (when model (concat ":" model))
-                      (when stream (concat "\s" stream "\s"))
-                      )))
+                      (when stream (concat "\s" stream "\s")))))
     (if consult-omni-highlight-matches
         (cond
          ((listp match-str)
@@ -105,8 +102,7 @@ Description of Arguments:
     (funcall consult-omni-gptel-buffer-name query args))
    ((stringp consult-omni-gptel-buffer-name)
     consult-omni-gptel-buffer-name)
-   (t
-    "*consult-omni-gptel*")))
+   (t "*consult-omni-gptel*")))
 
 (cl-defun consult-omni--gptel-response-preview (query &rest args &key backend model stream &allow-other-keys)
   "Returns a `gptel' buffer.
@@ -122,8 +118,7 @@ If STREAM is non-nil, the response is streamed."
              (model (or (and model (format "%s" model))
                         (and backend (car (cl-struct-slot-value (type-of backend) 'models backend)))
                         consult-omni-gptel-model))
-             (stream (if stream t nil))
-             )
+             (stream (if stream t nil)))
         (setq-local gptel-backend backend)
         (setq-local gptel-model model)
         (setq-local gptel-stream stream)
@@ -137,8 +132,6 @@ If STREAM is non-nil, the response is streamed."
           (gptel-send)))
       (current-buffer))))
 
-
-
 (defun consult-omni--gptelbuffer-preview (cand)
   "Shows a preview buffer of CAND for `consult-omni-gptel'.
 
@@ -151,15 +144,13 @@ The preview buffer is from `consult-omni--gptel-response-preview'."
           (buff (consult-omni--gptel-response-preview query :model model :backend backend :stream stream)))
     (if buff
         (funcall (consult--buffer-preview) 'preview
-                 buff
-                 ))))
+                 buff))))
 
 (cl-defun consult-omni--gptel-make-title-placeholder (input &rest args &key callback &allow-other-keys)
   "Makes a placeholder for sending query to gptel.
 
 This makes a placeholder string “ask gptel: %s” %s=INPUT with
-metadata so it can be send to `gptel'.
-"
+metadata so it can be send to `gptel'."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (if callback (seq-difference args (list :callback callback)) args)))
                (opts (car-safe opts))
                (source "gptel")
@@ -226,8 +217,7 @@ metadata so it can be send to `gptel'.
     output))
 
 (cl-defun consult-omni--gptel-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Fetches chat response for INPUT from gptel.
-"
+  "Fetches chat response for INPUT from gptel."
   (unless (featurep 'gptel)
     (error "consult-omni: gptel is not available. Make sure to install and load `gptel'."))
   (let ((results))
@@ -235,8 +225,7 @@ metadata so it can be send to `gptel'.
      ((stringp consult-omni-gptel-cand-title) (setq results (list consult-omni-gptel-cand-title)))
      ((functionp consult-omni-gptel-cand-title)
       (setq results (apply consult-omni-gptel-cand-title input :callback callback args))))
-    results
-    ))
+    results))
 
 ;; Define the Gptel Source
 (consult-omni-define-source "gptel"
@@ -255,8 +244,7 @@ metadata so it can be send to `gptel'.
                             :group #'consult-omni--group-function
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-gptel' module
 

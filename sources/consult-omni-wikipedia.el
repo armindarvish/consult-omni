@@ -39,9 +39,7 @@ Description of Arguments:
   TITLE      the title of the result/paper (e.g. title of paper)
   SNIPPET    a string containing a snippet/description of candidate
   DATE       the date the article was last updated
-  FACE       the face to apply to TITLE
-
-"
+  FACE       the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (date (and (stringp date) (propertize date 'face 'consult-omni-date-face)))
@@ -64,9 +62,7 @@ Description of Arguments:
     str))
 
 (cl-defun consult-omni--wikipedia-fetch-results (input &rest args &key callback &allow-other-keys)
-  "Fetches search results from Wikipedia for INPUT.
-"
-
+  "Fetches search results from Wikipedia for INPUT."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -113,7 +109,6 @@ Description of Arguments:
                                                                     :search-url search-url
                                                                     :query query
                                                                     :date date)))
-
                                                     raw-results)))
                                  (funcall callback annotated-results)
                                  annotated-results)))))
@@ -125,6 +120,7 @@ Description of Arguments:
                             :require-match t
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--wikipedia-fetch-results
+                            :on-new (apply-partially #'consult-omni-external-search-with-engine "Wikipedia")
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
@@ -132,8 +128,7 @@ Description of Arguments:
                             :group #'consult-omni--group-function
                             :sort t
                             :type 'dynamic
-                            :static 'both
-                            )
+                            :static 'both)
 
 ;;; provide `consult-omni-wikipedia' module
 

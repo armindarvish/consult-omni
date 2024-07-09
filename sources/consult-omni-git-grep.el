@@ -1,4 +1,4 @@
-;;; consult-omni-ripgrep.el --- Consulting Ripgrep Command -*- lexical-binding: t -*-
+;;; consult-omni-git-grep.el --- Consulting Git Grep Command -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2024 Armin Darvish
 
@@ -17,12 +17,12 @@
 (require 'consult-omni)
 (require 'consult-omni-grep)
 
-(defun consult-omni--ripgrep-transform (candidates &optional query)
-  "Formats candidates of `consult-omni-ripgrep'."
-(consult-omni--grep-format candidates :source "ripgrep" :query query :regexp-pattern consult--grep-match-regexp))
+(defun consult-omni--git-grep-transform (candidates &optional query)
+  "Formats candidates of `consult-omni-git-grep'."
+  (consult-omni--grep-format candidates :source "git-grep" :query query :regexp-pattern consult--grep-match-regexp))
 
-(cl-defun consult-omni--ripgrep-builder (input &rest args &key callback &allow-other-keys)
-  "Makes builder command line args for “ripgrep”."
+(cl-defun consult-omni--git-grep-builder (input &rest args &key callback &allow-other-keys)
+  "Makes builder command line args for “git-grep”."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -31,16 +31,16 @@
                (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
                (default-directory (or dir default-directory)))
-    (funcall (consult-omni--grep-make-builder #'consult--ripgrep-make-builder dir) query)))
+    (funcall (consult-omni--grep-make-builder #'consult--git-grep-make-builder dir) query)))
 
 ;; Define the Ripgrep Source
-(consult-omni-define-source "ripgrep"
+(consult-omni-define-source "git-grep"
                             :narrow-char ?r
                             :type 'async
                             :require-match t
                             :face 'consult-omni-engine-title-face
-                            :request #'consult-omni--ripgrep-builder
-                            :transform #'consult-omni--ripgrep-transform
+                            :request #'consult-omni--git-grep-builder
+                            :transform #'consult-omni--git-grep-transform
                             :on-preview #'consult-omni--grep-preview
                             :on-return #'identity
                             :on-callback #'consult-omni--grep-callback
@@ -48,16 +48,17 @@
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (and (executable-find "rg")
-                                                         (fboundp 'consult-ripgrep))
-                                                    t nil))
+                            :enabled (lambda () (if (and (executable-find "git")
+                                                         (fboundp 'consult-git-grep))
+                                                    t
+                                                  nil))
                             :sort t
                             :static 'both
                             :annotate nil)
 
-;;; provide `consult-omni-ripgrep' module
+;;; provide `consult-omni-git-grep' module
 
-(provide 'consult-omni-ripgrep)
+(provide 'consult-omni-git-grep)
 
-(add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-ripgrep)
-;;; consult-omni-ripgrep.el ends here
+(add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-git-grep)
+;;; consult-omni-git-grep.el ends here

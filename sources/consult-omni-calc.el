@@ -22,17 +22,23 @@
   "Only show calculator results when the query result in a nunmber?"
   :type 'boolean)
 
+(defcustom consult-omni-calc-regexp-pattern "^=\\(.*\\)?"
+  "Regexp to detect calculator formula?
+
+The first capturing group will be used as input for `calc-eval'.
+If there is no capture group, the user's query will be used when matching."
+  :type '(choice (regexp :tag "(Default) formula after =" "^=\\(.*\\)?")
+                 (regexp :tag "Any string with digits, operators or brackets" "\\(.*[[:digit:]\/\*\+-=%^&$\(\{\[].*\\)")))
+
 (defcustom consult-omni-calc-message-errors nil
   "Whether to message errors for calc?
 
 Setting this to non-nil will show messages
-when the calcultor cannot find results
-"
+when the calcultor cannot find results"
   :type 'boolean)
 
 (defun consult-omni--calc-callback (cand)
-  "Copys the result as well as formula to kill ring.
-"
+  "Copys the result as well as formula to kill ring."
   (let ((equ (get-text-property 0 :query cand))
         (result  (get-text-property 0 :title cand)))
   (kill-new (concat equ " => " result))
@@ -41,8 +47,7 @@ when the calcultor cannot find results
 (cl-defun consult-omni--calc-fetch-results (input &rest args &key callback &allow-other-keys)
   "Calculate the result of possible math equations.
 
-This uses `calc-eval' to return the result of input
-"
+This uses `calc-eval' to return the result of input"
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (source "calc")
                (opts (car-safe opts))
@@ -56,13 +61,13 @@ This uses `calc-eval' to return the result of input
                                                    ((and (symbolp item) (numberp (symbol-value item))) (format "%s" (symbol-value item)))
                                                    ((and (functionp item) (numberp (funcall item))) (format "%s" (funcall item)))
                                                    ((and (numberp (eval item))) (format "%s" (eval item)))
-                                                   (t item))
-                                     ) extra-args))
+                                                   (t item)))
+                                   extra-args))
                (calc-eval-error t)
                (result)
-               (annotated-result)
-               )
-    (when (string-match "[[:digit:]\/\*\+-=%^&$\(\{\[]" query nil t)
+               (annotated-result))
+    (when (string-match consult-omni-calc-regexp-pattern query nil)
+      (setq query (or (match-string 1 query) query))
       (condition-case err
           (if convert
               (cl-letf* (((symbol-function 'calc-convert-units)
@@ -71,22 +76,18 @@ This uses `calc-eval' to return the result of input
                               ((string-match-p ".*deg.*" convert)
                                (setq result (calc-eval (math-convert-temperature (apply #'calc-eval (list query) 'raw extra-args) (apply #'calc-eval (list (replace-regexp-in-string "[[:digit:]\s$]+" "" query extra-args)) 'raw extra-args) (calc-eval (list convert) 'raw)))))
                               (t (calc-eval (math-convert-units (apply #'calc-eval (list query) 'raw extra-args) (calc-eval (list convert) 'raw)))))))
-          (if consult-omni-calc-number-only
-              (setq result (apply #'calc-eval (list query) 'num extra-args))
-            (setq result (apply #'calc-eval (list query) nil extra-args))))
-        ('error (and consult-omni-calc-message-errors (message (error-message-string err))))
-        ))
-
-     (when result (setq annotated-result (propertize result
-                                        :source source
-                                        :title result
-                                        :url nil
-                                        :query query
-                                        )))
-     (if annotated-result
+            (if consult-omni-calc-number-only
+                (setq result (apply #'calc-eval (list query) 'num extra-args))
+              (setq result (apply #'calc-eval (list query) nil extra-args))))
+        ('error (and consult-omni-calc-message-errors (message (error-message-string err))))))
+    (when result (setq annotated-result (propertize result
+                                                    :source source
+                                                    :title result
+                                                    :url nil
+                                                    :query query)))
+    (if annotated-result
         (list annotated-result)
-       nil)
-    ))
+      nil)))
 
 ;; Define the Calc Source
 (consult-omni-define-source "calc"
@@ -106,8 +107,7 @@ This uses `calc-eval' to return the result of input
                             :group #'consult-omni--group-function
                             :sort t
                             :static nil
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-calc' module
 

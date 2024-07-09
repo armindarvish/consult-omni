@@ -32,9 +32,7 @@
 Description of Arguments:
 
   ENTRIES entries from `consult-omni--elfeed-fetch-result'.
-  QUERY   the query input from the user
-
-"
+  QUERY   the query input from the user"
   (let ((annotated-entries))
     (dolist (entry entries annotated-entries)
       (let* ((url (elfeed-entry-link entry))
@@ -67,8 +65,7 @@ Description of Arguments:
                             (concat " " (propertize feed-title 'face 'elfeed-search-feed-face)))
                           (when tags (concat " " "(" tags-str ")"))
                           (when domain (concat "\t" domain (when path path)))
-                          (concat "\t" (propertize "elfeed" 'face 'consult-omni-source-type-face))
-                          )))
+                          (concat "\t" (propertize "elfeed" 'face 'consult-omni-source-type-face)))))
         (if consult-omni-highlight-matches
             (cond
              ((listp match-str)
@@ -85,13 +82,11 @@ Description of Arguments:
                           :tags tags
                           :date date
                           :id id
-                          :feed feed
-                          )
+                          :feed feed)
               annotated-entries)))))
 
 (defun consult-omni--elfeed-search-buffer ()
-  "Get or create buffer for `consult-omni-elfeed'.
-"
+  "Get or create buffer for `consult-omni-elfeed'."
   (get-buffer-create (or consult-omni-elfeed-search-buffer-name "*consult-omni-elfeed-search*")))
 
 (defun consult-omni--elfeed-preview (cand)
@@ -106,16 +101,13 @@ Uses `elfeed-show-entry'."
       (setq elfeed-show-entry entry)
       (elfeed-show-refresh))
     (funcall (consult--buffer-preview) 'preview
-             buff
-             )))
+             buff)))
 
 (cl-defun consult-omni--elfeed-fetch-results (input &rest args &key callback &allow-other-keys)
   "Return entries matching INPUT in elfeed database.
 
 uses INPUT as filter ro find entries in elfeed databse.
-if FILTER is non-nil, it is used as additional filter parameters.
-
-"
+if FILTER is non-nil, it is used as additional filter parameters."
   (cl-letf* (((symbol-function #'elfeed-search-buffer) #'consult-omni--elfeed-search-buffer))
     (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                  (opts (car-safe opts))
@@ -127,8 +119,7 @@ if FILTER is non-nil, it is used as additional filter parameters.
                  (elfeed-search-filter (concat (if maxcount (format "#%d " maxcount))
                                                (if filter (format "%s" filter)
                                                  consult-omni-elfeed-default-filter)
-                                               (if query (format "%s" query))
-                                               ))
+                                               (if query (format "%s" query))))
                  (filter (elfeed-search-parse-filter elfeed-search-filter))
                  (head (list nil))
                  (tail head)
@@ -141,8 +132,7 @@ if FILTER is non-nil, it is used as additional filter parameters.
                 tail (cdr tail)
                 count (1+ count))))
       (when-let ((entries (cdr head)))
-        (consult-omni--elfeed-format-candidate entries query)))
-    ))
+        (consult-omni--elfeed-format-candidate entries query)))))
 
 ;; Define the Elfeed Source
 (consult-omni-define-source "elfeed"
@@ -161,8 +151,7 @@ if FILTER is non-nil, it is used as additional filter parameters.
                             :group #'consult-omni--group-function
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-elfeed' module
 

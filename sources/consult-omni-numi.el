@@ -29,23 +29,19 @@ See `consult-locate-args' for example."
 (defun consult-omni--numi-callback (cand)
   "Callback function for `consult-omni-numi' command."
   (let ((result  (get-text-property 0 :title cand)))
-    (kill-new result))
-  )
+    (kill-new result)))
 
 (defun consult-omni--numi-filter (candidates &optional query)
-  "Filters `consult-omni-numi' candidates.
-"
+  "Filters `consult-omni-numi' candidates."
   (cl-loop for candidate in candidates
            when (not (equal candidate "?"))
            collect candidate))
 
 (cl-defun consult-omni--numi-builder (input &rest args &key callback &allow-other-keys)
-  "Makes builder command line args for “numi-cli”.
-"
+  "Makes builder command line args for “numi-cli”."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts)))
-    (funcall #'consult-omni--async-builder (shell-quote-argument query) consult-omni-numi-args)
-    ))
+    (funcall #'consult-omni--async-builder (shell-quote-argument query) consult-omni-numi-args)))
 
 ;; Define the Numi Source
 (consult-omni-define-source "Numi"
@@ -63,11 +59,12 @@ See `consult-locate-args' for example."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (executable-find "numi-cli") t nil))
+                            :enabled (lambda () (if (executable-find "numi-cli")
+                                                    t
+                                                  nil))
                             :sort t
                             :static 'both
-                            :annotate nil
-                            )
+                            :annotate nil)
 
 ;;; provide `consult-omni-numi module
 

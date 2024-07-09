@@ -36,14 +36,11 @@
 (defun consult-omni-embark-default-action (cand)
   "Calls the default action on CAND.
 
-Gets the default callback function from `consult-omni-sources-alist'.
-"
+Gets the default callback function from `consult-omni-sources-alist'."
   (let* ((source (and (stringp cand) (get-text-property 0 :source cand))))
-    (funcall (consult-omni--get-source-prop source :on-callback) cand))
-  )
+    (funcall (consult-omni--get-source-prop source :on-callback) cand)))
 
 (add-to-list 'embark-default-action-overrides '(consult-omni . consult-omni-embark-default-action))
-
 
 (defun consult-omni-embark-insert-title (cand)
   "Insert the title oif the candidate at point"
@@ -66,26 +63,22 @@ Gets the default callback function from `consult-omni-sources-alist'.
         (insert (cond
                  ((and url title) (format " [[%s][%s]] " url title))
                  (url (format " [[%s]] " url))
-                 (t ""))
-                ))
+                 (t ""))))
        ((derived-mode-p 'markdown-mode)
         (insert (cond
                  ((and url title) (format " [%s](%s) " url title))
                  (url (format " <%s> " url))
-                 (t ""))
-                ))
+                 (t ""))))
        (t
         (insert (cond
                  ((and url title) (format " %s (%s) " title  url))
                  (url (format " %s " url))
-                 (t ""))
-                ))))))
+                 (t ""))))))))
 
 (defun consult-omni-embark-copy-url-as-kill (cand)
   "Copy the url of the candidate to `kill-ring'."
   (if-let ((url (and (stringp cand) (get-text-property 0 :url cand))))
-      (kill-new (format " %s " (string-trim url)))
-    ))
+      (kill-new (format " %s " (string-trim url)))))
 
 (defun consult-omni-embark-external-browse-link (cand)
   "Open the url with `consult-omni-default-browse-function'"
@@ -107,8 +100,7 @@ Gets the default callback function from `consult-omni-sources-alist'.
 
 Gets the preview function from `consult-omni-sources-alist'."
   (let* ((source (and (stringp cand) (get-text-property 0 :source cand))))
-    (funcall (consult-omni--get-source-prop source :on-preview) cand))
-  )
+    (funcall (consult-omni--get-source-prop source :on-preview) cand)))
 
 ;;; Define Embark Keymaps
 
@@ -122,9 +114,7 @@ Gets the preview function from `consult-omni-sources-alist'."
   "o o" #'consult-omni-embark-external-browse-link
   "o O" #'consult-omni-embark-alternate-browse-link
   "o s" #'consult-omni-embark-external-browse-search-link
-  "o p" #'consult-omni-embark-show-preview
-  )
-
+  "o p" #'consult-omni-embark-show-preview)
 
 (add-to-list 'embark-keymap-alist '(consult-omni . consult-omni-embark-general-actions-map))
 
@@ -141,20 +131,17 @@ Gets the preview function from `consult-omni-sources-alist'."
 (defun consult-omni-embark-scholar-copy-authors-as-kill (cand)
   "Copy the authors of CAND to `kill-ring'."
   (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
-      (kill-new (string-trim (format " %s " authors)))
-    ))
+      (kill-new (string-trim (format " %s " authors)))))
 
 (defun consult-omni-embark-scholar-insert-authors (cand)
   "Insert the authors of CAND at point."
   (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
-      (insert (string-trim (mapconcat #'identity authors ", ")))
-    ))
+      (insert (string-trim (mapconcat #'identity authors ", ")))))
 
 (defun consult-omni-embark-scholar-default-note (cand)
   "Default function for making note templates.
 
-This can be used for making notes for scholar articles.
-"
+This can be used for making notes for scholar articles."
   (let* ((url (and (stringp cand) (get-text-property 0 :url cand)))
          (url (and (stringp url) (string-trim url)))
          (doi (and (stringp cand) (get-text-property 0 :doi cand)))
@@ -171,10 +158,8 @@ This can be used for making notes for scholar articles.
                    ((listp authors)
                     (mapconcat #'identity authors ", "))
                    (t authors)))
-
          (journal  (and (stringp cand) (get-text-property 0 :journal cand)))
          (date (and (stringp cand) (get-text-property 0 :date cand))))
-
     (cond
      ((derived-mode-p 'org-mode)
       (concat
@@ -186,8 +171,7 @@ This can be used for making notes for scholar articles.
        (if authors (format "\n%s" authors))
        (if journal (format "\nin =%s= " journal))
        (if date (format "published on [%s]\n" date) "\n")
-       "\n*** Notes\n"
-       ))
+       "\n*** Notes\n"))
      ((derived-mode-p 'markdown-mode)
       (concat
        "\n"
@@ -198,8 +182,7 @@ This can be used for making notes for scholar articles.
        (if authors (format "\n%s" authors))
        (if journal (format "\nin **%s** " journal))
        (if date (format "published on %s\n" date) "\n")
-       "\n### Notes\n"
-       ))
+       "\n### Notes\n"))
      (t
       (concat
        "\n"
@@ -210,16 +193,12 @@ This can be used for making notes for scholar articles.
        (if authors (format "\n%s" authors))
        (if journal (format "\nin %s " journal))
        (if date (format "published on %s\n" date) "\n")
-       "\n*** Notes\n"
-       ))
-
-     )))
+       "\n*** Notes\n")))))
 
 (defun consult-omni-embark-scholar-insert-note (cand)
   "Insert note snippet for article.
 
-Uses `consult-omni-embark-scholar-make-note-func' to make template.
-"
+Uses `consult-omni-embark-scholar-make-note-func' to make template."
   (insert (funcall consult-omni-embark-scholar-make-note-func cand)))
 
 (defvar-keymap consult-omni-embark-scholar-actions-map
@@ -228,8 +207,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template.
   "o d" #'consult-omni-embark-scholar-external-browse-doi
   "w a" #'consult-omni-embark-scholar-copy-authors-as-kill
   "i a" #'consult-omni-embark-scholar-insert-authors
-  "i n" #'consult-omni-embark-scholar-insert-note
-  )
+  "i n" #'consult-omni-embark-scholar-insert-note)
 
 (add-to-list 'embark-keymap-alist '(consult-omni-scholar . consult-omni-embark-scholar-actions-map))
 
@@ -244,8 +222,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template.
         ('darwin (call-process "open" nil 0 nil path "-R"))
         ('cygwin (call-process "cygstart" nil 0 nil path))
         ('windows-nt (and (fboundp 'w32-shell-execute) (w32-shell-execute "open" path)))
-        (_ (call-process "xdg-open" nil 0 nil path))
-        )))
+        (_ (call-process "xdg-open" nil 0 nil path)))))
 
 (defun consult-omni-embark-apps-find-file (cand)
   "Open CAND's filepath with `find-file'."
@@ -261,8 +238,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template.
         ('darwin (call-process "open" nil 0 nil path))
         ('cygwin (call-process "cygstart" nil 0 nil path))
         ('windows-nt (and (fboundp 'w32-shell-execute) (w32-shell-execute "open" path)))
-        (_ (call-process "xdg-open" nil 0 nil path))
-        )
+        (_ (call-process "xdg-open" nil 0 nil path)))
     nil))
 
 (defun consult-omni-embark-apps-open-term (cand)
@@ -292,8 +268,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template.
   "o f"  #'consult-omni-embark-apps-find-file
   "o o" #'consult-omni-embark-apps-open-filemanager
   "o t" #'consult-omni-embark-apps-open-term
-  "w p" #'consult-omni-embark-apps-copy-path-as-kil
-  )
+  "w p" #'consult-omni-embark-apps-copy-path-as-kil)
 
 (add-to-list 'embark-keymap-alist '(consult-omni-apps . consult-omni-embark-apps-actions-map))
 (add-to-list 'embark-default-action-overrides '(consult-omni-apps . consult-omni-embark-default-action))
@@ -303,8 +278,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template.
 (defun consult-omni-embark-calc-copy-results-as-kill (cand)
   "Copy the results of the calculator to `kill-ring'."
   (if-let ((results (and (stringp cand) (get-text-property 0 :title cand))))
-      (kill-new (format " %s " results))
-    ))
+      (kill-new (format " %s " results))))
 
 (defun consult-omni-embark-calc-insert-results (cand)
   "Insert the results of the calculator at point"
@@ -314,8 +288,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template.
 (defun consult-omni-embark-calc-copy-formula-as-kill (cand)
   "Copy the results of the calculator to `kill-ring'."
   (if-let ((formula (and (stringp cand) (get-text-property 0 :query cand))))
-      (kill-new (format " %s " formula))
-    ))
+      (kill-new (format " %s " formula))))
 
 (defun consult-omni-embark-calc-insert-formula (cand)
   "Insert the results of the calculator at point"
@@ -330,8 +303,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template.
   "w r"  #'consult-omni-embark-calc-copy-results-as-kill
   "w f"  #'consult-omni-embark-calc-copy-formula-as-kill
   "i r"  #'consult-omni-embark-calc-insert-results
-  "i f"  #'consult-omni-embark-calc-insert-formula
-  )
+  "i f"  #'consult-omni-embark-calc-insert-formula)
 
 (add-to-list 'embark-keymap-alist '(consult-omni-calc . consult-omni-embark-calc-actions-map))
 (add-to-list 'embark-default-action-overrides '(consult-omni-calc . consult-omni-embark-default-action))
@@ -341,16 +313,14 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template.
 
 Can be:
   - an elisp function that takes a URL argument (e.g. mpv-pay-url)
-  - a string for external command line program
-"
+  - a string for external command line program"
   :type '(choice (string :tag "(Default) mpv executable command" (executable-find "mpv"))
                  (function :tag "play with mpv package" mpv-play-url)
                  (function :tag "Custom Function" function)
                  (string :tag "Custom Executable Command" string)))
 
 (defun consult-omni-play-url-with-app (url)
-  "Plays video at URL with `consult-omni-embark-video-default-player'.
-"
+  "Plays video at URL with `consult-omni-embark-video-default-player'."
   (interactive (let* ((cand (consult-omni-youtube nil "Search Youtube:  " t))
                       (link (get-text-property 0 :url cand)))
                  (list link)))
@@ -360,27 +330,22 @@ Can be:
         (progn
           (start-process "consult-omni-mpv" nil cmd url)
           (message "Opening with %s ..." consult-omni-embark-video-default-player))
-      (message "executable %s not found")
-      ))
+      (message "executable %s not found")))
    ((symbolp consult-omni-embark-video-default-player)
     (if (functionp consult-omni-embark-video-default-player)
         (progn (funcall consult-omni-embark-video-default-player url)
                (message "Opening with %s ..." consult-omni-embark-video-default-player))
-      (message "Symbol function definition is void: %s"  consult-omni-embark-video-default-player)))
-   ))
+      (message "Symbol function definition is void: %s"  consult-omni-embark-video-default-player)))))
 
 (defun consult-omni-embark-video-play-with-app (cand)
-  "Open CAND's video URL with `consult-omni-play-url-with-app'.
-"
+  "Open CAND's video URL with `consult-omni-play-url-with-app'."
   (if-let* ((url (and (stringp cand) (get-text-property 0 :url cand))))
-      (consult-omni-play-url-with-app url)
-    ))
+      (consult-omni-play-url-with-app url)))
 
 (defvar-keymap consult-omni-embark-video-actions-map
   :doc "Keymap for consult-omni-embark-video"
   :parent consult-omni-embark-general-actions-map
-  "o x" #'consult-omni-embark-video-play-with-app
-  )
+  "o x" #'consult-omni-embark-video-play-with-app)
 
 (add-to-list 'embark-keymap-alist '(consult-omni-video . consult-omni-embark-video-actions-map))
 
