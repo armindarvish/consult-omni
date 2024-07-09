@@ -33,9 +33,9 @@
   "Regexp pattern to find system applications"
   :type 'regexp)
 
-(defcustom consult-omni-apps-default-launch-function #'consult-omni--apps-lauch-app
+(defcustom consult-omni-apps-default-launch-function #'consult-omni--apps-launch-app
   "Default function to launch an app"
-  :type '(choice (function :tag "(Default) Use System Shell" consult-omni--apps-lauch-app)
+  :type '(choice (function :tag "(Default) Use System Shell" consult-omni--apps-launch-app)
                  (function :tag "Custom Function")))
 
 (defcustom consult-omni-open-with-prompt ">|  "
@@ -84,7 +84,7 @@ If FILE is non-nil, returns a command line for opeing the FILE with APP."
           (list (format "%s" app))
           (if (and file (file-exists-p (file-truename file))) (list (format "%s" file)))))
 
-(defun consult-omni--apps-lauch-app (app &optional file)
+(defun consult-omni--apps-launch-app (app &optional file)
   "Makes an async process for opening APP.
 
 Uses `consult-omni--apps-cmd-args' to get the command line args string.
