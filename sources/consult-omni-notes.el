@@ -16,7 +16,7 @@
 
 (require 'consult-omni)
 (require 'consult-omni-grep)
-(require 'consult-omni-rga)
+(require 'consult-omni-ripgrep-all)
 
 (defcustom consult-omni-notes-files (apply #'append
                                            (when (bound-and-true-p consult-notes-file-dir-sources)
@@ -54,8 +54,8 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
   "Formats `consult-omni-notes' candidates."
 
 (if-let ((regexp-pattern (cond
-                       ((and (equal consult-omni-notes-backend-command "rga") (executable-find "rga"))
-                                consult-omni-rga-match-regexp)
+                       ((and (equal consult-omni-notes-backend-command "rga") (executable-find consult-omni-notes-backend-command))
+                                consult-omni-ripgrep-all-match-regexp)
                        ((and (or (equal consult-omni-notes-backend-command "rg") (equal consult-omni-notes-backend-command "grep")) (executable-find consult-omni-notes-backend-command))
                           consult--grep-match-regexp)
                        (t nil))))
@@ -63,15 +63,15 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
 ))
 
 (defun consult-omni--notes-preview (cand)
-  "Preview function for `consult-omni-rga'."
+  "Preview function for `consult-omni-ripgrep-all'."
   (if (equal consult-omni-notes-backend-command "rga")
-      (consult-omni--rga-preview cand)
+      (consult-omni--ripgrep-all-preview cand)
     (consult-omni--grep-preview cand)))
 
 (defun consult-omni--notes-callback (cand)
-  "Callback function for `consult-omni-rga'."
+  "Callback function for `consult-omni-ripgrep-all'."
   (if (equal consult-omni-notes-backend-command "rga")
-      (consult-omni--rga-callback cand)
+      (consult-omni--ripgrep-all-callback cand)
     (consult-omni--grep-callback cand)))
 
 (defun consult-omni--notes-new-capture-org (&optional string)

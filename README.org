@@ -200,8 +200,7 @@ or if you use =use-package= macro with straight, you can do:
 #+begin_src emacs-lisp
 (use-package consult-omni
 	:straight (consult-omni :type git :host github :repo "armindarvish/consult-omni" :files (:defaults "sources/*.el"))
-        :after consult
-)
+        :after consult)
 #+end_src
 
 You can also fork this repository and use your own repo.
