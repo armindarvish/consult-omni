@@ -34,7 +34,7 @@
   "List of all note files for consult-omni-notes."
   :type '(repeat :tag "list of files" string))
 
-(defcustom consult-omni-notes-backend-command "rga"
+(defcustom consult-omni-notes-backend-command "rg"
   "What command-line program to use for searching files?
 
 Can be either:
