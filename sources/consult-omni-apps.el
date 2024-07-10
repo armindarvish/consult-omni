@@ -176,6 +176,10 @@ match `consult-omni-apps-regexp-pattern' in `consult-omni-apps-paths'."
 ;; set the `consult-omni-apps-cached-apps'
 (setq consult-omni-apps-cached-apps (consult-omni--apps-get-desktop-apps))
 
+(defun consult-omni--apps-update-cached-apps ()
+(let ((consult-omni-apps-use-cache nil))
+  (consult-omni--apps-get-desktop-apps)))
+
 (defun consult-omni--apps-parse-app-file (file)
   "Parses a desktop entry FILE.
 
@@ -266,6 +270,10 @@ For each file in files, if it contains the QUERY
              files)))))
 
 (setq consult-omni-apps--cached-items  (consult-omni-apps--cached-items consult-omni-apps-cached-apps ".*"))
+
+(defun consult-omni--apps-update-cached-items ()
+(let ((consult-omni-apps-use-cache nil))
+  (consult-omni-apps--cached-items consult-omni-apps-cached-apps ".*")))
 
 (cl-defun consult-omni--apps-list-apps (input &rest args &key callback &allow-other-keys)
   "Get a list of applications from OS.

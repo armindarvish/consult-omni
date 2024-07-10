@@ -3366,7 +3366,12 @@ match `consult-omni-apps-regexp-pattern' in `consult-omni-apps-paths'."
 ;; set the `consult-omni-apps-cached-apps'
 (setq consult-omni-apps-cached-apps (consult-omni--apps-get-desktop-apps))
 #+end_src
-
+***** update list of system apps
+#+begin_src emacs-lisp
+(defun consult-omni--apps-update-cached-apps ()
+(let ((consult-omni-apps-use-cache nil))
+  (consult-omni--apps-get-desktop-apps)))
+#+end_src
 ***** parse app for name, comment and exec
 #+begin_src emacs-lisp
 (defun consult-omni--apps-parse-app-file (file)
@@ -3424,8 +3429,6 @@ URL https://github.com/abo-abo/swiper/blob/master/counsel.el"
            (list name comment exec visible)))))))
 #+end_src
 
-
-
 ***** cached items
 #+begin_src emacs-lisp
 (defun consult-omni-apps--cached-items (files query)
@@ -3466,6 +3469,14 @@ For each file in files, if it contains the QUERY
 (setq consult-omni-apps--cached-items  (consult-omni-apps--cached-items consult-omni-apps-cached-apps ".*"))
 
 #+end_src
+
+****** update cahced items
+#+begin_src emacs-lisp
+(defun consult-omni--apps-update-cached-items ()
+(let ((consult-omni-apps-use-cache nil))
+  (consult-omni-apps--cached-items consult-omni-apps-cached-apps ".*")))
+#+end_src
+
 ***** items
 #+begin_src emacs-lisp
 
