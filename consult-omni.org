@@ -7593,14 +7593,12 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
 (defun consult-omni--notes-transform (candidates &optional query)
   "Formats `consult-omni-notes' candidates."
 
-(if-let ((regexp-pattern (cond
-                       ((and (equal consult-omni-notes-backend-command "rga") (executable-find consult-omni-notes-backend-command))
-                                consult-omni-ripgrep-all-match-regexp)
-                       ((and (or (equal consult-omni-notes-backend-command "rg") (equal consult-omni-notes-backend-command "grep")) (executable-find consult-omni-notes-backend-command))
-                          consult--grep-match-regexp)
-                       (t nil))))
-(consult-omni--grep-format candidates :source "Notes Search" :query query :regexp-pattern regexp-pattern)
-))
+(cond
+ ((and (equal consult-omni-notes-backend-command "rga") (executable-find consult-omni-notes-backend-command))
+  (consult-omni--ripgrep-all-format candidates :source "Notes Search" :query query :regexp-pattern consult-omni-ripgrep-all-match-regexp))
+ ((and (or (equal consult-omni-notes-backend-command "rg") (equal consult-omni-notes-backend-command "grep")) (executable-find consult-omni-notes-backend-command))
+  (consult-omni--grep-format candidates :source "Notes Search" :query query :regexp-pattern consult--grep-match-regexp))
+ (t nil)))
 #+end_src
 
 ***** preview
