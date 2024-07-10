@@ -7595,7 +7595,8 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
 
 (cond
  ((and (equal consult-omni-notes-backend-command "rga") (executable-find consult-omni-notes-backend-command))
-  (consult-omni--ripgrep-all-format candidates :source "Notes Search" :query query :regexp-pattern consult-omni-ripgrep-all-match-regexp))
+  (consult-omni--ripgrep-all-format candidates :source "Notes Search" :query query :regexp-pattern consult-omni-ripgrep-all-match-regexp)
+  )
  ((and (or (equal consult-omni-notes-backend-command "rg") (equal consult-omni-notes-backend-command "grep")) (executable-find consult-omni-notes-backend-command))
   (consult-omni--grep-format candidates :source "Notes Search" :query query :regexp-pattern consult--grep-match-regexp))
  (t nil)))
