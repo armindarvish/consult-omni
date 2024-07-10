@@ -104,7 +104,7 @@ URL `https://developers.google.com/custom-search/' for more info."
 (consult-omni-define-source "Google"
                             :narrow-char ?g
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--google-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "Google")

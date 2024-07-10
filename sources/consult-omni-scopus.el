@@ -153,7 +153,7 @@ Description of Arguments:
 (consult-omni-define-source "Scopus"
                             :narrow-char ?s
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :category 'consult-omni-scholar
                             :face 'consult-omni-scholar-title-face
                             :request #'consult-omni--scopus-fetch-results

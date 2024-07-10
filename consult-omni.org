@@ -3317,7 +3317,9 @@ Description of Arguments:
   SNIPPET the description of the app (from Desktop Entry)
   VISIBLE whether the applicaiton is visible (from Desktop Entry)
   FACE    the face to apply to TITLE"
-  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
+  (let* ((frame-width-percent (if (eq (frame-live-p (selected-frame)) t)
+                                  (floor (* (display-pixel-width) 0.01))
+                                (floor (* (frame-width) 0.1))))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (directory (and path (file-name-directory path)))
          (directory (and (stringp directory) (propertize directory 'face 'consult-omni-path-face)))
@@ -3634,7 +3636,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
 (consult-omni-define-source "Bing"
                             :narrow-char ?i
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--bing-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "Bing")
@@ -3757,7 +3759,7 @@ See URL `https://brave.com/search/api/' for more info"
 (consult-omni-define-source "Brave"
                             :narrow-char ?b
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--brave-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "Brave")
@@ -6484,7 +6486,7 @@ for some limited documentation"
 (consult-omni-define-source "DuckDuckGo API"
                             :narrow-char ?d
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--duckduckgoapi-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "DuckDuckGo")
@@ -6830,7 +6832,7 @@ URL `https://developers.google.com/custom-search/' for more info."
 (consult-omni-define-source "Google"
                             :narrow-char ?g
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--google-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "Google")
@@ -8688,7 +8690,7 @@ for more info."
 (consult-omni-define-source "PubMed"
                            :narrow-char ?p
                            :type 'dynamic
-                           :require-match t
+                           :require-match nil
                            :category 'consult-omni-scholar
                            :face 'consult-omni-scholar-title-face
                            :request #'consult-omni--pubmed-fetch-results
@@ -8896,7 +8898,7 @@ Description of Arguments:
 (consult-omni-define-source "Scopus"
                             :narrow-char ?s
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :category 'consult-omni-scholar
                             :face 'consult-omni-scholar-title-face
                             :request #'consult-omni--scopus-fetch-results
@@ -9085,7 +9087,7 @@ See URL `https://api.stackexchange.com/' for more info."
 (consult-omni-define-source "StackOverflow"
                             :narrow-char ?s
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--stackoverflow-fetch-results
                             :preview-key consult-omni-preview-key
@@ -9247,7 +9249,7 @@ Description of Arguments:
 (consult-omni-define-source "Wikipedia"
                             :narrow-char ?w
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--wikipedia-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "Wikipedia")

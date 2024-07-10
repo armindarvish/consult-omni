@@ -205,7 +205,7 @@ for more info."
 (consult-omni-define-source "PubMed"
                            :narrow-char ?p
                            :type 'dynamic
-                           :require-match t
+                           :require-match nil
                            :category 'consult-omni-scholar
                            :face 'consult-omni-scholar-title-face
                            :request #'consult-omni--pubmed-fetch-results

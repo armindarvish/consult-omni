@@ -139,7 +139,7 @@ See URL `https://api.stackexchange.com/' for more info."
 (consult-omni-define-source "StackOverflow"
                             :narrow-char ?s
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--stackoverflow-fetch-results
                             :preview-key consult-omni-preview-key

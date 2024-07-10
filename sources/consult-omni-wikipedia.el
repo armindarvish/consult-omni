@@ -117,7 +117,7 @@ Description of Arguments:
 (consult-omni-define-source "Wikipedia"
                             :narrow-char ?w
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--wikipedia-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "Wikipedia")

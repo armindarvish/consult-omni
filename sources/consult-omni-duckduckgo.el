@@ -75,7 +75,7 @@ for some limited documentation"
 (consult-omni-define-source "DuckDuckGo API"
                             :narrow-char ?d
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--duckduckgoapi-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "DuckDuckGo")
