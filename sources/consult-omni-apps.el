@@ -131,9 +131,7 @@ Description of Arguments:
   SNIPPET the description of the app (from Desktop Entry)
   VISIBLE whether the applicaiton is visible (from Desktop Entry)
   FACE    the face to apply to TITLE"
-  (let* ((frame-width-percent (if (eq (frame-live-p (selected-frame)) t)
-                                  (floor (* (display-pixel-width) 0.01))
-                                (floor (* (frame-width) 0.1))))
+  (let* ((frame-width-percent (max 10 (floor (* (frame-width) 0.1))))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (directory (and path (file-name-directory path)))
          (directory (and (stringp directory) (propertize directory 'face 'consult-omni-path-face)))
