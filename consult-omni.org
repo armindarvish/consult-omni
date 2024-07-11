@@ -9181,7 +9181,7 @@ Description of Arguments:
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 3 frame-width-percent)))
-         (snippet (and (stringp snippet) (consult-omni--set-string-width (string-trim snippet) (* 6 frame-width-percent))))
+         (snippet (and (stringp snippet) (consult-omni--set-string-width (string-trim snippet) (* 4 frame-width-percent))))
          (snippet (and (stringp snippet) (propertize snippet 'face 'consult-omni-snippet-face)))
          (str (concat title-str
                       (when date (concat "\s" date))
