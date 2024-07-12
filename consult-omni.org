@@ -6353,10 +6353,6 @@ Truncate the definition to this many lines in minibuffer."
 
 (defcustom consult-omni-dict-use-single-buffer (and (bound-and-true-p dictionary-use-single-buffer) dictionary-use-single-buffer)
   "Should the dictionary command reuse previous dictionary buffers?
-
-See `dictionary-use-single-buffer' for referenc
-  "Should the dictionary command reuse previous dictionary buffers?
-
 See `dictionary-use-single-buffer' for reference"
   :type 'boolean)
 
