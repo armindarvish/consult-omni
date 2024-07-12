@@ -6330,8 +6330,7 @@ For details see `dictionary-server'."
   :type '(choice (const :tag "Automatic" nil)
                  (const :tag "localhost" "localhost")
                  (const :tag "dict.org" "dict.org")
-                 (string :tag "User-defined"))
-)
+                 (string :tag "User-defined")))
 
 
 (defcustom consult-omni-dict-use-single-buffer (or (and (bound-and-true-p dictionary-use-single-buffer) dictionary-use-single-buffer) t)
@@ -6463,52 +6462,77 @@ cand))
   (funcall consult-omni-default-browse-function url)))
 #+end_src
 **** items
+***** get suggestions
+#+begin_src emacs-lisp
+(defun consult-omni-dict-word-suggestions-maybe (query buffer &optional maxcount)
+"Get list of word suggestions up to MAXCOUNT from dictionaries."
+  (goto-char (point-min))
+  (let ((source "Dictionary")
+        (annotated-results)
+        (idx 0))
+  (while (re-search-forward "Matches from \\(?1:.*?\\):\n\\(?2:[[:ascii:][:nonascii:]]*?\\)\n\n" nil t)
+    (when-let* ((dict (match-string 1))
+           (def (match-string 2))
+           (line (+ (match-end 1) 2)))
+      (when (or (not maxcount) (and maxcount (< idx maxcount))) (setq annotated-results (append annotated-results (consult-omni--dict-format-candidates :source source :query query :dict dict :def def :pos line :buffer buffer :idx idx))))
+      (cl-incf idx)))
+annotated-results
+))
+#+end_src
 ***** search query
 #+begin_src emacs-lisp
 (defun consult-omni--dict-search-query (query &optional maxcount)
-"Finds definitions for QUERY from `dictionary'.
+  "Finds definitions for QUERY from `dictionary'.
 
 if MAXCOUNT is non-nil, only find top MAXCOUNT definitions."
   (let* ((dictionary-server consult-omni-dict-server)
          (dictionary-search-interface consult-omni-dict-search-interface)
-         (dictionary-default-strategy consult-omni-dict-default-strategy)
          (dictionary-use-single-buffer consult-omni-dict-use-single-buffer)
-         (dictionary-server consult-omni-dict-server)
          (buffer (save-mark-and-excursion (dictionary) (current-buffer)))
          (annotated-results))
     (when (and buffer (buffer-live-p buffer))
       (with-current-buffer buffer
         (condition-case err
-            (progn (dictionary-new-search-internal query "*"
-                                        (lambda (result)
-                                          (let ((inhibit-read-only t)
-                                                (source "Dictionary")
-                                                (idx 0)
-                                                (reply (if result (dictionary-read-reply-and-split))))
-                                            (when reply
-                                            (while (dictionary-check-reply reply 151)
-                                              (let* ((reply-list (dictionary-reply-list reply))
-                                                     (dictionary (nth 2 reply-list))
-	                                             (description (nth 3 reply-list))
-	                                             (word (nth 1 reply-list))
-                                                     (def)
-                                                     (dict)
-                                                     (line))
-                                                (dictionary-display-word-entry dictionary description)
-	                                        (setq reply (dictionary-read-answer))
-	                                        (setq def (dictionary-decode-charset reply dictionary))
-                                                (setq line (point-max))
-                                                (dictionary-display-word-definition reply word dictionary)
-                                                (setq reply (dictionary-read-reply-and-split))
-                                                (when (or (not maxcount) (and maxcount (< idx maxcount))) (setq annotated-results (append annotated-results (consult-omni--dict-format-candidates :source source :query query :dict dictionary :def def :pos line :buffer buffer :idx idx) )))
-                                                (cl-incf idx)))
-                                            (when (> idx 0) (dictionary-post-buffer))))))
-                   (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case))
-          ('user-error nil)
+            (progn
+              (setq-local dictionary-default-strategy consult-omni-dict-default-strategy)
+              (setq-local dictionary-server consult-omni-dict-server)
+              (dictionary-new-search-internal query "*"
+                                              (lambda (result)
+                                                (let ((inhibit-read-only t)
+                                                      (source "Dictionary")
+                                                      (idx 0)
+                                                      (reply (if result (dictionary-read-reply-and-split))))
+                                                  (when reply
+                                                    (while (dictionary-check-reply reply 151)
+                                                      (let* ((reply-list (dictionary-reply-list reply))
+                                                             (dictionary (nth 2 reply-list))
+	                                                     (description (nth 3 reply-list))
+	                                                     (word (nth 1 reply-list))
+                                                             (def)
+                                                             (dict)
+                                                             (line))
+                                                        (dictionary-display-word-entry dictionary description)
+	                                                (setq reply (dictionary-read-answer))
+	                                                (setq def (dictionary-decode-charset reply dictionary))
+                                                        (setq line (point))
+                                                        (dictionary-display-word-definition reply word dictionary)
+
+                                                        (setq reply (dictionary-read-reply-and-split))
+                                                        (when (or (not maxcount) (and maxcount (< idx maxcount))) (setq annotated-results (append annotated-results (consult-omni--dict-format-candidates :source source :query query :dict dictionary :def def :pos line :buffer buffer :idx idx) )))
+                                                        (cl-incf idx)))
+                                                    (when (> idx 0) (dictionary-post-buffer))))))
+              (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
+              (unless annotated-results
+                  (setq annotated-results (consult-omni-dict-word-suggestions-maybe query buffer maxcount))))
+          ('user-error
+           (progn
+             (message (format "error in calling :items of Dictionary source - %s" (error-message-string err)))
+             (unless annotated-results
+             (setq annotated-results (consult-omni-dict-word-suggestions-maybe query buffer maxcount)))))
           ('error (message (if consult-omni-log-level
-                          (format "error in calling :items of Dictionary source - %s" (error-message-string err))))))
+                               (format "error in calling :items of Dictionary source - %s" (error-message-string err))))))
         (quit-window)))
-        annotated-results))
+    annotated-results))
 #+end_src
 ***** fetch results
 #+begin_src emacs-lisp
