@@ -137,7 +137,7 @@ Description of Arguments:
          (directory (and (stringp directory) (propertize directory 'face 'consult-omni-path-face)))
          (snippet (and (stringp snippet) (consult-omni--set-string-width snippet (* 3 frame-width-percent))))
          (snippet (and (stringp snippet) (propertize snippet 'face 'consult-omni-snippet-face)))
-         (match-str (and (stringp query) (consult--split-escaped query) nil))
+         (match-str (and (stringp query) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-files-title-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 4 frame-width-percent)))
