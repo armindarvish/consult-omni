@@ -63,7 +63,7 @@ Description of Arguments:
   FACE         the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (videocount-str (and videocount (consult-omni--numbers-human-readable (or videocount 0) "videos")))
          (viewcount-str (and viewcount (consult-omni--numbers-human-readable (or viewcount 0) "views")))
          (subcount-str (and subcount (consult-omni--numbers-human-readable (or subcount 0) "subs")))

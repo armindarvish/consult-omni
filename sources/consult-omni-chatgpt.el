@@ -49,7 +49,7 @@ Description of Arguments:
                       (propertize " " 'display '(space :align-to center))
                       (if model (propertize (format "model: %s" model) 'face 'consult-omni-path-face))
                       (if source (concat "\t" source))))
-         (match-str (if (stringp query) (consult--split-escaped query) nil)))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil)))
     (if consult-omni-highlight-matches
         (cond
          ((listp match-str)

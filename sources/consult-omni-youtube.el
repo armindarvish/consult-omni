@@ -75,7 +75,7 @@ Description of Arguments:
   FACE         the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (date (and (stringp date) (propertize date 'face 'consult-omni-date-face)))
          (channeltitle (and (stringp channeltitle) (propertize channeltitle 'face 'consult-omni-path-face)))
          (channeltitle (consult-omni--set-string-width channeltitle (* 2 frame-width-percent)))

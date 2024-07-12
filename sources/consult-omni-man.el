@@ -36,7 +36,7 @@ Similar to `consult-man-args' bur for consult-omni."
 (defun consult-omni--man-transform (candidates &optional query)
   "Formats candidates of `consult-omni-man'."
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (source (propertize "man" 'face 'consult-omni-source-type-face))
          (results))
     (save-match-data

@@ -65,7 +65,7 @@ Description of Arguments:
   FACE   the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (date (if (stringp date) (propertize date 'face 'consult-omni-date-face) "            "))
          (from (if (stringp from) (propertize from 'face 'consult-omni-path-face) ""))
          (from-str (and (stringp from) (consult-omni--set-string-width from (* 2 frame-width-percent))))

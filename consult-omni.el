@@ -314,7 +314,8 @@ This is used in dynamic collection to change grouping.")
                                             ("Perplexity" .  "https://www.perplexity.ai/search")
                                             ("PubMed" . "https://pubmed.ncbi.nlm.nih.gov/")
                                             ("Wikipedia" . "https://www.wikipedia.org/search-redirect.php")
-                                            ("YouTube" . "https://www.youtube.com/search"))
+                                            ("YouTube" . "https://www.youtube.com/search")
+                                            )
 "Alist of search engine name and URLs")
 
 ;;; Faces
@@ -942,7 +943,7 @@ Description of Arguments:
   FACE        the face used for the title"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
-         (match-str (and (stringp query) (consult--split-escaped query)))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 4 frame-width-percent)))

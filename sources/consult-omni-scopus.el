@@ -58,7 +58,7 @@ Description of Arguments:
                    (t nil)))
          (authors (if (and authors (stringp authors)) (propertize authors 'face 'consult-omni-source-type-face)))
          (doi (if (stringp doi) (propertize doi 'face 'link) nil))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 5 frame-width-percent)))

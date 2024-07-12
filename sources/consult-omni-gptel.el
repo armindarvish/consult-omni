@@ -76,7 +76,7 @@ Description of Arguments:
   FACE     the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
-         (match-str (and (stringp query) (consult--split-escaped query)))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (backend (and (stringp backend) (propertize backend 'face 'consult-omni-domain-face)))
          (model (and (stringp model) (propertize model 'face 'consult-omni-path-face)))
          (stream (and stream (propertize "~stream~" 'face 'consult-omni-snippet-face)))

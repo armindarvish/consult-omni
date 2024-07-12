@@ -28,7 +28,7 @@ Description of Arguments:
          (info (cadr cand))
          (msg (plist-get info :msg))
          (query (plist-get info :query))
-         (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped (car (consult--command-split query))) nil))
          (headers-template (consult-mu--headers-template))
          (str (if headers-template
                  (consult-mu--expand-headers-template msg headers-template)
