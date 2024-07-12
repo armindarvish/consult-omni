@@ -20,10 +20,6 @@
 
 ;;; Customization Variables
 
-(defcustom consult-omni-dict-short-definition-wordcount 1000
-  "Number of words to use in a short definition"
-  :type 'integer)
-
 (defcustom consult-omni-dict-server (or (and (bound-and-true-p dictionary-server) dictionary-server) "dict.org")
 "This server is contacted for searching the dictionary.
 
@@ -35,12 +31,28 @@ For details see `dictionary-server'."
 )
 
 
+(defcustom consult-omni-dict-use-single-buffer (and (bound-and-true-p dictionary-use-single-buffer) dictionary-use-single-buffer)
+  "Should the dictionary command reuse previous dictionary buffers?
+See `dictionary-use-single-buffer' for reference"
+  :type 'boolean)
+
+
 (defcustom consult-omni-dict-search-interface (or (and (bound-and-true-p dictionary-search-interface) dictionary-search-interface) 'help)
   "Controls how `dictionary-search' prompts for words and displays definitions.
 
 See `dictionary-search-interface' for details."
   :type '(choice (const :tag "Dictionary buffer" nil)
                  (const :tag "Help buffer" help)))
+
+(defcustom consult-omni-dict-default-strategy (or (and (bound-and-true-p dictionary-default-strategy) dictionary-default-strategy) ".")
+  "The default strategy for listing matching words.
+
+See `dictionary-default-strategy' for details."
+  :type 'string)
+
+(defcustom consult-omni-dict-short-definition-wordcount 1000
+  "Number of words to use in a short definition"
+  :type 'integer)
 
 (defcustom consult-omni-dict-number-of-lines nil
 "How many lines of definition to show in minibuffer?
@@ -49,12 +61,6 @@ Truncate the definition to this many lines in minibuffer."
   :type '(choice (const :tag "(Default) Do not truncate" nil)
                  (const :tag "Just use the first line" 1)
                  (int :tag "Custom Number of Lines")))
-
-
-(defcustom consult-omni-dict-use-single-buffer (and (bound-and-true-p dictionary-use-single-buffer) dictionary-use-single-buffer)
-  "Should the dictionary command reuse previous dictionary buffers?
-See `dictionary-use-single-buffer' for reference"
-  :type 'boolean)
 
 (cl-defun consult-omni--dict-format-candidates (&rest args &key source query dict def buffer pos  idx face &allow-other-keys)
   "Returns a formatted string for Dictionary candidates
