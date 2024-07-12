@@ -6324,7 +6324,7 @@ Description of Arguments:
   "Number of words to use in a short definition"
   :type 'integer)
 
-(defcustom consult-omni-dict-server (or dictionary-server "dict.org")
+(defcustom consult-omni-dict-server (or (and (bound-and-true-p dictionary-server) dictionary-server) "dict.org")
 "This server is contacted for searching the dictionary.
 
 For details see `dictionary-server'."
@@ -6335,7 +6335,7 @@ For details see `dictionary-server'."
 )
 
 
-(defcustom consult-omni-dict-search-interface (or dictionary-search-interface 'help)
+(defcustom consult-omni-dict-search-interface (or (and (bound-and-true-p dictionary-search-interface) dictionary-search-interface) 'help)
   "Controls how `dictionary-search' prompts for words and displays definitions.
 
 See `dictionary-search-interface' for details."
@@ -6351,7 +6351,10 @@ Truncate the definition to this many lines in minibuffer."
                  (int :tag "Custom Number of Lines")))
 
 
-(defcustom consult-omni-dict-use-single-buffer dictionary-use-single-buffer
+(defcustom consult-omni-dict-use-single-buffer (and (bound-and-true-p dictionary-use-single-buffer) dictionary-use-single-buffer)
+  "Should the dictionary command reuse previous dictionary buffers?
+
+See `dictionary-use-single-buffer' for referenc
   "Should the dictionary command reuse previous dictionary buffers?
 
 See `dictionary-use-single-buffer' for reference"
