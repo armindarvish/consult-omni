@@ -6334,6 +6334,14 @@ For details see `dictionary-server'."
                  (string :tag "User-defined"))
 )
 
+
+(defcustom consult-omni-dict-search-interface (or dictionary-search-interface 'help)
+  "Controls how `dictionary-search' prompts for words and displays definitions.
+
+See `dictionary-search-interface' for details."
+  :type '(choice (const :tag "Dictionary buffer" nil)
+                 (const :tag "Help buffer" help)))
+
 (defcustom consult-omni-dict-number-of-lines nil
 "How many lines of definition to show in minibuffer?
 
