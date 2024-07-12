@@ -6331,7 +6331,7 @@ For details see `dictionary-server'."
 )
 
 
-(defcustom consult-omni-dict-use-single-buffer (and (bound-and-true-p dictionary-use-single-buffer) dictionary-use-single-buffer)
+(defcustom consult-omni-dict-use-single-buffer (or (and (bound-and-true-p dictionary-use-single-buffer) dictionary-use-single-buffer) t)
   "Should the dictionary command reuse previous dictionary buffers?
 See `dictionary-use-single-buffer' for reference"
   :type 'boolean)
@@ -6454,12 +6454,14 @@ if MAXCOUNT is non-nil, only find top MAXCOUNT definitions."
          (annotated-results))
     (when (and buffer (buffer-live-p buffer))
       (with-current-buffer buffer
-        (dictionary-new-search-internal query "*"
+        (condition-case err
+            (progn (dictionary-new-search-internal query "*"
                                         (lambda (result)
                                           (let ((inhibit-read-only t)
                                                 (source "Dictionary")
                                                 (idx 0)
-                                                (reply (dictionary-read-reply-and-split)))
+                                                (reply (if result (dictionary-read-reply-and-split))))
+                                            (when reply
                                             (while (dictionary-check-reply reply 151)
                                               (let* ((reply-list (dictionary-reply-list reply))
                                                      (dictionary (nth 2 reply-list))
@@ -6476,10 +6478,13 @@ if MAXCOUNT is non-nil, only find top MAXCOUNT definitions."
                                                 (setq reply (dictionary-read-reply-and-split))
                                                 (when (or (not maxcount) (and maxcount (< idx maxcount))) (setq annotated-results (append annotated-results (consult-omni--dict-format-candidates :source source :query query :dict dictionary :def def :pos line :buffer buffer :idx idx) )))
                                                 (cl-incf idx)))
-                                            (dictionary-post-buffer))))
-        (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
-        (quit-window))
-        annotated-results)))
+                                            (when (> idx 0) (dictionary-post-buffer))))))
+                   (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case))
+          ('user-error nil)
+          ('error (message (if consult-omni-log-level
+                          (format "error in calling :items of Dictionary source - %s" (error-message-string err))))))
+        (quit-window)))
+        annotated-results))
 #+end_src
 ***** fetch results
 #+begin_src emacs-lisp
