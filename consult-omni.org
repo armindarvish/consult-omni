@@ -3456,6 +3456,7 @@ For each file in files, if it contains the QUERY
                     (title (or name (file-name-base file) ""))
                     (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
                     (search-url nil)
+                    (consult-omni-highlight-matches nil)
                     (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
                (propertize decorated
                            :source source
