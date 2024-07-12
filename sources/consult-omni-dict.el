@@ -62,6 +62,17 @@ Truncate the definition to this many lines in minibuffer."
                  (const :tag "Just use the first line" 1)
                  (int :tag "Custom Number of Lines")))
 
+(defcustom consult-omni-dict-external-dictionary-url "https://www.merriam-webster.com/dictionary/%s"
+"Format string for external dictionary website.
+
+This is a string with url and %s as placeholder for the query term."
+:type '(choice (const :tag "(Defualt) Meriam Webster" "https://www.merriam-webster.com/dictionary/%s")
+               (const :tag "GNU Collaborative International Dictionary of English" "https://gcide.gnu.org.ua/?q=%s")
+               (const :tag "The American Heritage Dictionary" "https://www.ahdictionary.com/word/search.html?q=%s")
+               (const :tag "Cambridge English Dictionary" "dictionary.cambridge.org/dictionary/english/%s")
+               (const :tag "Oxford English Dictionary" "https://www.oed.com/search/dictionary/?&q=%s")
+               (const :tag "Dictionary.com" "https://www.dictionary.com/browse/%s")))
+
 (cl-defun consult-omni--dict-format-candidates (&rest args &key source query dict def buffer pos  idx face &allow-other-keys)
   "Returns a formatted string for Dictionary candidates
 
@@ -77,7 +88,7 @@ Description of Arguments:
   FACE   the face to apply to DEFINITION"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
-         (match-str (and (stringp query) (consult--split-escaped query)))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (dict (and (stringp dict) (propertize dict 'face 'consult-omni-date-face)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (answer (and (stringp def) (if (length> def consult-omni-dict-short-definition-wordcount) (substring def 0 consult-omni-dict-short-definition-wordcount) def)))
@@ -128,6 +139,10 @@ Description of Arguments:
 (if-let  ((def (get-text-property 0 :def cand)))
     def
 cand))
+
+(defun consult-omni--dict-new (cand)
+  (let ((url (format consult-omni-dict-external-dictionary-url (url-hexify-string cand))))
+  (funcall consult-omni-default-browse-function url)))
 
 (defun consult-omni--dict-search-query (query &optional maxcount)
 "Finds definitions for QUERY from `dictionary'.
@@ -191,12 +206,13 @@ if MAXCOUNT is non-nil, only find top MAXCOUNT definitions."
                             :narrow-char ?D
                             :category 'consult-omni-dictionary
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-snippet-face
                             :request #'consult-omni--dict-fetch-results
                             :on-preview #'consult-omni--dict-preview
                             :on-return #'consult-omni--dict-return
                             :on-callback #'consult-omni--dict-preview
+                            :on-new #'consult-omni--dict-new
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history

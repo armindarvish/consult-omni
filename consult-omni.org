@@ -346,7 +346,8 @@ This is used in dynamic collection to change grouping.")
                                             ("Perplexity" .  "https://www.perplexity.ai/search")
                                             ("PubMed" . "https://pubmed.ncbi.nlm.nih.gov/")
                                             ("Wikipedia" . "https://www.wikipedia.org/search-redirect.php")
-                                            ("YouTube" . "https://www.youtube.com/search"))
+                                            ("YouTube" . "https://www.youtube.com/search")
+                                            )
 "Alist of search engine name and URLs")
 
 #+end_src
@@ -1081,7 +1082,7 @@ Description of Arguments:
   FACE        the face used for the title"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
-         (match-str (and (stringp query) (consult--split-escaped query)))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 4 frame-width-percent)))
@@ -3328,7 +3329,7 @@ Description of Arguments:
          (directory (and (stringp directory) (propertize directory 'face 'consult-omni-path-face)))
          (snippet (and (stringp snippet) (consult-omni--set-string-width snippet (* 3 frame-width-percent))))
          (snippet (and (stringp snippet) (propertize snippet 'face 'consult-omni-snippet-face)))
-         (match-str (and (stringp query) (consult--split-escaped query)))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-files-title-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 4 frame-width-percent)))
@@ -3508,6 +3509,7 @@ a new list is generated."
                     (title (or name (file-name-base file) ""))
                     (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
                     (search-url nil)
+                    (consult-omni-highlight-matches nil)
                     (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
                (propertize decorated
                            :source source
@@ -3983,7 +3985,7 @@ Description of Arguments:
   SNIPPET    a string containing a snippet/description of candidate"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
-         (match-str (and (stringp query) (consult--split-escaped query)))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 4 frame-width-percent)))
@@ -4266,7 +4268,7 @@ Description of Arguments:
                       (propertize " " 'display '(space :align-to center))
                       (if model (propertize (format "model: %s" model) 'face 'consult-omni-path-face))
                       (if source (concat "\t" source))))
-         (match-str (if (stringp query) (consult--split-escaped query) nil)))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil)))
     (if consult-omni-highlight-matches
         (cond
          ((listp match-str)
@@ -4437,7 +4439,7 @@ Description of Arguments:
          (pos (marker-position marker))
          (buff (and buff (propertize (format "%s" buff) 'face 'consult-omni-domain-face)))
          (pos (and pos (propertize (format "%s" pos) 'face 'consult-omni-path-face)))
-         (match-str (if (stringp query)
+         (match-str (if (and (stringp query) (not (equal query ".*")))
                         (consult--split-escaped (car (consult--command-split query)))
                       nil))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
@@ -5388,7 +5390,7 @@ Similar to `consult-man-args' bur for consult-omni."
 (defun consult-omni--man-transform (candidates &optional query)
   "Formats candidates of `consult-omni-man'."
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (source (propertize "man" 'face 'consult-omni-source-type-face))
          (results))
     (save-match-data
@@ -6170,7 +6172,7 @@ Description of Arguments:
          (info (cadr cand))
          (msg (plist-get info :msg))
          (query (plist-get info :query))
-         (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped (car (consult--command-split query))) nil))
          (headers-template (consult-mu--headers-template))
          (str (if headers-template
                  (consult-mu--expand-headers-template msg headers-template)
@@ -6362,6 +6364,18 @@ Truncate the definition to this many lines in minibuffer."
   :type '(choice (const :tag "(Default) Do not truncate" nil)
                  (const :tag "Just use the first line" 1)
                  (int :tag "Custom Number of Lines")))
+
+(defcustom consult-omni-dict-external-dictionary-url "https://www.merriam-webster.com/dictionary/%s"
+"Format string for external dictionary website.
+
+This is a string with url and %s as placeholder for the query term."
+:type '(choice (const :tag "(Defualt) Meriam Webster" "https://www.merriam-webster.com/dictionary/%s")
+               (const :tag "GNU Collaborative International Dictionary of English" "https://gcide.gnu.org.ua/?q=%s")
+               (const :tag "The American Heritage Dictionary" "https://www.ahdictionary.com/word/search.html?q=%s")
+               (const :tag "Cambridge English Dictionary" "dictionary.cambridge.org/dictionary/english/%s")
+               (const :tag "Oxford English Dictionary" "https://www.oed.com/search/dictionary/?&q=%s")
+               (const :tag "Dictionary.com" "https://www.dictionary.com/browse/%s")))
+
 #+end_src
 
 **** helper function
@@ -6382,7 +6396,7 @@ Description of Arguments:
   FACE   the face to apply to DEFINITION"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
-         (match-str (and (stringp query) (consult--split-escaped query)))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (dict (and (stringp dict) (propertize dict 'face 'consult-omni-date-face)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (answer (and (stringp def) (if (length> def consult-omni-dict-short-definition-wordcount) (substring def 0 consult-omni-dict-short-definition-wordcount) def)))
@@ -6438,6 +6452,12 @@ Description of Arguments:
 (if-let  ((def (get-text-property 0 :def cand)))
     def
 cand))
+#+end_src
+***** new
+#+begin_src emacs-lisp
+(defun consult-omni--dict-new (cand)
+  (let ((url (format consult-omni-dict-external-dictionary-url (url-hexify-string cand))))
+  (funcall consult-omni-default-browse-function url)))
 #+end_src
 **** items
 ***** search query
@@ -6509,12 +6529,13 @@ if MAXCOUNT is non-nil, only find top MAXCOUNT definitions."
                             :narrow-char ?D
                             :category 'consult-omni-dictionary
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-snippet-face
                             :request #'consult-omni--dict-fetch-results
                             :on-preview #'consult-omni--dict-preview
                             :on-return #'consult-omni--dict-return
                             :on-callback #'consult-omni--dict-preview
+                            :on-new #'consult-omni--dict-new
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
@@ -6846,7 +6867,7 @@ Description of Arguments:
                                    title-width
                                    elfeed-search-title-max-width)
                             :left))
-             (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
+             (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped (car (consult--command-split query))) nil))
              (str (concat (propertize title-column 'face title-faces 'kbd-help title) " "
                           (propertize date 'face 'elfeed-search-date-face)
                           (when feed-title
@@ -7334,7 +7355,7 @@ Description of Arguments:
   FACE     the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
-         (match-str (and (stringp query) (consult--split-escaped query)))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (backend (and (stringp backend) (propertize backend 'face 'consult-omni-domain-face)))
          (model (and (stringp model) (propertize model 'face 'consult-omni-path-face)))
          (stream (and stream (propertize "~stream~" 'face 'consult-omni-snippet-face)))
@@ -7612,7 +7633,7 @@ Description of Arguments:
   FACE         the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (videocount-str (and videocount (consult-omni--numbers-human-readable (or videocount 0) "videos")))
          (viewcount-str (and viewcount (consult-omni--numbers-human-readable (or viewcount 0) "views")))
          (subcount-str (and subcount (consult-omni--numbers-human-readable (or subcount 0) "subs")))
@@ -8055,7 +8076,7 @@ Description of Arguments:
   FACE   the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (date (if (stringp date) (propertize date 'face 'consult-omni-date-face) "            "))
          (from (if (stringp from) (propertize from 'face 'consult-omni-path-face) ""))
          (from-str (and (stringp from) (consult-omni--set-string-width from (* 2 frame-width-percent))))
@@ -8556,7 +8577,7 @@ Description of Arguments:
   FACE         the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (buffer (and buffer (propertize (format "%s" buffer) 'face 'consult-omni-domain-face)))
          (prio (and (stringp prio) (propertize (format "[#%s]" prio) 'face 'consult-omni-prompt-face)))
          (todo (and (stringp todo) (propertize todo 'face (or (and org-todo-keyword-faces (cdr (assoc todo org-todo-keyword-faces)))
@@ -8792,7 +8813,7 @@ Description of Arguments:
                    (t nil)))
          (authors (if (and authors (stringp authors)) (propertize authors 'face 'consult-omni-source-type-face)))
          (doi (if (stringp doi) (propertize doi 'face 'link)))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 5 frame-width-percent)))
@@ -9054,7 +9075,7 @@ Description of Arguments:
                    (t nil)))
          (authors (if (and authors (stringp authors)) (propertize authors 'face 'consult-omni-source-type-face)))
          (doi (if (stringp doi) (propertize doi 'face 'link) nil))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 5 frame-width-percent)))
@@ -9262,7 +9283,7 @@ Description of Arguments:
          (answered (if answered (propertize consult-omni-stackoverflow-answered-mark 'face 'consult-omni-domain-face)
                      (propertize consult-omni-stackoverflow-unanswered-mark 'face 'error)))
          (score (and score (propertize (format "%s" score) 'face 'consult-omni-path-face)))
-         (match-str (and (stringp query) (consult--split-escaped query)))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 7 frame-width-percent)))
@@ -9430,7 +9451,7 @@ Description of Arguments:
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (date (and (stringp date) (propertize date 'face 'consult-omni-date-face)))
-         (match-str (and (stringp query) (consult--split-escaped query)))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 3 frame-width-percent)))
@@ -9625,7 +9646,7 @@ Description of Arguments:
   FACE         the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (date (and (stringp date) (propertize date 'face 'consult-omni-date-face)))
          (channeltitle (and (stringp channeltitle) (propertize channeltitle 'face 'consult-omni-path-face)))
          (channeltitle (consult-omni--set-string-width channeltitle (* 2 frame-width-percent)))
