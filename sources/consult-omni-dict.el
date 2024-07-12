@@ -20,11 +20,6 @@
 
 ;;; Customization Variables
 
-(defcustom consult-omni-dict-buffer-name " *consult-omni-dict*"
-  "Name for consult-omni-dict buffer."
-  :type '(choice (:tag "A string for buffer name" string)
-                 (:tag "A custom function taking prompt (and other args) as input and returning buffer name string" function)))
-
 (defcustom consult-omni-dict-short-definition-wordcount 1000
   "Number of words to use in a short definition"
   :type 'integer)
@@ -48,7 +43,7 @@ Truncate the definition to this many lines in minibuffer."
                  (int :tag "Custom Number of Lines")))
 
 
-(defcustom consult-omni-dict-use-single-buffer (or dictionary-use-single-buffer nil)
+(defcustom consult-omni-dict-use-single-buffer dictionary-use-single-buffer
   "Should the dictionary command reuse previous dictionary buffers?
 
 See `dictionary-use-single-buffer' for reference"
@@ -99,15 +94,6 @@ Description of Arguments:
                                 :dict dict
                                 :buffer buffer))))
             items)))
-
-(defun consult-omni--dict-buffer-name (&optional query &rest args)
-  "Returns a string for `consult-omni-dict' buffer name"
-  (cond
-   ((functionp consult-omni-dict-buffer-name)
-    (funcall consult-omni-dict-buffer-name query args))
-   ((stringp consult-omni-dict-buffer-name)
-    consult-omni-dict-buffer-name)
-   (t " *consult-omni-dict*")))
 
 (defun consult-omni--dict-preview (cand)
   "Shows a preview buffer of CAND for `consult-omni-dict'."
