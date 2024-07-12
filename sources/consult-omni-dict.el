@@ -47,30 +47,61 @@ Truncate the definition to this many lines in minibuffer."
                  (const :tag "Just use the first line" 1)
                  (int :tag "Custom Number of Lines")))
 
-(cl-defun consult-omni--dict-format-candidate (&rest args &key source query line face &allow-other-keys)
+
+(defcustom consult-omni-dict-use-single-buffer (or dictionary-use-single-buffer nil)
+  "Should the dictionary command reuse previous dictionary buffers?
+
+See `dictionary-use-single-buffer' for reference"
+  :type 'boolean)
+
+(cl-defun consult-omni--dict-format-candidates (&rest args &key source query dict def buffer pos  idx face &allow-other-keys)
   "Returns a formatted string for Dictionary candidates
 
 Description of Arguments:
 
   SOURCE the name to use (e.g. “Dictionary”)
   QUERY  query input from the user
-  LINE   a single line of the definition for QUERY.
+  DICT   name of dictionary for current item
+  DEF    definition of current item
+  BUFFER the current buffer for dictionary
+  POS    position of definition in BUFFER
+  IDX    index of definition in current definitions
   FACE   the face to apply to DEFINITION"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
+         (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (match-str (and (stringp query) (consult--split-escaped query)))
+         (dict (and (stringp dict) (propertize dict 'face 'consult-omni-date-face)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
-         (title-str (and line (stringp line) (propertize line 'face face)))
-         (str title-str))
-    (if consult-omni-highlight-matches
-        (cond
-         ((listp match-str)
-          (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
-         ((stringp match-str)
-          (setq str (consult-omni--highlight-match match-str str t)))))
-    str))
+         (answer (and (stringp def) (if (length> def consult-omni-dict-short-definition-wordcount) (substring def 0 consult-omni-dict-short-definition-wordcount) def)))
+         (items (and (stringp answer) (split-string answer "\n")))
+         (items (and items (if (integerp consult-omni-dict-number-of-lines) (seq-take items consult-omni-dict-number-of-lines) items)))
+         (first-item t))
+    (mapcar (lambda (item)
+              (if-let ((str (propertize item 'face face)))
+                  (progn
+                    (if consult-omni-highlight-matches
+                        (cond
+                         ((listp match-str)
+                          (mapcar (lambda (match)
+                                    (setq str (consult-omni--highlight-match match str t)))
+                                  match-str))
+                         ((stringp match-str)
+                          (setq str (consult-omni--highlight-match match-str str t)))))
+                    (setq str (if first-item
+                                  (concat dict "\t" str)
+                                (concat (make-string (length dict) ?\s) "\t" str)))
+                    (setq first-item nil)
+                    (propertize str
+                                :source source
+                                :title def
+                                :query query
+                                :pos pos
+                                :dict dict
+                                :buffer buffer))))
+            items)))
 
 (defun consult-omni--dict-buffer-name (&optional query &rest args)
-  "Returns a string for `consult-omni-gptel' buffer name"
+  "Returns a string for `consult-omni-dict' buffer name"
   (cond
    ((functionp consult-omni-dict-buffer-name)
     (funcall consult-omni-dict-buffer-name query args))
@@ -79,56 +110,82 @@ Description of Arguments:
    (t " *consult-omni-dict*")))
 
 (defun consult-omni--dict-preview (cand)
-  "Shows a preview buffer of CAND for `consult-omni-dict'.
-
-The preview buffer is from `consult-omni--dict-definition-preview'."
+  "Shows a preview buffer of CAND for `consult-omni-dict'."
   (if (listp cand) (setq cand (or (car-safe cand) cand)))
   (let*  ((query (get-text-property 0 :query cand))
           (buffer (get-text-property 0 :buffer cand))
           (pos (get-text-property 0 :pos cand)))
-    (when buffer
-      (with-current-buffer buffer (when pos (goto-line pos)))
+      (when buffer
+        (with-current-buffer buffer (when pos (goto-char pos))))
       (funcall (consult--buffer-preview) 'preview
-                 buffer))))
+                 buffer)
+      (save-excursion
+        (with-selected-window (get-buffer-window buffer)
+          (recenter 1 t)))
+      (consult-omni--pulse-line 0.15)))
 
 (defun consult-omni--dict-return (cand)
 "Returns definition string of CAND for `consult-omni-dict'."
-(if-let  ((buffer (get-text-property 0 :buffer cand)))
-    (with-current-buffer buffer (buffer-string))
+(if-let  ((def (get-text-property 0 :def cand)))
+    def
 cand))
+
+(defun consult-omni--dict-search-query (query &optional maxcount)
+"Finds definitions for QUERY from `dictionary'.
+
+if MAXCOUNT is non-nil, only find top MAXCOUNT definitions."
+  (let* ((dictionary-server consult-omni-dict-server)
+         (dictionary-search-interface consult-omni-dict-search-interface)
+         (dictionary-default-strategy consult-omni-dict-default-strategy)
+         (dictionary-use-single-buffer consult-omni-dict-use-single-buffer)
+         (dictionary-server consult-omni-dict-server)
+         (buffer (save-mark-and-excursion (dictionary) (current-buffer)))
+         (annotated-results))
+    (when (and buffer (buffer-live-p buffer))
+      (with-current-buffer buffer
+        (dictionary-new-search-internal query "*"
+                                        (lambda (result)
+                                          (let ((inhibit-read-only t)
+                                                (source "Dictionary")
+                                                (idx 0)
+                                                (reply (dictionary-read-reply-and-split)))
+                                            (while (dictionary-check-reply reply 151)
+                                              (let* ((reply-list (dictionary-reply-list reply))
+                                                     (dictionary (nth 2 reply-list))
+	                                             (description (nth 3 reply-list))
+	                                             (word (nth 1 reply-list))
+                                                     (def)
+                                                     (dict)
+                                                     (line))
+                                                (dictionary-display-word-entry dictionary description)
+	                                        (setq reply (dictionary-read-answer))
+	                                        (setq def (dictionary-decode-charset reply dictionary))
+                                                (setq line (point-max))
+                                                (dictionary-display-word-definition reply word dictionary)
+                                                (setq reply (dictionary-read-reply-and-split))
+                                                (when (or (not maxcount) (and maxcount (< idx maxcount))) (setq annotated-results (append annotated-results (consult-omni--dict-format-candidates :source source :query query :dict dictionary :def def :pos line :buffer buffer :idx idx) )))
+                                                (cl-incf idx)))
+                                            (dictionary-post-buffer))))
+        (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
+        (quit-window))
+        annotated-results)))
 
 (cl-defun consult-omni--dict-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetches word definitions for INPUT from `dictionary'."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
-               (source "Dictionary")
-               (dictionary-server consult-omni-dict-server)
-               (buffer (get-buffer-create (consult-omni--dict-buffer-name query args)))
-               (def (dictionary-definition query))
-               (_ (when def (with-current-buffer buffer
-                    (erase-buffer)
-                    (insert def)
-                    (add-to-history 'dictionary-word-history query)
-                    (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
-                    )))
-               (frame-width-percent (floor (* (frame-width) 0.1)))
-               (answer (and (stringp def) (if (length> def consult-omni-dict-short-definition-wordcount) (substring def 0 consult-omni-dict-short-definition-wordcount) def)))
-               (items (and (stringp answer) (split-string answer "\n")))
-               (items (and items (if (integerp consult-omni-dict-number-of-lines) (seq-take items consult-omni-dict-number-of-lines) items)))
-               (idx 0)
-               (annotated-results (nreverse (mapcar (lambda (item)
-                                            (propertize (consult-omni--dict-format-candidate :source source :query query :line item)
-                                                        :source "Dictionary"
-                                                        :buffer buffer
-                                                        :pos (cl-incf idx)))
-                                         items))))
-              (when (and annotated-results (functionp callback))
-                (funcall callback annotated-results))
-              annotated-results))
+               (count (plist-get opts :count))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-default-count))
+               (annotated-results (consult-omni--dict-search-query query (if count count))))
+    (when (and annotated-results (functionp callback))
+      (funcall callback (nreverse annotated-results))
+    annotated-results)))
 
 ;; Define the Dictionary Source
 (consult-omni-define-source "Dictionary"
-                            :narrow-char ?a
+                            :narrow-char ?D
+                            :category 'consult-omni-dictionary
                             :type 'dynamic
                             :require-match t
                             :face 'consult-omni-snippet-face
@@ -139,7 +196,7 @@ cand))
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
-                            :enabled (lambda () (fboundp 'dictionary-definition))
+                            :enabled (lambda () (fboundp 'dictionary))
                             :group #'consult-omni--group-function
                             :sort nil
                             :static 'both

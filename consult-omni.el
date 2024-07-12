@@ -255,6 +255,10 @@ By default inherits from `consult-async-refresh-delay'. "
 (defvar consult-omni-video-category 'consult-omni-video
   "Category symbol for video search")
 
+
+(defvar consult-omni-dictionary-category 'consult-omni-dictionary
+  "Category symbol for dictionary search")
+
 (defvar consult-omni--selection-history (list)
   "History variable that keeps selected items.")
 
@@ -583,7 +587,7 @@ Ommits keys in IGNORE-KEYS."
       (funcall var)
     var))
 
-(defun consult-omni--pulse-regexp (regexp)
+(defun consult-omni--pulse-regexp (regexp &optional delay)
   "Finds and pulses REGEXP"
   (goto-char (point-min))
   (while (re-search-forward regexp nil t)
@@ -591,22 +595,22 @@ Ommits keys in IGNORE-KEYS."
            (beg (car m))
            (end (cadr m))
            (ov (make-overlay beg end))
-           (pulse-delay 0.075)
+           (pulse-delay (or delay 0.075))
            )
       (pulse-momentary-highlight-overlay ov 'highlight))
     ))
 
-(defun consult-omni--pulse-region (beg end)
+(defun consult-omni--pulse-region (beg end &optional delay)
   "Finds and pulses region from BEG to END"
   (let ((ov (make-overlay beg end))
-        (pulse-delay 0.075)
+        (pulse-delay (or delay 0.075))
         )
       (pulse-momentary-highlight-overlay ov 'highlight))
     )
 
-(defun consult-omni--pulse-line ()
+(defun consult-omni--pulse-line (&optional delay)
 "Pulses line at point momentarily"
-(let* ((pulse-delay 0.055)
+(let* ((pulse-delay (or delay 0.075))
       (ov (make-overlay (car (bounds-of-thing-at-point 'line)) (cdr (bounds-of-thing-at-point 'line)))))
 (pulse-momentary-highlight-overlay ov 'highlight))
 )
