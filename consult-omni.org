@@ -6321,7 +6321,7 @@ Description of Arguments:
   :type '(choice (:tag "A string for buffer name" string)
                  (:tag "A custom function taking prompt (and other args) as input and returning buffer name string" function)))
 
-(defcustom consult-omni-dict-short-definition-wordcount 800
+(defcustom consult-omni-dict-short-definition-wordcount 1000
   "Number of words to use in a short definition"
   :type 'integer)
 
