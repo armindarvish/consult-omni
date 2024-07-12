@@ -16,7 +16,7 @@
 
 (require 'dictionary)
 (require 'consult-omni)
-(with-temp-buffer (dictionary-mode))
+(ignore-errors (with-temp-buffer (dictionary-mode)))
 
 ;;; Customization Variables
 
