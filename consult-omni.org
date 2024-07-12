@@ -6361,9 +6361,6 @@ Truncate the definition to this many lines in minibuffer."
   :type '(choice (const :tag "(Default) Do not truncate" nil)
                  (const :tag "Just use the first line" 1)
                  (int :tag "Custom Number of Lines")))
-
-
-
 #+end_src
 
 **** helper function
