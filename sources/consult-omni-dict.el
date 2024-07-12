@@ -90,6 +90,7 @@ Description of Arguments:
          (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (dict (and (stringp dict) (propertize dict 'face 'consult-omni-date-face)))
+         (search-url (format consult-omni-dict-external-dictionary-url (url-hexify-string query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (answer (and (stringp def) (if (length> def consult-omni-dict-short-definition-wordcount) (substring def 0 consult-omni-dict-short-definition-wordcount) def)))
          (items (and (stringp answer) (split-string answer "\n")))
@@ -112,11 +113,13 @@ Description of Arguments:
                     (setq first-item nil)
                     (propertize str
                                 :source source
-                                :title def
                                 :query query
-                                :pos pos
+                                :title def
                                 :dict dict
-                                :buffer buffer))))
+                                :url nil
+                                :search-url search-url
+                                :buffer buffer
+                                :pos pos))))
             items)))
 
 (defun consult-omni--dict-preview (cand)
@@ -136,7 +139,7 @@ Description of Arguments:
 
 (defun consult-omni--dict-return (cand)
 "Returns definition string of CAND for `consult-omni-dict'."
-(if-let  ((def (get-text-property 0 :def cand)))
+(if-let  ((def (get-text-property 0 :title cand)))
     def
 cand))
 
