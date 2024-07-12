@@ -30,6 +30,7 @@
         'consult-omni-calc
         'consult-omni-chatgpt
         'consult-omni-consult-notes
+        'consult-omni-dict
         'consult-omni-doi
         'consult-omni-duckduckgo
         'consult-omni-elfeed
