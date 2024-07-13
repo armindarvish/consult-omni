@@ -5178,7 +5178,7 @@ nil))
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :sort t
+                            :sort nil
                             :static 'both
                             :transform #'consult-omni--ripgrep-transform
                             :enabled (lambda () (if (and (executable-find "grep")
