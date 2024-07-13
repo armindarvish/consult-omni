@@ -72,6 +72,15 @@ This is a string with url and %s as placeholder for the query term."
                (const :tag "Oxford English Dictionary" "https://www.oed.com/search/dictionary/?&q=%s")
                (const :tag "Dictionary.com" "https://www.dictionary.com/browse/%s")))
 
+
+(defcustom consult-omni-dict-predicate #'consult-omni-dict-default-pred-func
+"Function to use as predicate for dictionary source.
+
+This is called as (funcall consult-omni-dict-predicate query) to
+determine if the query should be checked in the dictionary."
+:type '(choice (function :tag "(Default) use “define ” prefix" consult-omni-dict-default-pred-func)
+               (function :tag "Custom Function")))
+
 (cl-defun consult-omni--dict-format-candidates (&rest args &key source query dict def buffer pos  idx face &allow-other-keys)
   "Returns a formatted string for Dictionary candidates
 
@@ -120,6 +129,15 @@ Description of Arguments:
                                 :buffer buffer
                                 :pos pos))))
             items)))
+
+(defun consult-omni-dict-default-pred-func (query)
+  "Checks if the query is intended for `consult-omni-dictionary'."
+  (cond
+   ((string-prefix-p "define " query)
+    (string-remove-prefix "define " query))
+   ((string-prefix-p "Define " query)
+    (string-remove-prefix "Define " query))
+    nil))
 
 (defun consult-omni--dict-preview (cand)
   "Shows a preview buffer of CAND for `consult-omni-dict'."
@@ -206,11 +224,11 @@ if MAXCOUNT is non-nil, only find top MAXCOUNT definitions."
                   (setq annotated-results (consult-omni-dict-word-suggestions-maybe query buffer maxcount))))
           ('user-error
            (progn
-             (message (format "error in calling :items of Dictionary source - %s" (error-message-string err)))
+             (message (format "Dictionary: %s" (error-message-string err)))
              (unless annotated-results
              (setq annotated-results (consult-omni-dict-word-suggestions-maybe query buffer maxcount)))))
           ('error (message (if consult-omni-log-level
-                               (format "error in calling :items of Dictionary source - %s" (error-message-string err))))))
+                               (format "Dictionary: %s" (error-message-string err))))))
         (quit-window)))
     annotated-results))
 
@@ -221,7 +239,10 @@ if MAXCOUNT is non-nil, only find top MAXCOUNT definitions."
                (count (plist-get opts :count))
                (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (annotated-results (consult-omni--dict-search-query query (if count count))))
+               (query (if (and consult-omni-dict-predicate (stringp query)) (funcall consult-omni-dict-predicate query)
+                        query))
+               (query (if (stringp query) (unless (string-empty-p (string-trim query)) (string-trim-left query)) nil))
+               (annotated-results (and query (not (string-empty-p query)) (consult-omni--dict-search-query query (if count count)))))
     (when (and annotated-results (functionp callback))
       (funcall callback (nreverse annotated-results))
     annotated-results)))
