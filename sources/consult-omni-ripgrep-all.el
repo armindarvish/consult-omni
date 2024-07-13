@@ -175,7 +175,7 @@ Adopted from `consult--grep-format'."
                             :enabled (lambda () (if (and (executable-find "rga")
                                                         (fboundp 'consult--ripgrep-make-builder))
                                                     t nil))
-                            :sort t
+                            :sort nil
                             :static 'both
                             :annotate nil)
 

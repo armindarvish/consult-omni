@@ -52,7 +52,7 @@
                                                          (fboundp 'consult-git-grep))
                                                     t
                                                   nil))
-                            :sort t
+                            :sort nil
                             :static 'both
                             :annotate nil)
 

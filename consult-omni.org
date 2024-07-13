@@ -4993,7 +4993,7 @@ Similar to `consult-find-args' bur for consult-omni."
                                                          (fboundp 'consult-git-grep))
                                                     t
                                                   nil))
-                            :sort t
+                            :sort nil
                             :static 'both
                             :annotate nil)
 #+end_src
@@ -5648,7 +5648,7 @@ See `consult-locate-args' for example."
                             :enabled (lambda () (if (and (executable-find "rg")
                                                          (fboundp 'consult-ripgrep))
                                                     t nil))
-                            :sort t
+                            :sort nil
                             :static 'both
                             :annotate nil)
 #+end_src
@@ -5871,7 +5871,7 @@ Adopted from `consult--grep-format'."
                             :enabled (lambda () (if (and (executable-find "rga")
                                                         (fboundp 'consult--ripgrep-make-builder))
                                                     t nil))
-                            :sort t
+                            :sort nil
                             :static 'both
                             :annotate nil)
 #+end_src

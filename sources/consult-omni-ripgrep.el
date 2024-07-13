@@ -51,7 +51,7 @@
                             :enabled (lambda () (if (and (executable-find "rg")
                                                          (fboundp 'consult-ripgrep))
                                                     t nil))
-                            :sort t
+                            :sort nil
                             :static 'both
                             :annotate nil)
 
