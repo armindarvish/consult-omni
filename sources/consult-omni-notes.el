@@ -34,7 +34,9 @@
   "List of all note files for consult-omni-notes."
   :type '(repeat :tag "list of files" string))
 
-(defcustom consult-omni-notes-backend-command "rg"
+(defcustom consult-omni-notes-backend-command (or (and (executable-find "rga") "rga")
+                                                  (and (executable-find "rg") "rg")
+                                                  (and (executable-find "grep") "grep"))
   "What command-line program to use for searching files?
 
 Can be either:
@@ -109,8 +111,9 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
                                 #'consult--ripgrep-make-builder)
                        ((and (equal consult-omni-notes-backend-command "grep") (executable-find "grep")) #'consult--ripgrep-make-builder)
                        (t nil))))
-  (when backend-builder
-    (funcall (consult-omni--grep-make-builder backend-builder dir) query))))
+      (let ((consult-ripgrep-args (if (equal consult-omni-notes-backend-command "rga") consult-omni-ripgrep-all-args consult-ripgrep-args)))
+        (when backend-builder
+          (funcall (consult-omni--grep-make-builder backend-builder dir) query)))))
 
 ;; Define the Notes Search Source
 (consult-omni-define-source "Notes Search"
