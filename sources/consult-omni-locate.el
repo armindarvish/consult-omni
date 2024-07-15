@@ -162,7 +162,7 @@ See `consult-locate-args' for example."
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :enabled (lambda () (if (executable-find "mdfind") t nil))
-                            :sort t
+                            :sort nil
                             :static 'both
                             :annotate nil)
 
