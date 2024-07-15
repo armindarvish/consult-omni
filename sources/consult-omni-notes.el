@@ -18,7 +18,7 @@
 (require 'consult-omni-grep)
 (require 'consult-omni-ripgrep-all)
 
-(defcustom consult-omni-notes-files (apply #'append
+(defcustom consult-omni-notes-files (append
                                            (when (bound-and-true-p consult-notes-file-dir-sources)
                                              ;; dir sources
                                              (apply #'append (mapcar #'cddr consult-notes-file-dir-sources)))
@@ -30,7 +30,7 @@
                                              (list (expand-file-name denote-directory)))
                                            ;; org agenda files
                                            (when (bound-and-true-p consult-notes-org-headings-mode)
-                                             (list (mapcar #'expand-file-name consult-notes-org-headings-files))))
+                                             (mapcar #'expand-file-name consult-notes-org-headings-files)))
   "List of all note files for consult-omni-notes."
   :type '(repeat :tag "list of files" string))
 
