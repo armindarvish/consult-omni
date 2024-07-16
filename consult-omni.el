@@ -307,6 +307,12 @@ This is used in dynamic collection to change grouping.")
 (defvar consult-omni--async-log-buffer " *consult-omni--async-log*"
   "name of buffer for logging async processes info")
 
+(defvar consult-omni-dynamic-timers (list)
+  "List of timers for dynamic candidates colleciton")
+
+(defvar consult-omni--async-log-buffer " *consult-omni--async-log*"
+  "name of buffer for logging async processes info")
+
 (defvar consult-omni--search-engine-alist '(("Bing" . "https://www.bing.com/search")
                                             ("Brave" .  "https://search.brave.com/search")
                                             ("DuckDuckGo" . "https://duckduckgo.com/")
@@ -315,7 +321,9 @@ This is used in dynamic collection to change grouping.")
                                             ("PubMed" . "https://pubmed.ncbi.nlm.nih.gov/")
                                             ("Wikipedia" . "https://www.wikipedia.org/search-redirect.php")
                                             ("YouTube" . "https://www.youtube.com/search")
-                                            )
+                                            ("gptel" . #'consult-omni--gptel-preview
+)
+)
 "Alist of search engine name and URLs")
 
 ;;; Faces
@@ -1081,11 +1089,16 @@ CALLBACK is used as a fall back."
 (defun consult-omni-external-search (cand &optional engine)
   "Default NEW function for a non-existing CAND."
   (interactive (list (consult--read nil :prompt "Search: ")))
-  (if-let* ((engine (or engine consult-omni-default-search-engine (consult--read consult-omni--search-engine-alist :prompt "Select Search Engine: ")))
-            (search-url (cdr (assoc engine consult-omni--search-engine-alist)))
+  (let* ((cand (or (and (stringp cand) (propertize cand :query (substring-no-properties cand) :title cand)) cand))
+         (engine (or engine consult-omni-default-search-engine (consult--read consult-omni--search-engine-alist :prompt "Select Search Engine: ")))
+            (func (cdr (assoc engine consult-omni--search-engine-alist)))
+            (search-url (if (stringp func) func nil))
             (params `(("q" . ,(substring-no-properties cand))))
-            (url (consult-omni--make-url-string search-url params)))
-      (funcall consult-omni-default-browse-function url)))
+            (url (if (stringp search-url) (consult-omni--make-url-string search-url params) nil)))
+      (cond
+       (url (funcall consult-omni-default-browse-function url))
+       ((functionp (cadr func)) (funcall (cadr func) cand)))
+))
 
 (defun consult-omni-external-search-with-engine (engine &optional cand)
   "Funtion for new non-existing CAND in `consult-omni-brave'."
