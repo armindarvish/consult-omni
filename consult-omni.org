@@ -353,7 +353,9 @@ This is used in dynamic collection to change grouping.")
                                             ("PubMed" . "https://pubmed.ncbi.nlm.nih.gov/")
                                             ("Wikipedia" . "https://www.wikipedia.org/search-redirect.php")
                                             ("YouTube" . "https://www.youtube.com/search")
-                                            )
+                                            ("gptel" . #'consult-omni--gptel-preview
+)
+)
 "Alist of search engine name and URLs")
 
 #+end_src
@@ -555,6 +557,7 @@ Case is ignored, if ignore-case is non-nil.
           (setq m (cddr m))))))
   str)
 #+end_src
+
 ***** highlight match with overlay
 #+begin_src emacs-lisp
 
