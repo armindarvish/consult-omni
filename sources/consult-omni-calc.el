@@ -26,7 +26,7 @@
   "Regexp to detect calculator formula?
 
 The first capturing group will be used as input for `calc-eval'.
-If there is no capture group, the user's query will be used when matching."
+If there is no capture group, the whole input query."
   :type '(choice (regexp :tag "(Default) formula after =" "^=\\(.*\\)?")
                  (regexp :tag "Any string with digits, operators or brackets" "\\(.*[[:digit:]\/\*\+-=%^&$\(\{\[].*\\)")))
 
@@ -66,8 +66,11 @@ This uses `calc-eval' to return the result of input"
                (calc-eval-error t)
                (result)
                (annotated-result))
-    (when (string-match consult-omni-calc-regexp-pattern query nil)
-      (setq query (or (match-string 1 query) query))
+    (when consult-omni-calc-regexp-pattern
+      (if (string-match consult-omni-calc-regexp-pattern query nil)
+          (setq query (or (match-string 1 query) query))
+        (setq query nil)))
+    (when query
       (condition-case err
           (if convert
               (cl-letf* (((symbol-function 'calc-convert-units)
@@ -79,7 +82,7 @@ This uses `calc-eval' to return the result of input"
             (if consult-omni-calc-number-only
                 (setq result (apply #'calc-eval (list query) 'num extra-args))
               (setq result (apply #'calc-eval (list query) nil extra-args))))
-        ('error (and consult-omni-calc-message-errors (message (error-message-string err))))))
+        ('error (and consult-omni-calc-message-errors (message (error-message-string err)))))
     (when result (setq annotated-result (propertize result
                                                     :source source
                                                     :title result
@@ -87,7 +90,7 @@ This uses `calc-eval' to return the result of input"
                                                     :query query)))
     (if annotated-result
         (list annotated-result)
-      nil)))
+      nil))))
 
 ;; Define the Calc Source
 (consult-omni-define-source "calc"
