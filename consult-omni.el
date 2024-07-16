@@ -509,6 +509,7 @@ If a regular expression contains capturing groups,
 If no capturing groups are used, highlight the whole match.
 Case is ignored, if ignore-case is non-nil.
 (This is adapted from `consult--highlight-regexps'.)"
+  (save-match-data
   (let ((i 0))
     (while (and (let ((case-fold-search ignore-case))
                   (string-match regexp str i))
@@ -520,7 +521,7 @@ Case is ignored, if ignore-case is non-nil.
           (when (car m)
             (add-face-text-property (car m) (cadr m)
                                     'consult-omni-highlight-match-face nil str))
-          (setq m (cddr m))))))
+          (setq m (cddr m)))))))
   str)
 
 (defun consult-omni--overlay-match (match-str buffer ignore-case)
@@ -532,6 +533,7 @@ or preview buffers."
   (let ((buffer (or (and buffer (get-buffer buffer)) (current-buffer))))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
+        (save-match-data
         (save-mark-and-excursion
           (remove-overlays (point-min) (point-max) 'consult-omni-overlay t)
           (goto-char (point-min))
@@ -543,7 +545,7 @@ or preview buffers."
                     (end (cadr m))
                     (overlay (make-overlay beg end)))
           (overlay-put overlay 'consult-omni-overlay t)
-          (overlay-put overlay 'face 'consult-omni-highlight-match-face)))))))))
+          (overlay-put overlay 'face 'consult-omni-highlight-match-face))))))))))
 
 (defun consult-omni-overlays-toggle (&optional buffer)
   "Toggles overlay highlights in consult-omni view/preview buffers."
