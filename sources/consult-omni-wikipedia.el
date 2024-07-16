@@ -53,7 +53,7 @@ Description of Arguments:
                       (when date (concat "\s" date))
                       (when snippet (concat "\s\s" snippet))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))

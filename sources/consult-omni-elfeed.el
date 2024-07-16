@@ -66,7 +66,7 @@ Description of Arguments:
                           (when tags (concat " " "(" tags-str ")"))
                           (when domain (concat "\t" domain (when path path)))
                           (concat "\t" (propertize "elfeed" 'face 'consult-omni-source-type-face)))))
-        (if consult-omni-highlight-matches
+        (if consult-omni-highlight-matches-in-minibuffer
             (cond
              ((listp match-str)
               (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))

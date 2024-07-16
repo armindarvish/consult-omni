@@ -107,7 +107,7 @@ Description of Arguments:
     (mapcar (lambda (item)
               (if-let ((str (propertize item 'face face)))
                   (progn
-                    (if consult-omni-highlight-matches
+                    (if consult-omni-highlight-matches-in-minibuffer
                         (cond
                          ((listp match-str)
                           (mapcar (lambda (match)

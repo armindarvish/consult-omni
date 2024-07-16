@@ -190,8 +190,12 @@ This variable is a list of strings or symbols;
    (see `consult-buffer-sources' for example.)"
   :type '(choice (repeat :tag "list of source names" string)))
 
-(defcustom consult-omni-highlight-matches t
+(defcustom consult-omni-highlight-matches-in-minibuffer t
   "Should `consult-omni' highlight search queries in the minibuffer?"
+  :type 'boolean)
+
+(defcustom consult-omni-highlight-matches-in-file t
+  "Should `consult-omni' highlight search queries in files (preview or return)?"
   :type 'boolean)
 
 (defcustom consult-omni-highlight-match-ignore-case t
@@ -988,7 +992,7 @@ Description of Arguments:
                       (when url-str (concat "\s" url-str))
                       (when snippet (concat "\s\s" snippet))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))

@@ -146,7 +146,7 @@ Description of Arguments:
                       (when snippet (concat "\t" snippet))
                       (when directory (concat "\t" directory))
                       (when source (concat "\t" source)))))
-     (if consult-omni-highlight-matches
+     (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -254,7 +254,7 @@ For each file in files, if it contains the QUERY
                     (title (or name (file-name-base file) ""))
                     (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
                     (search-url nil)
-                    (consult-omni-highlight-matches nil)
+                    (consult-omni-highlight-matches-in-minibuffer nil)
                     (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
                (propertize decorated
                            :source source
@@ -298,7 +298,7 @@ a new list is generated."
                     (title (or name (file-name-base file) ""))
                     (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
                     (search-url nil)
-                    (consult-omni-highlight-matches nil)
+                    (consult-omni-highlight-matches-in-minibuffer nil)
                     (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
                (propertize decorated
                            :source source

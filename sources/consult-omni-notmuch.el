@@ -83,7 +83,7 @@ Description of Arguments:
                         (if title-str title-str)
                         (if tags (format "\s\s%s" tags))
                         (if source (concat "\t" source))))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((and (listp match-str) (stringp str))
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))

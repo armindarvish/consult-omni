@@ -45,29 +45,38 @@ Adopted from `consult--grep-format'."
                    ;; Filter out empty context lines
                    (or (/= (aref str (match-beginning 3)) ?-)
                        (/= (match-end 0) (length str))))
-            (let* ((file (file-truename (match-string 1 str)))
-                   (line (match-string 2 str))
+          ;; We share the file name across candidates to reduce
+          ;; the amount of allocated memory.
+          (unless (and (= file-len (- (match-end 1) (match-beginning 1)))
+                       (eq t (compare-strings
+                              file 0 file-len
+                              str (match-beginning 1) (match-end 1) nil)))
+            (setq file (match-string 1 str)
+                  file-len (length file)))
+
+            (let* ((line (match-string 2 str))
                    (ctx (and (numberp (match-beginning 3)) (= (aref str (match-beginning 3)) ?-)))
                    (sep (if ctx "-" ":"))
                    (content (substring str (or (match-end 5) (match-end 4) (match-end 3) (match-end 2) (match-end 1) (match-end 0))))
-                   (content (if (length> content (* frame-width-percent 6)) (consult-omni--set-string-width content (* frame-width-percent 6))
-                              content))
                    (page (match-string 5 str))
                    (page-str (and page (concat "Page " page)))
                    (line-len (length line))
-                   (file-str (string-remove-prefix (file-truename default-directory) file))
-                   (file-str (if (and (stringp file-str) (> (length file-str) (* frame-width-percent 5)))
-                                 (consult-omni--set-string-width file-str (* frame-width-percent 5) (* frame-width-percent 1))
+                   (file-str (string-remove-prefix (file-truename default-directory) (file-truename file)))
+                   (file-str (if (and (stringp file-str) (> (length file-str) (* frame-width-percent 2)))
+                                 (consult-omni--set-string-width file-str (* frame-width-percent 2) (* frame-width-percent 1))
                                file-str))
-                   (file-len (length file-str))
+                   (file-str-len (length file-str))
                    (cand (concat file-str sep line sep page-str sep content)))
 
+              (when (length> content (* frame-width-percent 6)) (setq content (consult-omni--set-string-width content (* frame-width-percent 6))))
+
             ;; Store file name in order to avoid allocations in `consult--prefix-group'
-            (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) cand)
-            (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number cand)
+            (add-text-properties 0 1 `(:source ,source :title ,cand :query ,query :file ,file :pos ,line :page ,page :content ,content) cand)
+            (add-text-properties 0 file-str-len `(face consult-file consult--prefix-group ,file) cand)
+            (put-text-property (1+ file-str-len) (+ 1 file-str-len line-len) 'face 'consult-line-number cand)
             (when ctx
-              (add-face-text-property (+ 2 file-len line-len) (length cand) 'consult-grep-context 'append cand))
-            (push (propertize cand :source source :title cand :query query :file file :pos line :page page :content content) result)))))
+              (add-face-text-property (+ 2 file-str-len line-len) (length cand) 'consult-grep-context 'append cand))
+            (push cand result)))))
     result))
 
 (defun consult-omni--ripgrep-all-transform (candidates &optional query)
@@ -89,7 +98,7 @@ Adopted from `consult--grep-format'."
            (and (stringp page) (doc-view-goto-page (string-to-number page))))
           ('pdf-view-mode
            (and (stringp page) (pdf-view-goto-page (string-to-number page)))
-           (when consult-omni-highlight-matches
+           (when consult-omni-highlight-matches-in-file
              (add-to-history 'search-ring (isearch-string-propertize query))
              (when-let ((matches (pdf-isearch-search-page query)))
                (setq pdf-isearch-current-matches matches)
@@ -103,46 +112,44 @@ Adopted from `consult--grep-format'."
         (when (derived-mode-p 'org-mode)
           (org-fold-show-entry))
         (recenter nil t)
-        (when consult-omni-highlight-matches
+        (when consult-omni-highlight-matches-in-file
           (add-to-history 'search-ring (isearch-string-propertize query))
           (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case))
         (consult-omni--pulse-line))))
     nil))
 
-(defun consult-omni--ripgrep-all-callback (cand)
-  "Callback function for `consult-omni-ripgrep-all'."
-  (let ((file (get-text-property 0 :file cand))
-        (pos (get-text-property 0 :pos cand))
-        (page (get-text-property 0 :page cand))
-        (content (get-text-property 0 :content cand))
-        (query (get-text-property 0 :query cand)))
-    (funcall  #'consult--file-action file)
-    (cond
-     ((string-suffix-p ".pdf" file)
-      (pcase major-mode
-        ('doc-view-mode
-         (and (stringp page) (doc-view-goto-page (string-to-number page))))
-        ('pdf-view-mode
-         (and (stringp page) (pdf-view-goto-page (string-to-number page)))
-         (when consult-omni-highlight-matches
-             (add-to-history 'search-ring (isearch-string-propertize query))
-             (when-let ((matches (pdf-isearch-search-page query)))
-               (setq pdf-isearch-current-matches matches)
-               (setq pdf-isearch-current-match (car-safe matches))
-               (pdf-isearch-hl-matches pdf-isearch-current-match pdf-isearch-current-matches t)
-               (pdf-isearch-focus-match pdf-isearch-current-match))))
-        (_ nil)))
-     (t
-      (if (buffer-narrowed-p) (widen))
-      (and (stringp pos) (goto-line (string-to-number pos)))
-      (when (derived-mode-p 'org-mode)
-        (org-fold-show-entry))
-      (recenter nil t)
-      (when consult-omni-highlight-matches
-        (add-to-history 'search-ring (isearch-string-propertize query))
-        (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
-        (consult-omni-overlays-toggle))
-      (consult-omni--pulse-line)))))
+;; (defun consult-omni--ripgrep-all-callback (cand)
+;;   "Callback function for `consult-omni-ripgrep-all'."
+;;   (let ((file (get-text-property 0 :file cand))
+;;         (pos (get-text-property 0 :pos cand))
+;;         (page (get-text-property 0 :page cand))
+;;         (content (get-text-property 0 :content cand))
+;;         (query (get-text-property 0 :query cand)))
+;;     (when file
+;;       (funcall  #'consult--file-action file)
+;;       (cond
+;;        ((string-suffix-p ".pdf" file)
+;;         (pcase major-mode
+;;           ('doc-view-mode
+;;            (and (stringp page) (doc-view-goto-page (string-to-number page))))
+;;           ('pdf-view-mode
+;;            (and (stringp page) (pdf-view-goto-page (string-to-number page)))
+;;            (when consult-omni-highlight-matches-in-file
+;;              (add-to-history 'search-ring (isearch-string-propertize query))
+;;              (when-let ((matches (pdf-isearch-search-page query)))
+;;                (setq pdf-isearch-current-matches matches)
+;;                (setq pdf-isearch-current-match (car-safe matches))
+;;                (pdf-isearch-hl-matches pdf-isearch-current-match pdf-isearch-current-matches t)
+;;                (pdf-isearch-focus-match pdf-isearch-current-match))))
+;;           (_ nil)))
+;;        (t
+;;         (and (stringp pos) (goto-line (string-to-number pos)))
+;;         (consult--invisible-open-permanently)
+;;         (recenter nil t)
+;;         (when consult-omni-highlight-matches-in-file
+;;           (add-to-history 'search-ring (isearch-string-propertize query))
+;;           (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case))
+;;         (consult-omni--pulse-line))))))
 
 (cl-defun consult-omni--ripgrep-all-builder (input &rest args &key callback &allow-other-keys)
   "Makes builder command line args for “ripgrep”."
@@ -167,7 +174,7 @@ Adopted from `consult--grep-format'."
                             :transform #'consult-omni--ripgrep-all-transform
                             :on-preview #'consult-omni--ripgrep-all-preview
                             :on-return #'identity
-                            :on-callback #'consult-omni--ripgrep-all-callback
+                            :on-callback #'consult-omni--ripgrep-all-preview
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history

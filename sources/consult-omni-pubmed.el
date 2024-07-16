@@ -70,7 +70,7 @@ Description of Arguments:
                       (if date (format "\s\s%s" date))
                       (if authors (format "\s\s%s" authors))
                       (if source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))

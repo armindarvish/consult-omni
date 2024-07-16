@@ -50,7 +50,7 @@ Description of Arguments:
                       (if model (propertize (format "model: %s" model) 'face 'consult-omni-path-face))
                       (if source (concat "\t" source))))
          (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil)))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))

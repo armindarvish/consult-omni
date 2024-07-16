@@ -47,7 +47,7 @@ Description of Arguments:
          (str (concat title-str
                       (when url-str (concat "\s" url-str))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))

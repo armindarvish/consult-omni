@@ -87,7 +87,7 @@ Description of Arguments:
                       (when backend (concat "\t" backend))
                       (when model (concat ":" model))
                       (when stream (concat "\s" stream "\s")))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))

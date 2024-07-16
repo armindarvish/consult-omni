@@ -209,8 +209,12 @@ This variable is a list of strings or symbols;
    (see `consult-buffer-sources' for example.)"
   :type '(choice (repeat :tag "list of source names" string)))
 
-(defcustom consult-omni-highlight-matches t
+(defcustom consult-omni-highlight-matches-in-minibuffer t
   "Should `consult-omni' highlight search queries in the minibuffer?"
+  :type 'boolean)
+
+(defcustom consult-omni-highlight-matches-in-file t
+  "Should `consult-omni' highlight search queries in files (preview or return)?"
   :type 'boolean)
 
 (defcustom consult-omni-highlight-match-ignore-case t
@@ -1128,7 +1132,7 @@ Description of Arguments:
                       (when url-str (concat "\s" url-str))
                       (when snippet (concat "\s\s" snippet))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -3375,7 +3379,7 @@ Description of Arguments:
                       (when snippet (concat "\t" snippet))
                       (when directory (concat "\t" directory))
                       (when source (concat "\t" source)))))
-     (if consult-omni-highlight-matches
+     (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -3494,7 +3498,7 @@ For each file in files, if it contains the QUERY
                     (title (or name (file-name-base file) ""))
                     (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
                     (search-url nil)
-                    (consult-omni-highlight-matches nil)
+                    (consult-omni-highlight-matches-in-minibuffer nil)
                     (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
                (propertize decorated
                            :source source
@@ -3546,7 +3550,7 @@ a new list is generated."
                     (title (or name (file-name-base file) ""))
                     (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
                     (search-url nil)
-                    (consult-omni-highlight-matches nil)
+                    (consult-omni-highlight-matches-in-minibuffer nil)
                     (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
                (propertize decorated
                            :source source
@@ -4038,7 +4042,7 @@ Description of Arguments:
          (str (concat title-str
                       (when url-str (concat "\s" url-str))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -4309,7 +4313,7 @@ Description of Arguments:
                       (if model (propertize (format "model: %s" model) 'face 'consult-omni-path-face))
                       (if source (concat "\t" source))))
          (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil)))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -4489,7 +4493,7 @@ Description of Arguments:
                       (when buff (concat "\t" buff))
                       (when pos (concat "\s\s" pos ))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -5085,11 +5089,11 @@ Similar to `consult-find-args' bur for consult-omni."
 Adopted from `consult--grep-format'."
 (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (file "")
+         (filename "")
          (file-len 0)
-         (file-str)
-         (cand)
+         (file-str "")
+         (file-str-len 0)
          result)
-    (save-match-data
       (dolist (str candidates)
         (when (and (string-match regexp-pattern str)
                    ;; Filter out empty context lines
@@ -5101,26 +5105,37 @@ Adopted from `consult--grep-format'."
                        (eq t (compare-strings
                               file 0 file-len
                               str (match-beginning 1) (match-end 1) nil)))
-            (setq file (file-truename (match-string 1 str)))
-            (if (and file (stringp file) (> file-len (* frame-width-percent 2)))
-              (setq file-str (consult-omni--set-string-width (string-remove-prefix (file-truename default-directory) file) (* frame-width-percent 2) (* frame-width-percent 1)))
-              (setq file-str (string-remove-prefix (file-truename default-directory) file)))
-            (setq file-len (length file-str)))
+            (setq file (match-string 1 str)
+                  file-len (length file)))
           (let* ((line (match-string 2 str))
                  (ctx (= (aref str (match-beginning 3)) ?-))
                  (sep (if ctx "-" ":"))
                  (content (substring str (match-end 0)))
-                 (line-len (length line)))
+                 (line-len (length line))
+                 (cand)
+                 (file-str (string-remove-prefix (file-truename default-directory) (file-truename file)))
+                 (file-str (if (> (length file-str) (* frame-width-percent 5))
+                               (consult-omni--set-string-width file-str (* frame-width-percent 5) (* frame-width-percent 1))
+                             file-str))
+                 (file-str-len (length file-str)))
             (when (length> content consult-grep-max-columns)
               (setq content  (consult-omni--set-string-width content consult-grep-max-columns)))
              (setq cand (concat file-str sep line sep content))
             ;; Store file name in order to avoid allocations in `consult--prefix-group'
-            (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) cand)
-            (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number cand)
+            (add-text-properties 0 1 `(:source ,source :title ,cand :query ,query :file ,file :pos ,line :content ,content) cand)
+            (add-text-properties 0 file-str-len `(face consult-file consult--prefix-group ,file) cand)
+            (put-text-property (1+ file-str-len) (+ 1 file-str-len line-len) 'face 'consult-line-number cand)
             (when ctx
-              (add-face-text-property (+ 2 file-len line-len) (length str) 'consult-grep-context 'append cand))
-            (push (propertize cand :source source :title cand :query query :file file :pos line :content content) result)))))
+              (add-face-text-property (+ 2 file-str-len line-len) (length cand) 'consult-grep-context 'append cand))
+(push cand result)
+            )))
     result))
+#+end_src
+****** transform
+#+begin_src emacs-lisp
+(defun consult-omni--grep-transform (candidates &optional query)
+  "Formats candidates for `consult-omni-grep'."
+  (consult-omni--grep-format candidates :source "grep" :query query :regexp-pattern consult--grep-match-regexp))
 #+end_src
 ****** grep-builder
 #+begin_src emacs-lisp
@@ -5135,12 +5150,6 @@ Adopted from `consult--grep-format'."
 
 
 
-****** transform
-#+begin_src emacs-lisp
-(defun consult-omni--grep-transform (candidates &optional query)
-  "Formats candidates for `consult-omni-grep'."
-  (consult-omni--grep-format candidates :source "grep" :query query :regexp-pattern consult--grep-match-regexp))
-#+end_src
 ****** preview
 #+begin_src emacs-lisp
 
@@ -5150,41 +5159,38 @@ Adopted from `consult--grep-format'."
         (pos (get-text-property 0 :pos cand))
         (content (get-text-property 0 :content cand))
         (query (get-text-property 0 :query cand)))
-    (with-current-buffer (funcall #'consult--file-action file)
-      (if (buffer-narrowed-p) (widen))
-      (and (stringp pos) (goto-line (string-to-number pos)))
-      (when (derived-mode-p 'org-mode)
-        (org-fold-show-entry))
-      (recenter nil t)
-      (when consult-omni-highlight-matches
-        (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
-        (add-to-history 'search-ring (isearch-string-propertize query)))
-     (consult-omni--pulse-line))
-nil))
+    (when file
+      (with-current-buffer (funcall #'consult--file-action file)
+        (and (stringp pos) (goto-line (string-to-number pos)))
+        (consult--invisible-open-permanently)
+        (recenter nil t)
+        (when consult-omni-highlight-matches-in-file
+          (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
+          (add-to-history 'search-ring (isearch-string-propertize query)))
+        (consult-omni--pulse-line))
+      nil)))
 
 #+end_src
 
 ****** callback
 #+begin_src emacs-lisp
 
-(defun consult-omni--grep-callback (cand)
-  "Callback function for `consult-omni-grep'."
-  (let ((file (get-text-property 0 :file cand))
-        (pos (get-text-property 0 :pos cand))
-        (content (get-text-property 0 :content cand))
-        (query (get-text-property 0 :query cand)))
-    (with-current-buffer (funcall #'consult--file-action file)
-       (if (buffer-narrowed-p) (widen))
-       (and (stringp pos) (goto-line (string-to-number pos)))
-       (when (derived-mode-p 'org-mode)
-        (org-fold-show-entry))
-       (recenter nil t)
-      (when consult-omni-highlight-matches
-        (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
-        (add-to-history 'search-ring (isearch-string-propertize query))
-        (consult-omni-overlays-toggle))
-      (consult-omni--pulse-line))
-nil))
+;; (defun consult-omni--grep-callback (cand)
+;;   "Callback function for `consult-omni-grep'."
+;;   (let ((file (get-text-property 0 :file cand))
+;;         (pos (get-text-property 0 :pos cand))
+;;         (content (get-text-property 0 :content cand))
+;;         (query (get-text-property 0 :query cand)))
+;;     (when file
+;;       (with-current-buffer (funcall #'consult--file-action file)
+;;        (and (stringp pos) (goto-line (string-to-number pos)))
+;;         (consult--invisible-open-permanently)
+;;        (recenter nil t)
+;;       (when consult-omni-highlight-matches-in-file
+;;         (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
+;;         (add-to-history 'search-ring (isearch-string-propertize query)))
+;;       (consult-omni--pulse-line))
+;; nil))
 #+end_src
 
 ***** items
@@ -5216,7 +5222,7 @@ nil))
                             :transform #'consult-omni--grep-transform
                             :on-preview #'consult-omni--grep-preview
                             :on-return #'identity
-                            :on-callback #'consult-omni--grep-callback
+                            :on-callback #'consult-omni--grep-preview
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
@@ -5225,7 +5231,8 @@ nil))
                             :interactive consult-omni-intereactive-commands-type
                             :transform #'consult-omni--ripgrep-transform
                             :enabled (lambda () (and (executable-find "grep")
-                                                (fboundp 'consult-grep)))
+                                                (fboundp 'consult-grep)
+                                                t))
                             :annotate nil)
 #+end_src
 
@@ -5448,7 +5455,7 @@ Similar to `consult-man-args' bur for consult-omni."
                  (str (concat title-str
                               (and desc "\t") desc
                               (and source "\t") source)))
-            (if consult-omni-highlight-matches
+            (if consult-omni-highlight-matches-in-minibuffer
                 (cond
                  ((listp match-str)
                   (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -5680,7 +5687,7 @@ See `consult-locate-args' for example."
                             :transform #'consult-omni--ripgrep-transform
                             :on-preview #'consult-omni--grep-preview
                             :on-return #'identity
-                            :on-callback #'consult-omni--grep-callback
+                            :on-callback #'consult-omni--grep-preview
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
@@ -5763,29 +5770,38 @@ Adopted from `consult--grep-format'."
                    ;; Filter out empty context lines
                    (or (/= (aref str (match-beginning 3)) ?-)
                        (/= (match-end 0) (length str))))
-            (let* ((file (file-truename (match-string 1 str)))
-                   (line (match-string 2 str))
+          ;; We share the file name across candidates to reduce
+          ;; the amount of allocated memory.
+          (unless (and (= file-len (- (match-end 1) (match-beginning 1)))
+                       (eq t (compare-strings
+                              file 0 file-len
+                              str (match-beginning 1) (match-end 1) nil)))
+            (setq file (match-string 1 str)
+                  file-len (length file)))
+
+            (let* ((line (match-string 2 str))
                    (ctx (and (numberp (match-beginning 3)) (= (aref str (match-beginning 3)) ?-)))
                    (sep (if ctx "-" ":"))
                    (content (substring str (or (match-end 5) (match-end 4) (match-end 3) (match-end 2) (match-end 1) (match-end 0))))
-                   (content (if (length> content (* frame-width-percent 6)) (consult-omni--set-string-width content (* frame-width-percent 6))
-                              content))
                    (page (match-string 5 str))
                    (page-str (and page (concat "Page " page)))
                    (line-len (length line))
-                   (file-str (string-remove-prefix (file-truename default-directory) file))
-                   (file-str (if (and (stringp file-str) (> (length file-str) (* frame-width-percent 5)))
-                                 (consult-omni--set-string-width file-str (* frame-width-percent 5) (* frame-width-percent 1))
+                   (file-str (string-remove-prefix (file-truename default-directory) (file-truename file)))
+                   (file-str (if (and (stringp file-str) (> (length file-str) (* frame-width-percent 2)))
+                                 (consult-omni--set-string-width file-str (* frame-width-percent 2) (* frame-width-percent 1))
                                file-str))
-                   (file-len (length file-str))
+                   (file-str-len (length file-str))
                    (cand (concat file-str sep line sep page-str sep content)))
 
+              (when (length> content (* frame-width-percent 6)) (setq content (consult-omni--set-string-width content (* frame-width-percent 6))))
+
             ;; Store file name in order to avoid allocations in `consult--prefix-group'
-            (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) cand)
-            (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number cand)
+            (add-text-properties 0 1 `(:source ,source :title ,cand :query ,query :file ,file :pos ,line :page ,page :content ,content) cand)
+            (add-text-properties 0 file-str-len `(face consult-file consult--prefix-group ,file) cand)
+            (put-text-property (1+ file-str-len) (+ 1 file-str-len line-len) 'face 'consult-line-number cand)
             (when ctx
-              (add-face-text-property (+ 2 file-len line-len) (length cand) 'consult-grep-context 'append cand))
-            (push (propertize cand :source source :title cand :query query :file file :pos line :page page :content content) result)))))
+              (add-face-text-property (+ 2 file-str-len line-len) (length cand) 'consult-grep-context 'append cand))
+            (push cand result)))))
     result))
 #+end_src
 ****** transform
@@ -5813,7 +5829,7 @@ Adopted from `consult--grep-format'."
            (and (stringp page) (doc-view-goto-page (string-to-number page))))
           ('pdf-view-mode
            (and (stringp page) (pdf-view-goto-page (string-to-number page)))
-           (when consult-omni-highlight-matches
+           (when consult-omni-highlight-matches-in-file
              (add-to-history 'search-ring (isearch-string-propertize query))
              (when-let ((matches (pdf-isearch-search-page query)))
                (setq pdf-isearch-current-matches matches)
@@ -5827,49 +5843,49 @@ Adopted from `consult--grep-format'."
         (when (derived-mode-p 'org-mode)
           (org-fold-show-entry))
         (recenter nil t)
-        (when consult-omni-highlight-matches
+        (when consult-omni-highlight-matches-in-file
           (add-to-history 'search-ring (isearch-string-propertize query))
           (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case))
         (consult-omni--pulse-line))))
     nil))
+
+
 #+end_src
 
 ****** callback
 #+begin_src emacs-lisp
-(defun consult-omni--ripgrep-all-callback (cand)
-  "Callback function for `consult-omni-ripgrep-all'."
-  (let ((file (get-text-property 0 :file cand))
-        (pos (get-text-property 0 :pos cand))
-        (page (get-text-property 0 :page cand))
-        (content (get-text-property 0 :content cand))
-        (query (get-text-property 0 :query cand)))
-    (funcall  #'consult--file-action file)
-    (cond
-     ((string-suffix-p ".pdf" file)
-      (pcase major-mode
-        ('doc-view-mode
-         (and (stringp page) (doc-view-goto-page (string-to-number page))))
-        ('pdf-view-mode
-         (and (stringp page) (pdf-view-goto-page (string-to-number page)))
-         (when consult-omni-highlight-matches
-             (add-to-history 'search-ring (isearch-string-propertize query))
-             (when-let ((matches (pdf-isearch-search-page query)))
-               (setq pdf-isearch-current-matches matches)
-               (setq pdf-isearch-current-match (car-safe matches))
-               (pdf-isearch-hl-matches pdf-isearch-current-match pdf-isearch-current-matches t)
-               (pdf-isearch-focus-match pdf-isearch-current-match))))
-        (_ nil)))
-     (t
-      (if (buffer-narrowed-p) (widen))
-      (and (stringp pos) (goto-line (string-to-number pos)))
-      (when (derived-mode-p 'org-mode)
-        (org-fold-show-entry))
-      (recenter nil t)
-      (when consult-omni-highlight-matches
-        (add-to-history 'search-ring (isearch-string-propertize query))
-        (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
-        (consult-omni-overlays-toggle))
-      (consult-omni--pulse-line)))))
+;; (defun consult-omni--ripgrep-all-callback (cand)
+;;   "Callback function for `consult-omni-ripgrep-all'."
+;;   (let ((file (get-text-property 0 :file cand))
+;;         (pos (get-text-property 0 :pos cand))
+;;         (page (get-text-property 0 :page cand))
+;;         (content (get-text-property 0 :content cand))
+;;         (query (get-text-property 0 :query cand)))
+;;     (when file
+;;       (funcall  #'consult--file-action file)
+;;       (cond
+;;        ((string-suffix-p ".pdf" file)
+;;         (pcase major-mode
+;;           ('doc-view-mode
+;;            (and (stringp page) (doc-view-goto-page (string-to-number page))))
+;;           ('pdf-view-mode
+;;            (and (stringp page) (pdf-view-goto-page (string-to-number page)))
+;;            (when consult-omni-highlight-matches-in-file
+;;              (add-to-history 'search-ring (isearch-string-propertize query))
+;;              (when-let ((matches (pdf-isearch-search-page query)))
+;;                (setq pdf-isearch-current-matches matches)
+;;                (setq pdf-isearch-current-match (car-safe matches))
+;;                (pdf-isearch-hl-matches pdf-isearch-current-match pdf-isearch-current-matches t)
+;;                (pdf-isearch-focus-match pdf-isearch-current-match))))
+;;           (_ nil)))
+;;        (t
+;;         (and (stringp pos) (goto-line (string-to-number pos)))
+;;         (consult--invisible-open-permanently)
+;;         (recenter nil t)
+;;         (when consult-omni-highlight-matches-in-file
+;;           (add-to-history 'search-ring (isearch-string-propertize query))
+;;           (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case))
+;;         (consult-omni--pulse-line))))))
 #+end_src
 
 ***** items
@@ -5902,7 +5918,7 @@ Adopted from `consult--grep-format'."
                             :transform #'consult-omni--ripgrep-all-transform
                             :on-preview #'consult-omni--ripgrep-all-preview
                             :on-return #'identity
-                            :on-callback #'consult-omni--ripgrep-all-callback
+                            :on-callback #'consult-omni--ripgrep-all-preview
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
@@ -6450,7 +6466,7 @@ Description of Arguments:
     (mapcar (lambda (item)
               (if-let ((str (propertize item 'face face)))
                   (progn
-                    (if consult-omni-highlight-matches
+                    (if consult-omni-highlight-matches-in-minibuffer
                         (cond
                          ((listp match-str)
                           (mapcar (lambda (match)
@@ -6959,7 +6975,7 @@ Description of Arguments:
                           (when tags (concat " " "(" tags-str ")"))
                           (when domain (concat "\t" domain (when path path)))
                           (concat "\t" (propertize "elfeed" 'face 'consult-omni-source-type-face)))))
-        (if consult-omni-highlight-matches
+        (if consult-omni-highlight-matches-in-minibuffer
             (cond
              ((listp match-str)
               (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -7450,7 +7466,7 @@ Description of Arguments:
                       (when backend (concat "\t" backend))
                       (when model (concat ":" model))
                       (when stream (concat "\s" stream "\s")))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -7753,7 +7769,7 @@ Description of Arguments:
                       (unless (string-empty-p stats) (concat "\s" stats))
                       (when snippet (concat "\s\s" snippet))
                       (concat "\t" source))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -8182,7 +8198,7 @@ Description of Arguments:
                         (if title-str title-str)
                         (if tags (format "\s\s%s" tags))
                         (if source (concat "\t" source))))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((and (listp match-str) (stringp str))
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -8723,7 +8739,7 @@ Description of Arguments:
                       (and date "\s\s") date
                       (and snippet "\s\s") snippet
                       (and source "\t") source)))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -8944,7 +8960,7 @@ Description of Arguments:
                       (if date (format "\s\s%s" date))
                       (if authors (format "\s\s%s" authors))
                       (if source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -9206,7 +9222,7 @@ Description of Arguments:
                       (if date (format "\s\s%s" date))
                       (if authors (format "\s\s%s" authors))
                       (if source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -9414,7 +9430,7 @@ Description of Arguments:
                       (when answered (concat "\s" answered))
                       (when score (concat "\s" score))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -9583,7 +9599,7 @@ Description of Arguments:
                       (when date (concat "\s" date))
                       (when snippet (concat "\s\s" snippet))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -9801,7 +9817,7 @@ Description of Arguments:
                       (unless (string-empty-p stats) (concat "\s" stats))
                       (when snippet (concat "\s\s" snippet))
                       (concat "\t" source))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))

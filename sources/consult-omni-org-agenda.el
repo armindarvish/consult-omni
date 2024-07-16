@@ -188,7 +188,7 @@ Description of Arguments:
                       (and date "\s\s") date
                       (and snippet "\s\s") snippet
                       (and source "\t") source)))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
