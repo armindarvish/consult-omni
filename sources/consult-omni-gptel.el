@@ -243,7 +243,7 @@ metadata so it can be send to `gptel'."
                             :enabled (lambda () (fboundp 'gptel))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-gptel' module

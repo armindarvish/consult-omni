@@ -68,7 +68,7 @@
                                                  :preview-key 'consult-preview-key
                                                  :group #'consult-omni--group-function
                                                  :enabled (lambda () (bound-and-true-p consult-notes-org-headings-mode))
-                                                 :static 'both))
+                                                 :interactive consult-omni-intereactive-commands-type))
 
 (when consult-notes-org-roam-mode
   (cl-loop for source in '(consult-notes-org-roam--refs consult-notes-org-roam--nodes)
@@ -82,7 +82,7 @@
                                                              :on-return #'identity
                                                              :on-callback #'consult-omni--consult-notes-org-roam-note-callback
                                                              :preview-key 'consult-preview-key
-                                                             :static 'both
+                                                             :interactive consult-omni-intereactive-commands-type
                                                              :group #'consult-omni--group-function
                                                              :enabled (lambda () consult-notes-org-roam-mode)
                                                              :annotate nil)))

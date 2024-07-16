@@ -84,8 +84,8 @@ Similar to `consult-find-args' bur for consult-omni."
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            :enabled (lambda () (if (executable-find "find") t nil))
+                            :interactive consult-omni-intereactive-commands-type
+                            :enabled (lambda () (executable-find "find"))
                             :annotate nil)
 
 ;;; provide `consult-omni-find' module

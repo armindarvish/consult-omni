@@ -88,7 +88,7 @@ See URL `https://brave.com/search/api/' for more info"
                             :enabled (lambda () (bound-and-true-p consult-omni-brave-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 
 ;;; provide `consult-omni-brave' module
 

@@ -150,7 +150,7 @@ if FILTER is non-nil, it is used as additional filter parameters."
                             :enabled (lambda () (boundp 'elfeed-db))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-elfeed' module

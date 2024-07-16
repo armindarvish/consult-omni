@@ -80,12 +80,10 @@
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :transform #'consult-omni--gh-transform
-                            :enabled (lambda () (if (and (executable-find "gh")
-                                                         (fboundp 'consult-gh-search-repos))
-                                                    t
-                                                  nil))
+                            :enabled (lambda () (and (executable-find "gh")
+                                                (fboundp 'consult-gh-search-repos)))
                             :annotate nil)
 
 ;;; provide `consult-omni-gh' module

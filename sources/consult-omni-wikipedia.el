@@ -124,11 +124,11 @@ Description of Arguments:
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
-                            :enabled (lambda () (boundp  'consult-omni-wikipedia-api-url))
+                            :enabled (lambda () (bound-and-true-p consult-omni-wikipedia-api-url))
                             :group #'consult-omni--group-function
                             :sort t
                             :type 'dynamic
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 
 ;;; provide `consult-omni-wikipedia' module
 

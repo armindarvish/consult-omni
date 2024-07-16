@@ -41,6 +41,22 @@ This variable is a list of symbols;
 each symbol being a source featue (e.g. consult-omni-brave)"
   :type '(repeat :tag "list of source modules/features to load" symbol))
 
+(defcustom consult-omni-intereactive-commands-type 'both
+  "Type of interactive commands to make?.
+
+This variable can be a  symbol:
+  'static  only make statis commands
+  'dynamic only make dynamic commands
+  otherwise make both commands
+
+dynamic commands are dynamically completed  in the minibuffer.
+static commands fetch search results once without dynamic completion"
+  :type '(choice (const :tag "(Default) Make both static and dynamic commands" 'both)
+                 (const :tag "Only make DYNAMIC interactive commands" 'dynamic)
+                 (const :tag "Only make STATIC interactive commands" 'static)
+                 ))
+
+
 
 (defcustom consult-omni-default-browse-function #'browse-url
   "consult-omni default function when selecting a link"
@@ -1881,7 +1897,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
 
 ;;; Macros
 ;;;###autoload
-(cl-defmacro consult-omni-define-source (source-name &rest args &key type request transform filter on-setup on-preview on-return on-exit state on-callback on-new require-match static lookup group narrow-char category search-hist select-hist add-hist face annotate enabled sort predicate preview-key docstring  &allow-other-keys)
+(cl-defmacro consult-omni-define-source (source-name &rest args &key type request transform filter on-setup on-preview on-return on-exit state on-callback on-new require-match interactive lookup group narrow-char category search-hist select-hist add-hist face annotate enabled sort predicate preview-key docstring  &allow-other-keys)
   "Macro to make a consult-omni-source for SOURCE-NAME.
 
 Generates the following:
@@ -1910,7 +1926,7 @@ Description of Arguments:
   ON-CALLBACK  (function)            Function called on selected candidate
   ON-NEW       (function)            Function called on non-existing candidate
   REUIRE-MATCH (function)            Can non-matching candidates be selected
-  STATIC       (boolean|'both)       Whether to make static commands or not
+  INTERACTIVE  (symbol)              make 'dynamic, 'static or 'both commands
   LOOKUP       (function)            Lookup function for `consult--read'
   GROUP        (function)            Passed as GROUP to `consult--read'
   NARROW-CHAR  (char)                Passed as NARROW to `consult-read'
@@ -2038,12 +2054,12 @@ Description of Arguments:
   REQUIRE-MATCH is a boolean. When non-nil non-matching candidates (e.g.
                 the minibuffer content itself) can be selected as a candidate.
 
-  STATIC can be a boolean (nil or t) or the symbol 'both.
-         - If nil, only \*non-dynamic\* interactive commands are created
+  INTERACTIVE can be a symbol of the list:
+         - If 'dynamic, only \*dynamic\* interactive commands are created
            in this macro.
-         - If t, only \*dynamic\* interactive commands are created
+         - If 'static, only \*static\* interactive commands are created
            in this macro.
-         - If something else (e.g. 'both) \*Both\* dynamic and non-dynamic
+         - Otherwise, \*Both\* dynamic and static
            commands are created.
 
   LOOKUP is passed to `consult--read'.
@@ -2058,6 +2074,7 @@ Description of Arguments:
 
   SEARCH-HIST is history list varibale to keep records of search terms.
   SELECT-HIST is history list varibale to keep records of selected candidates.
+  ADD-HIST is a list of items to add to the history list.
 
   FACE is used to format the candidate. This is useful for simple formating
        without making using TRANSFORM or formatin candidates inside the REQUEST
@@ -2071,13 +2088,13 @@ Description of Arguments:
      (defvar ,(consult-omni--source-name source-name) nil)
      (setq ,(consult-omni--source-name source-name) (consult-omni--make-source-list ,source-name ,request ,annotate ,face ,narrow-char ,state ,preview-key ,category ,lookup ,group ,require-match ,sort ,enabled ,predicate ,select-hist ,add-hist))
      ;; make a dynamic interactive command consult-omni-dynamic-%s (%s=source-name)
-     (unless (eq ,static t)
+     (unless (eq ,interactive 'dynamic)
        (defun ,(consult-omni--func-name source-name) (&optional initial prompt no-callback &rest args)
          ,(or docstring (consult-omni--func-generate-docstring source-name t))
          (interactive "P")
          (consult-omni--call-dynamic-command initial prompt no-callback args ,source-name ,request ,category ,face ,lookup ,require-match ,search-hist ,select-hist ,add-hist ,preview-key ,sort)))
      ;; make a static interactive command consult-omni-%s (%s=source-name)
-     (if ,static
+     (unless (eq ,interactive 'static)
          (defun ,(consult-omni--func-name source-name nil "-static") (&optional input prompt no-callback &rest args)
            ,(or docstring (consult-omni--func-generate-docstring source-name))
            (interactive "P")
@@ -2107,8 +2124,9 @@ Description of Arguments:
                                                           :search-hist ,search-hist
                                                           :select-hist ,select-hist
                                                           :add-hist ,add-hist
-                                                          :interactive-static (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name nil "-static"))
-                                                          :interactive-dynamic (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name))
+                                                          :intactive ,interactive
+                                                          :static-command (and (functionp (consult-omni--func-name ,source-name nil "-static")) (consult-omni--func-name ,source-name nil "-static"))
+                                                          :dynamic-command (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name))
                                                           :enabled ,enabled
                                                           :sort ,sort
                                                           :predicate ,predicate)))
@@ -2149,7 +2167,7 @@ DOCSTRING    the docstring for the function that is returned."
                                              )))
                              results)))))))
 
-(cl-defun consult-omni--make-source-from-consult-source (consult-source &rest args &key type request transform on-setup on-preview on-return on-exit state on-callback on-new group narrow-char category static search-hist select-hist face annotate enabled sort predicate preview-key require-match docstring &allow-other-keys)
+(cl-defun consult-omni--make-source-from-consult-source (consult-source &rest args &key type request transform on-setup on-preview on-return on-exit state on-callback on-new group narrow-char category interactive search-hist select-hist face annotate enabled sort predicate preview-key require-match docstring &allow-other-keys)
   "Makes a consult-omni source from a consult source plist, CONSULT-SOURCE.
 
 All other input variables are passed to `consult-omni-define-source'
@@ -2194,7 +2212,7 @@ macro. See `consult-omni-define-source' for more details."
                                             :predicate ',predicate
                                             :group ',group
                                             :sort ',sort
-                                            :static ',static
+                                            :interactive ',interactive
                                             :annotate ',annotate
                                             :require-match ',require-match)))))
 

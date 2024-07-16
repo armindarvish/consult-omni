@@ -87,7 +87,7 @@ Description of Arguments:
                             :enabled (lambda () (fboundp 'browser-hist-search))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-browser-history' module

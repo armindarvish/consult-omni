@@ -85,7 +85,7 @@ for some limited documentation"
                             :enabled (lambda () (bound-and-true-p consult-omni-duckduckgo-search-url))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-duckduckgo' module

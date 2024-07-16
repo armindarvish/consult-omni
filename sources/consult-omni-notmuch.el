@@ -245,11 +245,10 @@ parsing outputs of “notmuch search”, and
                             :select-hist 'consult-omni--email-select-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :transform (lambda (candidates &optional query) (funcall (consult-omni--notmuch-get-transform-func) candidates query))
-                            :enabled (lambda () (if (and (bound-and-true-p notmuch-command) (executable-find notmuch-command))
-                                                    t
-                                                  nil))
+                            :enabled (lambda () (and (bound-and-true-p notmuch-command)
+                                                (executable-find notmuch-command)))
                             :annotate nil)
 
 ;;; provide `consult-omni-notmuch' module

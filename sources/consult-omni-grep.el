@@ -136,11 +136,10 @@ nil))
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort nil
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :transform #'consult-omni--ripgrep-transform
-                            :enabled (lambda () (if (and (executable-find "grep")
-                                                         (fboundp 'consult-grep))
-                                                    t nil))
+                            :enabled (lambda () (and (executable-find "grep")
+                                                (fboundp 'consult-grep)))
                             :annotate nil)
 
 ;;; provide `consult-omni-grep' module

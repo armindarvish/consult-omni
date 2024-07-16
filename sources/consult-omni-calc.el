@@ -109,7 +109,7 @@ This uses `calc-eval' to return the result of input"
                             :enabled (lambda () (fboundp 'calc-eval))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static nil
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-calc' module

@@ -60,6 +60,22 @@ This variable is a list of symbols;
 each symbol being a source featue (e.g. consult-omni-brave)"
   :type '(repeat :tag "list of source modules/features to load" symbol))
 
+(defcustom consult-omni-intereactive-commands-type 'both
+  "Type of interactive commands to make?.
+
+This variable can be a  symbol:
+  'static  only make statis commands
+  'dynamic only make dynamic commands
+  otherwise make both commands
+
+dynamic commands are dynamically completed  in the minibuffer.
+static commands fetch search results once without dynamic completion"
+  :type '(choice (const :tag "(Default) Make both static and dynamic commands" 'both)
+                 (const :tag "Only make DYNAMIC interactive commands" 'dynamic)
+                 (const :tag "Only make STATIC interactive commands" 'static)
+                 ))
+
+
 
 (defcustom consult-omni-default-browse-function #'browse-url
   "consult-omni default function when selecting a link"
@@ -2153,7 +2169,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
 #+begin_src emacs-lisp
 ;;; Macros
 ;;;###autoload
-(cl-defmacro consult-omni-define-source (source-name &rest args &key type request transform filter on-setup on-preview on-return on-exit state on-callback on-new require-match static lookup group narrow-char category search-hist select-hist add-hist face annotate enabled sort predicate preview-key docstring  &allow-other-keys)
+(cl-defmacro consult-omni-define-source (source-name &rest args &key type request transform filter on-setup on-preview on-return on-exit state on-callback on-new require-match interactive lookup group narrow-char category search-hist select-hist add-hist face annotate enabled sort predicate preview-key docstring  &allow-other-keys)
   "Macro to make a consult-omni-source for SOURCE-NAME.
 
 Generates the following:
@@ -2182,7 +2198,7 @@ Description of Arguments:
   ON-CALLBACK  (function)            Function called on selected candidate
   ON-NEW       (function)            Function called on non-existing candidate
   REUIRE-MATCH (function)            Can non-matching candidates be selected
-  STATIC       (boolean|'both)       Whether to make static commands or not
+  INTERACTIVE  (symbol)              make 'dynamic, 'static or 'both commands
   LOOKUP       (function)            Lookup function for `consult--read'
   GROUP        (function)            Passed as GROUP to `consult--read'
   NARROW-CHAR  (char)                Passed as NARROW to `consult-read'
@@ -2310,12 +2326,12 @@ Description of Arguments:
   REQUIRE-MATCH is a boolean. When non-nil non-matching candidates (e.g.
                 the minibuffer content itself) can be selected as a candidate.
 
-  STATIC can be a boolean (nil or t) or the symbol 'both.
-         - If nil, only \*non-dynamic\* interactive commands are created
+  INTERACTIVE can be a symbol of the list:
+         - If 'dynamic, only \*dynamic\* interactive commands are created
            in this macro.
-         - If t, only \*dynamic\* interactive commands are created
+         - If 'static, only \*static\* interactive commands are created
            in this macro.
-         - If something else (e.g. 'both) \*Both\* dynamic and non-dynamic
+         - Otherwise, \*Both\* dynamic and static
            commands are created.
 
   LOOKUP is passed to `consult--read'.
@@ -2330,6 +2346,7 @@ Description of Arguments:
 
   SEARCH-HIST is history list varibale to keep records of search terms.
   SELECT-HIST is history list varibale to keep records of selected candidates.
+  ADD-HIST is a list of items to add to the history list.
 
   FACE is used to format the candidate. This is useful for simple formating
        without making using TRANSFORM or formatin candidates inside the REQUEST
@@ -2343,13 +2360,13 @@ Description of Arguments:
      (defvar ,(consult-omni--source-name source-name) nil)
      (setq ,(consult-omni--source-name source-name) (consult-omni--make-source-list ,source-name ,request ,annotate ,face ,narrow-char ,state ,preview-key ,category ,lookup ,group ,require-match ,sort ,enabled ,predicate ,select-hist ,add-hist))
      ;; make a dynamic interactive command consult-omni-dynamic-%s (%s=source-name)
-     (unless (eq ,static t)
+     (unless (eq ,interactive 'dynamic)
        (defun ,(consult-omni--func-name source-name) (&optional initial prompt no-callback &rest args)
          ,(or docstring (consult-omni--func-generate-docstring source-name t))
          (interactive "P")
          (consult-omni--call-dynamic-command initial prompt no-callback args ,source-name ,request ,category ,face ,lookup ,require-match ,search-hist ,select-hist ,add-hist ,preview-key ,sort)))
      ;; make a static interactive command consult-omni-%s (%s=source-name)
-     (if ,static
+     (unless (eq ,interactive 'static)
          (defun ,(consult-omni--func-name source-name nil "-static") (&optional input prompt no-callback &rest args)
            ,(or docstring (consult-omni--func-generate-docstring source-name))
            (interactive "P")
@@ -2379,8 +2396,9 @@ Description of Arguments:
                                                           :search-hist ,search-hist
                                                           :select-hist ,select-hist
                                                           :add-hist ,add-hist
-                                                          :interactive-static (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name nil "-static"))
-                                                          :interactive-dynamic (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name))
+                                                          :intactive ,interactive
+                                                          :static-command (and (functionp (consult-omni--func-name ,source-name nil "-static")) (consult-omni--func-name ,source-name nil "-static"))
+                                                          :dynamic-command (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name))
                                                           :enabled ,enabled
                                                           :sort ,sort
                                                           :predicate ,predicate)))
@@ -2428,7 +2446,7 @@ DOCSTRING    the docstring for the function that is returned."
 **** define source
 #+begin_src emacs-lisp
 
-(cl-defun consult-omni--make-source-from-consult-source (consult-source &rest args &key type request transform on-setup on-preview on-return on-exit state on-callback on-new group narrow-char category static search-hist select-hist face annotate enabled sort predicate preview-key require-match docstring &allow-other-keys)
+(cl-defun consult-omni--make-source-from-consult-source (consult-source &rest args &key type request transform on-setup on-preview on-return on-exit state on-callback on-new group narrow-char category interactive search-hist select-hist face annotate enabled sort predicate preview-key require-match docstring &allow-other-keys)
   "Makes a consult-omni source from a consult source plist, CONSULT-SOURCE.
 
 All other input variables are passed to `consult-omni-define-source'
@@ -2473,7 +2491,7 @@ macro. See `consult-omni-define-source' for more details."
                                             :predicate ',predicate
                                             :group ',group
                                             :sort ',sort
-                                            :static ',static
+                                            :interactive ',interactive
                                             :annotate ',annotate
                                             :require-match ',require-match)))))
 #+end_src
@@ -3563,7 +3581,7 @@ a new list is generated."
                             :enabled (lambda () (boundp 'consult-omni-apps-paths))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil
                             :category 'file)
 #+end_src
@@ -3682,7 +3700,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                             :enabled (lambda () (bound-and-true-p consult-omni-bing-search-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 **** provide and footer
@@ -3805,7 +3823,7 @@ See URL `https://brave.com/search/api/' for more info"
                             :enabled (lambda () (bound-and-true-p consult-omni-brave-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 #+end_src
 
 **** provide and footer
@@ -3949,7 +3967,7 @@ See URL `https://brave.com/search/api/' for more info"
                             :select-hist t
                             :enabled (lambda () (bound-and-true-p consult-omni-brave-autosuggest-api-key))
                             :sort t
-                            :static nil)
+                            :interactive consult-omni-intereactive-commands-type)
 #+end_src
 **** provide and footer
 #+begin_src emacs-lisp
@@ -4065,7 +4083,7 @@ Description of Arguments:
                             :enabled (lambda () (fboundp 'browser-hist-search))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 **** provide and footer
@@ -4209,7 +4227,7 @@ This uses `calc-eval' to return the result of input"
                             :enabled (lambda () (fboundp 'calc-eval))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static nil
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -4385,7 +4403,7 @@ Description of Arguments:
                             :enabled (lambda () (bound-and-true-p consult-omni-openai-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 **** provide and footer
@@ -4527,7 +4545,7 @@ Description of Arguments:
                             :enabled (lambda () (fboundp 'consult-omni--line-multi-candidates))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 **** provide and footer
@@ -4585,10 +4603,11 @@ Description of Arguments:
                                                :on-callback #'consult--buffer-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--buffer-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-buffer)))
 #+end_src
 ****** modified buffer
 #+begin_src emacs-lisp
@@ -4599,10 +4618,11 @@ Description of Arguments:
                                                :on-callback #'consult--buffer-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--buffer-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-modified-buffer)))
 #+end_src
 ****** hidden buffer
 #+begin_src emacs-lisp
@@ -4613,10 +4633,11 @@ Description of Arguments:
                                                :on-callback #'consult--buffer-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--buffer-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-hidden-buffer)))
 #+end_src
 ****** project buffer
 #+begin_src emacs-lisp
@@ -4627,10 +4648,11 @@ Description of Arguments:
                                                :on-callback #'consult--buffer-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--buffer-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled :enabled (lambda () (bound-and-true-p consult--source-project-buffer)))
 #+end_src
 ****** recent file
 #+begin_src emacs-lisp
@@ -4641,10 +4663,11 @@ Description of Arguments:
                                                :on-callback #'consult--file-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--file-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-recent-file)))
 #+end_src
 ****** project recent file
 #+begin_src emacs-lisp
@@ -4655,10 +4678,11 @@ Description of Arguments:
                                                :on-callback #'consult--file-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--file-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-project-recent-file)))
 #+end_src
 ****** bookmark
 #+begin_src emacs-lisp
@@ -4669,10 +4693,11 @@ Description of Arguments:
                                                :on-callback #'consult--bookmark-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'bookmark-set
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-bookmark)))
 #+end_src
 
 ***** provide and footer
@@ -4795,11 +4820,9 @@ Similar to `consult-fd-args' bur for consult-omni."
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            :enabled (lambda () (if (or (executable-find "fdfind")
-                                                        (executable-find "fd"))
-                                                    t
-                                                  nil))
+                            :interactive consult-omni-intereactive-commands-type
+                            :enabled (lambda () (or (executable-find "fdfind")
+                                               (executable-find "fd")))
                             :annotate nil)
 #+end_src
 
@@ -4928,8 +4951,8 @@ Similar to `consult-find-args' bur for consult-omni."
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            :enabled (lambda () (if (executable-find "find") t nil))
+                            :interactive consult-omni-intereactive-commands-type
+                            :enabled (lambda () (executable-find "find"))
                             :annotate nil)
 #+end_src
 
@@ -5011,12 +5034,10 @@ Similar to `consult-find-args' bur for consult-omni."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (and (executable-find "git")
-                                                         (fboundp 'consult-git-grep))
-                                                    t
-                                                  nil))
+                            :enabled (lambda () (and (executable-find "git")
+                                                    (fboundp 'consult-git-grep)))
                             :sort nil
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -5201,11 +5222,10 @@ nil))
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort nil
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :transform #'consult-omni--ripgrep-transform
-                            :enabled (lambda () (if (and (executable-find "grep")
-                                                         (fboundp 'consult-grep))
-                                                    t nil))
+                            :enabled (lambda () (and (executable-find "grep")
+                                                (fboundp 'consult-grep)))
                             :annotate nil)
 #+end_src
 
@@ -5333,11 +5353,9 @@ Similar to `consult-locate-args' bur for consult-omni."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (executable-find "locate")
-                                                    t
-                                                  nil))
+                            :enabled (lambda () (executable-find "locate"))
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -5471,9 +5489,9 @@ Similar to `consult-man-args' bur for consult-omni."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (executable-find "man") t nil))
+                            :enabled (lambda () (executable-find "man"))
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -5582,9 +5600,9 @@ See `consult-locate-args' for example."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (executable-find "mdfind") t nil))
+                            :enabled (lambda () (executable-find "mdfind"))
                             :sort nil
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -5667,11 +5685,10 @@ See `consult-locate-args' for example."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (and (executable-find "rg")
-                                                         (fboundp 'consult-ripgrep))
-                                                    t nil))
+                            :enabled (lambda () (and (executable-find "rg")
+                                                (fboundp 'consult-ripgrep)))
                             :sort nil
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -5890,11 +5907,10 @@ Adopted from `consult--grep-format'."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (and (executable-find "rga")
-                                                        (fboundp 'consult--ripgrep-make-builder))
-                                                    t nil))
+                            :enabled (lambda () (and (executable-find "rga")
+                                                 (fboundp 'consult--ripgrep-make-builder)))
                             :sort nil
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -5996,7 +6012,7 @@ Adopted from `consult--grep-format'."
                                                  :preview-key 'consult-preview-key
                                                  :group #'consult-omni--group-function
                                                  :enabled (lambda () (bound-and-true-p consult-notes-org-headings-mode))
-                                                 :static 'both))
+                                                 :interactive consult-omni-intereactive-commands-type))
 #+end_src
 
 ***** consult-notes-org-roam
@@ -6013,7 +6029,7 @@ Adopted from `consult--grep-format'."
                                                              :on-return #'identity
                                                              :on-callback #'consult-omni--consult-notes-org-roam-note-callback
                                                              :preview-key 'consult-preview-key
-                                                             :static 'both
+                                                             :interactive consult-omni-intereactive-commands-type
                                                              :group #'consult-omni--group-function
                                                              :enabled (lambda () consult-notes-org-roam-mode)
                                                              :annotate nil)))
@@ -6133,12 +6149,10 @@ Adopted from `consult--grep-format'."
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :transform #'consult-omni--gh-transform
-                            :enabled (lambda () (if (and (executable-find "gh")
-                                                         (fboundp 'consult-gh-search-repos))
-                                                    t
-                                                  nil))
+                            :enabled (lambda () (and (executable-find "gh")
+                                                (fboundp 'consult-gh-search-repos)))
                             :annotate nil)
 #+end_src
 
@@ -6293,12 +6307,12 @@ Description of Arguments:
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--email-select-history
-                            :enabled (lambda () (if (and (executable-find "mu")
-                                                         (fboundp 'consult-mu))
-                                                    t nil))
+                            :enabled (lambda () (and (executable-find "mu")
+                                                (mu4e-running-p)
+                                                (fboundp 'consult-mu)))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -6612,7 +6626,7 @@ if MAXCOUNT is non-nil, only find top MAXCOUNT definitions."
                             :enabled (lambda () (fboundp 'dictionary))
                             :group #'consult-omni--group-function
                             :sort nil
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 #+end_src
@@ -6732,7 +6746,7 @@ if MAXCOUNT is non-nil, only find top MAXCOUNT definitions."
                             :enabled (lambda () (bound-and-true-p consult-omni-doiorg-search-url))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 #+end_src
 **** provide and footer
 #+begin_src emacs-lisp
@@ -6849,7 +6863,7 @@ for some limited documentation"
                             :enabled (lambda () (bound-and-true-p consult-omni-duckduckgo-search-url))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 **** provide and footer
@@ -7043,7 +7057,7 @@ if FILTER is non-nil, it is used as additional filter parameters."
                             :enabled (lambda () (boundp 'elfeed-db))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 #+end_src
@@ -7195,7 +7209,7 @@ URL `https://developers.google.com/custom-search/' for more info."
                             :enabled (lambda () (bound-and-true-p consult-omni-google-customsearch-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 **** provide and footer
@@ -7320,7 +7334,7 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                             :group #'consult-omni--group-function
                             :enabled (lambda () (bound-and-true-p consult-omni-google-autosuggest-api-url))
                             :sort t
-                            :static nil)
+                            :interactive consult-omni-intereactive-commands-type)
 #+end_src
 **** provide and footer
 #+begin_src emacs-lisp
@@ -7607,7 +7621,7 @@ metadata so it can be send to `gptel'."
                             :enabled (lambda () (fboundp 'gptel))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 #+end_src
@@ -7862,7 +7876,7 @@ Description of Arguments:
                             :enabled (lambda () (bound-and-true-p consult-omni-invidious-server-url))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -8049,8 +8063,9 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            :annotate nil)
+                            :interactive consult-omni-intereactive-commands-type
+                            :annotate nil
+                            :enabled (lambda () (bound-and-true-p consult-omni-notes-files)))
 #+end_src
 
 
@@ -8345,11 +8360,10 @@ parsing outputs of “notmuch search”, and
                             :select-hist 'consult-omni--email-select-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :transform (lambda (candidates &optional query) (funcall (consult-omni--notmuch-get-transform-func) candidates query))
-                            :enabled (lambda () (if (and (bound-and-true-p notmuch-command) (executable-find notmuch-command))
-                                                    t
-                                                  nil))
+                            :enabled (lambda () (and (bound-and-true-p notmuch-command)
+                                                (executable-find notmuch-command)))
                             :annotate nil)
 #+end_src
 
@@ -8452,11 +8466,9 @@ See `consult-locate-args' for example."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (executable-find "numi-cli")
-                                                    t
-                                                  nil))
+                            :enabled (lambda () (executable-find "numi-cli"))
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -8830,7 +8842,7 @@ Adopted from `consult-org--headings'."
                             :enabled (lambda () (bound-and-true-p org-agenda-files))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 #+end_src
 
 
@@ -9093,7 +9105,7 @@ for more info."
                            :enabled (lambda () (bound-and-true-p consult-omni-pubmed-api-key))
                            :group #'consult-omni--group-function
                            :sort t
-                           :static 'both
+                           :interactive consult-omni-intereactive-commands-type
                            :annotate nil)
 #+end_src
 **** provide and footer
@@ -9303,7 +9315,7 @@ Description of Arguments:
                             :enabled (lambda () (bound-and-true-p consult-omni-scopus-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 #+end_src
@@ -9488,7 +9500,7 @@ See URL `https://api.stackexchange.com/' for more info."
                             :enabled (lambda () (bound-and-true-p consult-omni-stackexchange-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -9648,11 +9660,11 @@ Description of Arguments:
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
-                            :enabled (lambda () (boundp  'consult-omni-wikipedia-api-url))
+                            :enabled (lambda () (bound-and-true-p consult-omni-wikipedia-api-url))
                             :group #'consult-omni--group-function
                             :sort t
                             :type 'dynamic
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 #+end_src
 
 **** provide and footer
@@ -10129,7 +10141,7 @@ This is a version with  statistics (e.g. view counts)
                             :enabled (lambda () (bound-and-true-p consult-omni-youtube-search-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 

@@ -329,7 +329,7 @@ a new list is generated."
                             :enabled (lambda () (boundp 'consult-omni-apps-paths))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil
                             :category 'file)
 

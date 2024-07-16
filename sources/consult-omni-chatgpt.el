@@ -134,7 +134,7 @@ Description of Arguments:
                             :enabled (lambda () (bound-and-true-p consult-omni-openai-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-chatgpt' module

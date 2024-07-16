@@ -114,7 +114,7 @@ URL `https://developers.google.com/custom-search/' for more info."
                             :enabled (lambda () (bound-and-true-p consult-omni-google-customsearch-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-google' module

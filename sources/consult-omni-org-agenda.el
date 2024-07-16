@@ -285,7 +285,7 @@ Adopted from `consult-org--headings'."
                             :enabled (lambda () (bound-and-true-p org-agenda-files))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 
 ;;; provide `consult-omni-org-agenda' module
 

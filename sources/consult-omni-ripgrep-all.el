@@ -172,11 +172,10 @@ Adopted from `consult--grep-format'."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (and (executable-find "rga")
-                                                        (fboundp 'consult--ripgrep-make-builder))
-                                                    t nil))
+                            :enabled (lambda () (and (executable-find "rga")
+                                                 (fboundp 'consult--ripgrep-make-builder)))
                             :sort nil
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-ripgrep-all' module

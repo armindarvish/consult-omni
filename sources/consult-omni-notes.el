@@ -132,8 +132,9 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            :annotate nil)
+                            :interactive consult-omni-intereactive-commands-type
+                            :annotate nil
+                            :enabled (lambda () (bound-and-true-p consult-omni-notes-files)))
 
 ;;; provide `consult-omni-notes' module
 

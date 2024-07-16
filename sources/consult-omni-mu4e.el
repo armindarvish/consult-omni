@@ -113,12 +113,12 @@ Description of Arguments:
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--email-select-history
-                            :enabled (lambda () (if (and (executable-find "mu")
-                                                         (fboundp 'consult-mu))
-                                                    t nil))
+                            :enabled (lambda () (and (executable-find "mu")
+                                                (mu4e-running-p)
+                                                (fboundp 'consult-mu)))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-mu4e' module

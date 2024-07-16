@@ -265,7 +265,7 @@ if MAXCOUNT is non-nil, only find top MAXCOUNT definitions."
                             :enabled (lambda () (fboundp 'dictionary))
                             :group #'consult-omni--group-function
                             :sort nil
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-dict' module

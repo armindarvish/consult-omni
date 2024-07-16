@@ -426,7 +426,7 @@ This is a version with  statistics (e.g. view counts)
                             :enabled (lambda () (bound-and-true-p consult-omni-youtube-search-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-youtube' module

@@ -102,7 +102,7 @@ Description of Arguments:
                             :enabled (lambda () (fboundp 'consult-omni--line-multi-candidates))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-line-multi' module
