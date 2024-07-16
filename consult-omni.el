@@ -924,7 +924,7 @@ This is used to get initial input for static commands, when
                  :initial initial
                  :category 'consult-omni
                  :history 'consult-omni--search-history
-                 :add-history (consult-omni--add-history)))
+                 :add-history (consult-omni--add-history '(symbol))))
 
 (cl-defun consult-omni--simple-format-candidate (&rest args &key source query url search-url title snippet &allow-other-keys)
   "Returns a simple formatted string for candidates.
@@ -1006,12 +1006,12 @@ and is used to define the grouping for CAND."
             source
           nil))))))
 
-(defun consult-omni--add-history (&rest args)
+(defun consult-omni--add-history (&optional things &rest args)
   "Makes a list for future history based on at-point items."
   (delq nil
         (cl-remove-duplicates
-         (append (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing nil))
-                         (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line)) (list isearch-string)))))
+         (append (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing t))
+                         (or things (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line))) (list isearch-string)))))
 
 (defun consult-omni--lookup-function ()
   "Lookup function for `consult-omni' minibuffer candidates.
@@ -1776,7 +1776,7 @@ This is used to make docstring for function made by `consult-omni-define-source'
           (format "interactive command to search %s."
                   (capitalize source-name))))
 
-(defun consult-omni--make-source-list (source-name request annotate face narrow-char state preview-key category lookup group require-match sort enabled predicate select-hist)
+(defun consult-omni--make-source-list (source-name request annotate face narrow-char state preview-key category lookup group require-match sort enabled predicate select-hist add-hist)
   "Internal function to make a source for `consult-omni--multi'.
 
 Do not use this function directly, use `consult-omni-define-source' macro
@@ -1792,10 +1792,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
           :state ,(or state #'consult-omni--dynamic-state-function)
           :category ,(or category 'consult-omni)
           :history ,select-hist
-          :add-history (delq nil
-                             (cl-remove-duplicates
-                              (append (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing))
-                                              (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line)) (list isearch-string))))
+          :add-history ,(or add-hist #'consult-omni--add-history)
           :items  ,request
           :annotate ,(cond
                       ((and annotate (functionp annotate))
@@ -1847,7 +1844,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
       (setq selected (funcall callback-func selected))))
     selected))
 
-(defun consult-omni--call-dynamic-command (initial prompt no-callback args source-name request category face lookup require-match search-hist-var select-hist-var preview-key sort)
+(defun consult-omni--call-dynamic-command (initial prompt no-callback args source-name request category face lookup require-match search-hist-var select-hist-var add-hist preview-key sort)
   "Internal function to make dynamic `consult--read' command.
 
 Do not use this function directly, use `consult-omni-define-source' macro
@@ -1860,6 +1857,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
                                                 args
                                                 :prompt prompt
                                                 :history '(:input search-hist-var)
+                                                :add-history (or add-hist (consult-omni--add-history))
                                                 :initial (consult--async-split-initial initial)
                                                 :sort sort
                                                 :require-match require-match))
@@ -1883,7 +1881,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
 
 ;;; Macros
 ;;;###autoload
-(cl-defmacro consult-omni-define-source (source-name &rest args &key type request transform filter on-setup on-preview on-return on-exit state on-callback on-new require-match static lookup group narrow-char category search-hist select-hist face annotate enabled sort predicate preview-key docstring  &allow-other-keys)
+(cl-defmacro consult-omni-define-source (source-name &rest args &key type request transform filter on-setup on-preview on-return on-exit state on-callback on-new require-match static lookup group narrow-char category search-hist select-hist add-hist face annotate enabled sort predicate preview-key docstring  &allow-other-keys)
   "Macro to make a consult-omni-source for SOURCE-NAME.
 
 Generates the following:
@@ -1919,6 +1917,7 @@ Description of Arguments:
   CATEGORY     (symbol)              Passed as CATEGORY to `consult--read'
   SEARCH-HIST  (symbol)              Passed as HISTORY to `consult--read'
   SELECT-HIST  (symbol)              Collects list of selected items
+  ADD-HIST     (list)                List of items to add to the history.
   FACE         (face)                Passed as FACE to `consult--read-multi'
   ANNOTATE     (function)            Passed as ANNOTATE to `consult--read'
   ENABLED      (function)            Passed as ENABLED to `consult--read'
@@ -2070,13 +2069,13 @@ Description of Arguments:
   `(progn
      ;; make a variable called consult-omni--source-%s (%s=source-name)
      (defvar ,(consult-omni--source-name source-name) nil)
-     (setq ,(consult-omni--source-name source-name) (consult-omni--make-source-list ,source-name ,request ,annotate ,face ,narrow-char ,state ,preview-key ,category ,lookup ,group ,require-match ,sort ,enabled ,predicate ,select-hist))
+     (setq ,(consult-omni--source-name source-name) (consult-omni--make-source-list ,source-name ,request ,annotate ,face ,narrow-char ,state ,preview-key ,category ,lookup ,group ,require-match ,sort ,enabled ,predicate ,select-hist ,add-hist))
      ;; make a dynamic interactive command consult-omni-dynamic-%s (%s=source-name)
      (unless (eq ,static t)
        (defun ,(consult-omni--func-name source-name) (&optional initial prompt no-callback &rest args)
          ,(or docstring (consult-omni--func-generate-docstring source-name t))
          (interactive "P")
-         (consult-omni--call-dynamic-command initial prompt no-callback args ,source-name ,request ,category ,face ,lookup ,require-match ,search-hist ,select-hist ,preview-key ,sort)))
+         (consult-omni--call-dynamic-command initial prompt no-callback args ,source-name ,request ,category ,face ,lookup ,require-match ,search-hist ,select-hist ,add-hist ,preview-key ,sort)))
      ;; make a static interactive command consult-omni-%s (%s=source-name)
      (if ,static
          (defun ,(consult-omni--func-name source-name nil "-static") (&optional input prompt no-callback &rest args)
@@ -2107,6 +2106,7 @@ Description of Arguments:
                                                           :category (or ',category 'consult-omni)
                                                           :search-hist ,search-hist
                                                           :select-hist ,select-hist
+                                                          :add-hist ,add-hist
                                                           :interactive-static (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name nil "-static"))
                                                           :interactive-dynamic (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name))
                                                           :enabled ,enabled
@@ -2283,6 +2283,7 @@ here: URL `https://github.com/minad/consult'."
            :sort t
            :require-match nil
            :history '(:input consult-omni--search-history)
+           :add-history (consult-omni--add-history '(symbol))
            :initial (consult--async-split-initial initial)))
          (match (plist-get (cdr selected) :match))
          (source  (plist-get (cdr selected) :name))
