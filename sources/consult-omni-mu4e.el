@@ -85,8 +85,7 @@ Description of Arguments:
                (count (plist-get opts :count))
                (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (mu4e-search-skip-duplicates t)
-               (mu-input (format "%s -- --maxnum %s --skip-dups" query count))
+               (mu-input (format "%s -- --maxnum %s" query count))
                (messages))
     (consult-mu--update-headers mu-input nil nil :dynamic)
     (with-current-buffer consult-mu-headers-buffer-name
