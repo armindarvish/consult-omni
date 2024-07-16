@@ -345,18 +345,23 @@ This is used in dynamic collection to change grouping.")
 (defvar consult-omni--async-log-buffer " *consult-omni--async-log*"
   "name of buffer for logging async processes info")
 
-(defvar consult-omni--search-engine-alist '(("Bing" . "https://www.bing.com/search")
-                                            ("Brave" .  "https://search.brave.com/search")
-                                            ("DuckDuckGo" . "https://duckduckgo.com/")
-                                            ("Google" . "https://www.google.com/search")
-                                            ("Perplexity" .  "https://www.perplexity.ai/search")
-                                            ("PubMed" . "https://pubmed.ncbi.nlm.nih.gov/")
-                                            ("Wikipedia" . "https://www.wikipedia.org/search-redirect.php")
-                                            ("YouTube" . "https://www.youtube.com/search")
+(defvar consult-omni--search-engine-alist '(("Bing" . "https://www.bing.com/search?q=%s")
+                                            ("Brave" .  "https://search.brave.com/search?q=%s")
+                                            ("DuckDuckGo" . "https://duckduckgo.com/?q=%s")
+                                            ("Google" . "https://www.google.com/search?q=%s")
+                                            ("Perplexity" .  "https://www.perplexity.ai/search?q=%s")
+                                            ("PubMed" . "https://pubmed.ncbi.nlm.nih.gov/?q=%s")
+                                            ("Wikipedia" . "https://www.wikipedia.org/search-redirect.php?q=%s")
+                                            ("YouTube" . "https://www.youtube.com/search?q=%s")
                                             ("gptel" . #'consult-omni--gptel-preview
 )
 )
-"Alist of search engine name and URLs")
+"Alist of search engine name and URLs.
+
+car of each item is the name of the engine
+cdr of items must be:
+- a search url string with %s for the query
+- an elisp funciton that takes query string")
 
 #+end_src
 
@@ -1257,19 +1262,17 @@ CALLBACK is used as a fall back."
          (engine (or engine consult-omni-default-search-engine (consult--read consult-omni--search-engine-alist :prompt "Select Search Engine: ")))
             (func (cdr (assoc engine consult-omni--search-engine-alist)))
             (search-url (if (stringp func) func nil))
-            (params `(("q" . ,(substring-no-properties cand))))
-            (url (if (stringp search-url) (consult-omni--make-url-string search-url params) nil)))
+            (url (if (stringp search-url) (format search-url (url-hexify-string cand)) nil)))
       (cond
        (url (funcall consult-omni-default-browse-function url))
-  pu     ((functionp (cadr func)) (funcall (cadr func) cand)))
+       ((functionp (cadr func)) (funcall (cadr func) cand)))
 ))
 #+end_src
 ***** external search with engine
 #+begin_src emacs-lisp
 (defun consult-omni-external-search-with-engine (engine &optional cand)
   "Funtion for new non-existing CAND in `consult-omni-brave'."
-  (let* ((consult-omni-default-search-engine engine))
-    (funcall #'consult-omni-external-search cand)))
+    (funcall #'consult-omni-external-search cand engine))
 #+end_src
 ***** consult-omni--default-new
 #+begin_src emacs-lisp
