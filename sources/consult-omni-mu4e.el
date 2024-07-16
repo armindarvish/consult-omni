@@ -78,14 +78,15 @@ Description of Arguments:
 
 (cl-defun consult-omni--mu-fetch-results (input &rest args &key callback &allow-other-keys)
   "Makes builder command line args for “mu4e”."
-  (save-mark-and-excursion
-    (consult-mu--execute-all-marks))
+  (save-window-excursion
+    (consult-mu--execute-all-marks)
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
                (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (mu-input (format "%s -- --maxnum %s" query count))
+               (mu4e-search-skip-duplicates t)
+               (mu-input (format "%s -- --maxnum %s --skip-dups" query count))
                (messages))
     (consult-mu--update-headers mu-input nil nil :dynamic)
     (with-current-buffer consult-mu-headers-buffer-name
@@ -96,7 +97,7 @@ Description of Arguments:
                                                 (consult-omni-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
                                       do (forward-line 1)))))
     (when (and messages callback)
-      (funcall callback messages))))
+      (funcall callback messages)))))
 
 ;; Define the Mu4e Source
 (consult-omni-define-source "mu4e"
@@ -114,7 +115,6 @@ Description of Arguments:
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--email-select-history
                             :enabled (lambda () (and (executable-find "mu")
-                                                (mu4e-running-p)
                                                 (fboundp 'consult-mu)))
                             :group #'consult-omni--group-function
                             :sort t
