@@ -7479,7 +7479,7 @@ If STREAM is non-nil, the response is streamed."
           (gptel-send)))
       (current-buffer))))
 
-(defun consult-omni--gptelbuffer-preview (cand)
+(defun consult-omni--gptel-preview (cand)
   "Shows a preview buffer of CAND for `consult-omni-gptel'.
 
 The preview buffer is from `consult-omni--gptel-response-preview'."
@@ -7590,9 +7590,9 @@ metadata so it can be send to `gptel'."
                             :require-match t
                             :face 'consult-omni-ai-title-face
                             :request #'consult-omni--gptel-fetch-results
-                            :on-preview #'consult-omni--gptelbuffer-preview
+                            :on-preview #'consult-omni--gptel-preview
                             :on-return #'identity
-                            :on-callback #'consult-omni--gptelbuffer-preview
+                            :on-callback #'consult-omni--gptel-preview
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
