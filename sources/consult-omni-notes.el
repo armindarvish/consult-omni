@@ -18,7 +18,7 @@
 (require 'consult-omni-grep)
 (require 'consult-omni-ripgrep-all)
 
-(defcustom consult-omni-notes-files (apply #'append
+(defcustom consult-omni-notes-files (append
                                            (when (bound-and-true-p consult-notes-file-dir-sources)
                                              ;; dir sources
                                              (apply #'append (mapcar #'cddr consult-notes-file-dir-sources)))
@@ -30,11 +30,13 @@
                                              (list (expand-file-name denote-directory)))
                                            ;; org agenda files
                                            (when (bound-and-true-p consult-notes-org-headings-mode)
-                                             (list (mapcar #'expand-file-name consult-notes-org-headings-files))))
+                                             (mapcar #'expand-file-name consult-notes-org-headings-files)))
   "List of all note files for consult-omni-notes."
   :type '(repeat :tag "list of files" string))
 
-(defcustom consult-omni-notes-backend-command "rga"
+(defcustom consult-omni-notes-backend-command (or (and (executable-find "rga") "rga")
+                                                  (and (executable-find "rg") "rg")
+                                                  (and (executable-find "grep") "grep"))
   "What command-line program to use for searching files?
 
 Can be either:
@@ -47,20 +49,21 @@ Can be either:
 "Function to use to create new notes.
 
 This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)"
-:type '(choice (function :tag "(Default) Use org-capture" consult-omni--notes-new-capture-org)
-                 (function :tag "Custom Function")))
+:type '(choice (function :tag "(Default) Use Org Capture" consult-omni--notes-new-capture-org)
+               (function :tag "Use Org Roam" consult-omni--notes-new-capture-org-roam)
+               (function :tag "Use Denote" consult-omni--notes-new-create-denote)
+               (function :tag "Custom Function")))
 
 (defun consult-omni--notes-transform (candidates &optional query)
   "Formats `consult-omni-notes' candidates."
 
-(if-let ((regexp-pattern (cond
-                       ((and (equal consult-omni-notes-backend-command "rga") (executable-find consult-omni-notes-backend-command))
-                                consult-omni-ripgrep-all-match-regexp)
-                       ((and (or (equal consult-omni-notes-backend-command "rg") (equal consult-omni-notes-backend-command "grep")) (executable-find consult-omni-notes-backend-command))
-                          consult--grep-match-regexp)
-                       (t nil))))
-(consult-omni--grep-format candidates :source "Notes Search" :query query :regexp-pattern regexp-pattern)
-))
+(cond
+ ((and (equal consult-omni-notes-backend-command "rga") (executable-find consult-omni-notes-backend-command))
+  (consult-omni--ripgrep-all-format candidates :source "Notes Search" :query query :regexp-pattern consult-omni-ripgrep-all-match-regexp)
+  )
+ ((and (or (equal consult-omni-notes-backend-command "rg") (equal consult-omni-notes-backend-command "grep")) (executable-find consult-omni-notes-backend-command))
+  (consult-omni--grep-format candidates :source "Notes Search" :query query :regexp-pattern consult--grep-match-regexp))
+ (t nil)))
 
 (defun consult-omni--notes-preview (cand)
   "Preview function for `consult-omni-ripgrep-all'."
@@ -71,8 +74,8 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
 (defun consult-omni--notes-callback (cand)
   "Callback function for `consult-omni-ripgrep-all'."
   (if (equal consult-omni-notes-backend-command "rga")
-      (consult-omni--ripgrep-all-callback cand)
-    (consult-omni--grep-callback cand)))
+      (consult-omni--ripgrep-all-preview cand)
+    (consult-omni--grep-preview cand)))
 
 (defun consult-omni--notes-new-capture-org (&optional string)
   "Makes new org note"
@@ -110,8 +113,9 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
                                 #'consult--ripgrep-make-builder)
                        ((and (equal consult-omni-notes-backend-command "grep") (executable-find "grep")) #'consult--ripgrep-make-builder)
                        (t nil))))
-  (when backend-builder
-    (funcall (consult-omni--grep-make-builder backend-builder dir) query))))
+      (let ((consult-ripgrep-args (if (equal consult-omni-notes-backend-command "rga") consult-omni-ripgrep-all-args consult-ripgrep-args)))
+        (when backend-builder
+          (funcall (consult-omni--grep-make-builder backend-builder dir) query)))))
 
 ;; Define the Notes Search Source
 (consult-omni-define-source "Notes Search"
@@ -130,8 +134,9 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            :annotate nil)
+                            :interactive consult-omni-intereactive-commands-type
+                            :annotate nil
+                            :enabled (lambda () (bound-and-true-p consult-omni-notes-files)))
 
 ;;; provide `consult-omni-notes' module
 

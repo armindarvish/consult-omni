@@ -43,16 +43,15 @@
                             :transform #'consult-omni--ripgrep-transform
                             :on-preview #'consult-omni--grep-preview
                             :on-return #'identity
-                            :on-callback #'consult-omni--grep-callback
+                            :on-callback #'consult-omni--grep-preview
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (and (executable-find "rg")
-                                                         (fboundp 'consult-ripgrep))
-                                                    t nil))
-                            :sort t
-                            :static 'both
+                            :enabled (lambda () (and (executable-find "rg")
+                                                (fboundp 'consult-ripgrep)))
+                            :sort nil
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-ripgrep' module

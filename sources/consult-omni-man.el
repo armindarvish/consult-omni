@@ -36,7 +36,7 @@ Similar to `consult-man-args' bur for consult-omni."
 (defun consult-omni--man-transform (candidates &optional query)
   "Formats candidates of `consult-omni-man'."
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (source (propertize "man" 'face 'consult-omni-source-type-face))
          (results))
     (save-match-data
@@ -54,7 +54,7 @@ Similar to `consult-man-args' bur for consult-omni."
                  (str (concat title-str
                               (and desc "\t") desc
                               (and source "\t") source)))
-            (if consult-omni-highlight-matches
+            (if consult-omni-highlight-matches-in-minibuffer
                 (cond
                  ((listp match-str)
                   (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -85,9 +85,9 @@ Similar to `consult-man-args' bur for consult-omni."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (executable-find "man") t nil))
+                            :enabled (lambda () (executable-find "man"))
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-man' module

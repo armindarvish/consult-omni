@@ -78,7 +78,7 @@ See URL `https://brave.com/search/api/' for more info"
 (consult-omni-define-source "Brave"
                             :narrow-char ?b
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--brave-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "Brave")
@@ -88,7 +88,7 @@ See URL `https://brave.com/search/api/' for more info"
                             :enabled (lambda () (bound-and-true-p consult-omni-brave-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 
 ;;; provide `consult-omni-brave' module
 

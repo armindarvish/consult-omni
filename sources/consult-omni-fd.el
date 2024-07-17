@@ -82,11 +82,9 @@ Similar to `consult-fd-args' bur for consult-omni."
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            :enabled (lambda () (if (or (executable-find "fdfind")
-                                                        (executable-find "fd"))
-                                                    t
-                                                  nil))
+                            :interactive consult-omni-intereactive-commands-type
+                            :enabled (lambda () (or (executable-find "fdfind")
+                                               (executable-find "fd")))
                             :annotate nil)
 
 ;;; provide `consult-omni-fd' module

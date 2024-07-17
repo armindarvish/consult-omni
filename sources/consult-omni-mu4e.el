@@ -28,7 +28,7 @@ Description of Arguments:
          (info (cadr cand))
          (msg (plist-get info :msg))
          (query (plist-get info :query))
-         (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped (car (consult--command-split query))) nil))
          (headers-template (consult-mu--headers-template))
          (str (if headers-template
                  (consult-mu--expand-headers-template msg headers-template)
@@ -78,8 +78,8 @@ Description of Arguments:
 
 (cl-defun consult-omni--mu-fetch-results (input &rest args &key callback &allow-other-keys)
   "Makes builder command line args for “mu4e”."
-  (save-mark-and-excursion
-    (consult-mu--execute-all-marks))
+  (save-window-excursion
+    (consult-mu--execute-all-marks)
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -96,7 +96,7 @@ Description of Arguments:
                                                 (consult-omni-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
                                       do (forward-line 1)))))
     (when (and messages callback)
-      (funcall callback messages))))
+      (funcall callback messages)))))
 
 ;; Define the Mu4e Source
 (consult-omni-define-source "mu4e"
@@ -113,12 +113,11 @@ Description of Arguments:
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--email-select-history
-                            :enabled (lambda () (if (and (executable-find "mu")
-                                                         (fboundp 'consult-mu))
-                                                    t nil))
+                            :enabled (lambda () (and (executable-find "mu")
+                                                (fboundp 'consult-mu)))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-mu4e' module

@@ -59,11 +59,9 @@ See `consult-locate-args' for example."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (executable-find "numi-cli")
-                                                    t
-                                                  nil))
+                            :enabled (lambda () (executable-find "numi-cli"))
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-numi module

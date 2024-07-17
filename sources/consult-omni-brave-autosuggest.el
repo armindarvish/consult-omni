@@ -107,7 +107,7 @@ See URL `https://brave.com/search/api/' for more info"
                             :select-hist t
                             :enabled (lambda () (bound-and-true-p consult-omni-brave-autosuggest-api-key))
                             :sort t
-                            :static nil)
+                            :interactive consult-omni-intereactive-commands-type)
 
 ;;; provide `consult-omni-brave-autosuggest' module
 

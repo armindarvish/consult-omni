@@ -45,7 +45,7 @@ Description of Arguments:
          (pos (marker-position marker))
          (buff (and buff (propertize (format "%s" buff) 'face 'consult-omni-domain-face)))
          (pos (and pos (propertize (format "%s" pos) 'face 'consult-omni-path-face)))
-         (match-str (if (stringp query)
+         (match-str (if (and (stringp query) (not (equal query ".*")))
                         (consult--split-escaped (car (consult--command-split query)))
                       nil))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
@@ -55,7 +55,7 @@ Description of Arguments:
                       (when buff (concat "\t" buff))
                       (when pos (concat "\s\s" pos ))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -102,7 +102,7 @@ Description of Arguments:
                             :enabled (lambda () (fboundp 'consult-omni--line-multi-candidates))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-line-multi' module

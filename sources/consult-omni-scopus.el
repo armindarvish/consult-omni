@@ -58,7 +58,7 @@ Description of Arguments:
                    (t nil)))
          (authors (if (and authors (stringp authors)) (propertize authors 'face 'consult-omni-source-type-face)))
          (doi (if (stringp doi) (propertize doi 'face 'link) nil))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 5 frame-width-percent)))
@@ -67,7 +67,7 @@ Description of Arguments:
                       (if date (format "\s\s%s" date))
                       (if authors (format "\s\s%s" authors))
                       (if source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -153,7 +153,7 @@ Description of Arguments:
 (consult-omni-define-source "Scopus"
                             :narrow-char ?s
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :category 'consult-omni-scholar
                             :face 'consult-omni-scholar-title-face
                             :request #'consult-omni--scopus-fetch-results
@@ -166,7 +166,7 @@ Description of Arguments:
                             :enabled (lambda () (bound-and-true-p consult-omni-scopus-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-scopus' module

@@ -41,6 +41,22 @@ This variable is a list of symbols;
 each symbol being a source featue (e.g. consult-omni-brave)"
   :type '(repeat :tag "list of source modules/features to load" symbol))
 
+(defcustom consult-omni-intereactive-commands-type 'both
+  "Type of interactive commands to make?.
+
+This variable can be a  symbol:
+  'static  only make statis commands
+  'dynamic only make dynamic commands
+  otherwise make both commands
+
+dynamic commands are dynamically completed  in the minibuffer.
+static commands fetch search results once without dynamic completion"
+  :type '(choice (const :tag "(Default) Make both static and dynamic commands" 'both)
+                 (const :tag "Only make DYNAMIC interactive commands" 'dynamic)
+                 (const :tag "Only make STATIC interactive commands" 'static)
+                 ))
+
+
 
 (defcustom consult-omni-default-browse-function #'browse-url
   "consult-omni default function when selecting a link"
@@ -174,8 +190,12 @@ This variable is a list of strings or symbols;
    (see `consult-buffer-sources' for example.)"
   :type '(choice (repeat :tag "list of source names" string)))
 
-(defcustom consult-omni-highlight-matches t
+(defcustom consult-omni-highlight-matches-in-minibuffer t
   "Should `consult-omni' highlight search queries in the minibuffer?"
+  :type 'boolean)
+
+(defcustom consult-omni-highlight-matches-in-file t
+  "Should `consult-omni' highlight search queries in files (preview or return)?"
   :type 'boolean)
 
 (defcustom consult-omni-highlight-match-ignore-case t
@@ -255,6 +275,10 @@ By default inherits from `consult-async-refresh-delay'. "
 (defvar consult-omni-video-category 'consult-omni-video
   "Category symbol for video search")
 
+
+(defvar consult-omni-dictionary-category 'consult-omni-dictionary
+  "Category symbol for dictionary search")
+
 (defvar consult-omni--selection-history (list)
   "History variable that keeps selected items.")
 
@@ -303,15 +327,29 @@ This is used in dynamic collection to change grouping.")
 (defvar consult-omni--async-log-buffer " *consult-omni--async-log*"
   "name of buffer for logging async processes info")
 
-(defvar consult-omni--search-engine-alist '(("Bing" . "https://www.bing.com/search")
-                                            ("Brave" .  "https://search.brave.com/search")
-                                            ("DuckDuckGo" . "https://duckduckgo.com/")
-                                            ("Google" . "https://www.google.com/search")
-                                            ("Perplexity" .  "https://www.perplexity.ai/search")
-                                            ("PubMed" . "https://pubmed.ncbi.nlm.nih.gov/")
-                                            ("Wikipedia" . "https://www.wikipedia.org/search-redirect.php")
-                                            ("YouTube" . "https://www.youtube.com/search"))
-"Alist of search engine name and URLs")
+(defvar consult-omni-dynamic-timers (list)
+  "List of timers for dynamic candidates colleciton")
+
+(defvar consult-omni--async-log-buffer " *consult-omni--async-log*"
+  "name of buffer for logging async processes info")
+
+(defvar consult-omni--search-engine-alist '(("Bing" . "https://www.bing.com/search?q=%s")
+                                            ("Brave" .  "https://search.brave.com/search?q=%s")
+                                            ("DuckDuckGo" . "https://duckduckgo.com/?q=%s")
+                                            ("Google" . "https://www.google.com/search?q=%s")
+                                            ("Perplexity" .  "https://www.perplexity.ai/search?q=%s")
+                                            ("PubMed" . "https://pubmed.ncbi.nlm.nih.gov/?q=%s")
+                                            ("Wikipedia" . "https://www.wikipedia.org/search-redirect.php?q=%s")
+                                            ("YouTube" . "https://www.youtube.com/search?q=%s")
+                                            ("gptel" . #'consult-omni--gptel-preview
+)
+)
+"Alist of search engine name and URLs.
+
+car of each item is the name of the engine
+cdr of items must be:
+- a search url string with %s for the query
+- an elisp funciton that takes query string")
 
 ;;; Faces
 
@@ -471,6 +509,7 @@ If a regular expression contains capturing groups,
 If no capturing groups are used, highlight the whole match.
 Case is ignored, if ignore-case is non-nil.
 (This is adapted from `consult--highlight-regexps'.)"
+  (save-match-data
   (let ((i 0))
     (while (and (let ((case-fold-search ignore-case))
                   (string-match regexp str i))
@@ -482,7 +521,7 @@ Case is ignored, if ignore-case is non-nil.
           (when (car m)
             (add-face-text-property (car m) (cadr m)
                                     'consult-omni-highlight-match-face nil str))
-          (setq m (cddr m))))))
+          (setq m (cddr m)))))))
   str)
 
 (defun consult-omni--overlay-match (match-str buffer ignore-case)
@@ -494,6 +533,7 @@ or preview buffers."
   (let ((buffer (or (and buffer (get-buffer buffer)) (current-buffer))))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
+        (save-match-data
         (save-mark-and-excursion
           (remove-overlays (point-min) (point-max) 'consult-omni-overlay t)
           (goto-char (point-min))
@@ -505,7 +545,7 @@ or preview buffers."
                     (end (cadr m))
                     (overlay (make-overlay beg end)))
           (overlay-put overlay 'consult-omni-overlay t)
-          (overlay-put overlay 'face 'consult-omni-highlight-match-face)))))))))
+          (overlay-put overlay 'face 'consult-omni-highlight-match-face))))))))))
 
 (defun consult-omni-overlays-toggle (&optional buffer)
   "Toggles overlay highlights in consult-omni view/preview buffers."
@@ -583,7 +623,7 @@ Ommits keys in IGNORE-KEYS."
       (funcall var)
     var))
 
-(defun consult-omni--pulse-regexp (regexp)
+(defun consult-omni--pulse-regexp (regexp &optional delay)
   "Finds and pulses REGEXP"
   (goto-char (point-min))
   (while (re-search-forward regexp nil t)
@@ -591,22 +631,22 @@ Ommits keys in IGNORE-KEYS."
            (beg (car m))
            (end (cadr m))
            (ov (make-overlay beg end))
-           (pulse-delay 0.075)
+           (pulse-delay (or delay 0.075))
            )
       (pulse-momentary-highlight-overlay ov 'highlight))
     ))
 
-(defun consult-omni--pulse-region (beg end)
+(defun consult-omni--pulse-region (beg end &optional delay)
   "Finds and pulses region from BEG to END"
   (let ((ov (make-overlay beg end))
-        (pulse-delay 0.075)
+        (pulse-delay (or delay 0.075))
         )
       (pulse-momentary-highlight-overlay ov 'highlight))
     )
 
-(defun consult-omni--pulse-line ()
+(defun consult-omni--pulse-line (&optional delay)
 "Pulses line at point momentarily"
-(let* ((pulse-delay 0.055)
+(let* ((pulse-delay (or delay 0.075))
       (ov (make-overlay (car (bounds-of-thing-at-point 'line)) (cdr (bounds-of-thing-at-point 'line)))))
 (pulse-momentary-highlight-overlay ov 'highlight))
 )
@@ -906,7 +946,7 @@ This is used to get initial input for static commands, when
                  :initial initial
                  :category 'consult-omni
                  :history 'consult-omni--search-history
-                 :add-history (consult-omni--add-history)))
+                 :add-history (consult-omni--add-history '(symbol))))
 
 (cl-defun consult-omni--simple-format-candidate (&rest args &key source query url search-url title snippet &allow-other-keys)
   "Returns a simple formatted string for candidates.
@@ -938,7 +978,7 @@ Description of Arguments:
   FACE        the face used for the title"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
-         (match-str (and (stringp query) (consult--split-escaped query) nil))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 4 frame-width-percent)))
@@ -954,7 +994,7 @@ Description of Arguments:
                       (when url-str (concat "\s" url-str))
                       (when snippet (concat "\s\s" snippet))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -988,12 +1028,12 @@ and is used to define the grouping for CAND."
             source
           nil))))))
 
-(defun consult-omni--add-history (&rest args)
+(defun consult-omni--add-history (&optional things &rest args)
   "Makes a list for future history based on at-point items."
   (delq nil
         (cl-remove-duplicates
-         (append (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing nil))
-                         (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line)) (list isearch-string)))))
+         (append (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing t))
+                         (or things (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line))) (list isearch-string)))))
 
 (defun consult-omni--lookup-function ()
   "Lookup function for `consult-omni' minibuffer candidates.
@@ -1076,16 +1116,19 @@ CALLBACK is used as a fall back."
 (defun consult-omni-external-search (cand &optional engine)
   "Default NEW function for a non-existing CAND."
   (interactive (list (consult--read nil :prompt "Search: ")))
-  (if-let* ((engine (or engine consult-omni-default-search-engine (consult--read consult-omni--search-engine-alist :prompt "Select Search Engine: ")))
-            (search-url (cdr (assoc engine consult-omni--search-engine-alist)))
-            (params `(("q" . ,(substring-no-properties cand))))
-            (url (consult-omni--make-url-string search-url params)))
-      (funcall consult-omni-default-browse-function url)))
+  (let* ((cand (or (and (stringp cand) (propertize cand :query (substring-no-properties cand) :title cand)) cand))
+         (engine (or engine consult-omni-default-search-engine (consult--read consult-omni--search-engine-alist :prompt "Select Search Engine: ")))
+            (func (cdr (assoc engine consult-omni--search-engine-alist)))
+            (search-url (if (stringp func) func nil))
+            (url (if (stringp search-url) (format search-url (url-hexify-string cand)) nil)))
+      (cond
+       (url (funcall consult-omni-default-browse-function url))
+       ((functionp (cadr func)) (funcall (cadr func) cand)))
+))
 
 (defun consult-omni-external-search-with-engine (engine &optional cand)
   "Funtion for new non-existing CAND in `consult-omni-brave'."
-  (let* ((consult-omni-default-search-engine engine))
-    (funcall #'consult-omni-external-search cand)))
+    (funcall #'consult-omni-external-search cand engine))
 
 (defun consult-omni--default-new (cand)
   "Wrapperfor calling `consult-omni-default-new-function'."
@@ -1755,7 +1798,7 @@ This is used to make docstring for function made by `consult-omni-define-source'
           (format "interactive command to search %s."
                   (capitalize source-name))))
 
-(defun consult-omni--make-source-list (source-name request annotate face narrow-char state preview-key category lookup group require-match sort enabled predicate select-hist)
+(defun consult-omni--make-source-list (source-name request annotate face narrow-char state preview-key category lookup group require-match sort enabled predicate select-hist add-hist)
   "Internal function to make a source for `consult-omni--multi'.
 
 Do not use this function directly, use `consult-omni-define-source' macro
@@ -1771,10 +1814,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
           :state ,(or state #'consult-omni--dynamic-state-function)
           :category ,(or category 'consult-omni)
           :history ,select-hist
-          :add-history (delq nil
-                             (cl-remove-duplicates
-                              (append (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing))
-                                              (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line)) (list isearch-string))))
+          :add-history ,(or add-hist #'consult-omni--add-history)
           :items  ,request
           :annotate ,(cond
                       ((and annotate (functionp annotate))
@@ -1826,7 +1866,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
       (setq selected (funcall callback-func selected))))
     selected))
 
-(defun consult-omni--call-dynamic-command (initial prompt no-callback args source-name request category face lookup require-match search-hist-var select-hist-var preview-key sort)
+(defun consult-omni--call-dynamic-command (initial prompt no-callback args source-name request category face lookup require-match search-hist-var select-hist-var add-hist preview-key sort)
   "Internal function to make dynamic `consult--read' command.
 
 Do not use this function directly, use `consult-omni-define-source' macro
@@ -1839,6 +1879,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
                                                 args
                                                 :prompt prompt
                                                 :history '(:input search-hist-var)
+                                                :add-history (or add-hist (consult-omni--add-history))
                                                 :initial (consult--async-split-initial initial)
                                                 :sort sort
                                                 :require-match require-match))
@@ -1862,7 +1903,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
 
 ;;; Macros
 ;;;###autoload
-(cl-defmacro consult-omni-define-source (source-name &rest args &key type request transform filter on-setup on-preview on-return on-exit state on-callback on-new require-match static lookup group narrow-char category search-hist select-hist face annotate enabled sort predicate preview-key docstring  &allow-other-keys)
+(cl-defmacro consult-omni-define-source (source-name &rest args &key type request transform filter on-setup on-preview on-return on-exit state on-callback on-new require-match interactive lookup group narrow-char category search-hist select-hist add-hist face annotate enabled sort predicate preview-key docstring  &allow-other-keys)
   "Macro to make a consult-omni-source for SOURCE-NAME.
 
 Generates the following:
@@ -1891,13 +1932,14 @@ Description of Arguments:
   ON-CALLBACK  (function)            Function called on selected candidate
   ON-NEW       (function)            Function called on non-existing candidate
   REUIRE-MATCH (function)            Can non-matching candidates be selected
-  STATIC       (boolean|'both)       Whether to make static commands or not
+  INTERACTIVE  (symbol)              make 'dynamic, 'static or 'both commands
   LOOKUP       (function)            Lookup function for `consult--read'
   GROUP        (function)            Passed as GROUP to `consult--read'
   NARROW-CHAR  (char)                Passed as NARROW to `consult-read'
   CATEGORY     (symbol)              Passed as CATEGORY to `consult--read'
   SEARCH-HIST  (symbol)              Passed as HISTORY to `consult--read'
   SELECT-HIST  (symbol)              Collects list of selected items
+  ADD-HIST     (list)                List of items to add to the history.
   FACE         (face)                Passed as FACE to `consult--read-multi'
   ANNOTATE     (function)            Passed as ANNOTATE to `consult--read'
   ENABLED      (function)            Passed as ENABLED to `consult--read'
@@ -2018,12 +2060,12 @@ Description of Arguments:
   REQUIRE-MATCH is a boolean. When non-nil non-matching candidates (e.g.
                 the minibuffer content itself) can be selected as a candidate.
 
-  STATIC can be a boolean (nil or t) or the symbol 'both.
-         - If nil, only \*non-dynamic\* interactive commands are created
+  INTERACTIVE can be a symbol of the list:
+         - If 'dynamic, only \*dynamic\* interactive commands are created
            in this macro.
-         - If t, only \*dynamic\* interactive commands are created
+         - If 'static, only \*static\* interactive commands are created
            in this macro.
-         - If something else (e.g. 'both) \*Both\* dynamic and non-dynamic
+         - Otherwise, \*Both\* dynamic and static
            commands are created.
 
   LOOKUP is passed to `consult--read'.
@@ -2038,6 +2080,7 @@ Description of Arguments:
 
   SEARCH-HIST is history list varibale to keep records of search terms.
   SELECT-HIST is history list varibale to keep records of selected candidates.
+  ADD-HIST is a list of items to add to the history list.
 
   FACE is used to format the candidate. This is useful for simple formating
        without making using TRANSFORM or formatin candidates inside the REQUEST
@@ -2049,15 +2092,15 @@ Description of Arguments:
   `(progn
      ;; make a variable called consult-omni--source-%s (%s=source-name)
      (defvar ,(consult-omni--source-name source-name) nil)
-     (setq ,(consult-omni--source-name source-name) (consult-omni--make-source-list ,source-name ,request ,annotate ,face ,narrow-char ,state ,preview-key ,category ,lookup ,group ,require-match ,sort ,enabled ,predicate ,select-hist))
+     (setq ,(consult-omni--source-name source-name) (consult-omni--make-source-list ,source-name ,request ,annotate ,face ,narrow-char ,state ,preview-key ,category ,lookup ,group ,require-match ,sort ,enabled ,predicate ,select-hist ,add-hist))
      ;; make a dynamic interactive command consult-omni-dynamic-%s (%s=source-name)
-     (unless (eq ,static t)
+     (unless (eq ,interactive 'dynamic)
        (defun ,(consult-omni--func-name source-name) (&optional initial prompt no-callback &rest args)
          ,(or docstring (consult-omni--func-generate-docstring source-name t))
          (interactive "P")
-         (consult-omni--call-dynamic-command initial prompt no-callback args ,source-name ,request ,category ,face ,lookup ,require-match ,search-hist ,select-hist ,preview-key ,sort)))
+         (consult-omni--call-dynamic-command initial prompt no-callback args ,source-name ,request ,category ,face ,lookup ,require-match ,search-hist ,select-hist ,add-hist ,preview-key ,sort)))
      ;; make a static interactive command consult-omni-%s (%s=source-name)
-     (if ,static
+     (unless (eq ,interactive 'static)
          (defun ,(consult-omni--func-name source-name nil "-static") (&optional input prompt no-callback &rest args)
            ,(or docstring (consult-omni--func-generate-docstring source-name))
            (interactive "P")
@@ -2086,8 +2129,10 @@ Description of Arguments:
                                                           :category (or ',category 'consult-omni)
                                                           :search-hist ,search-hist
                                                           :select-hist ,select-hist
-                                                          :interactive-static (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name nil "-static"))
-                                                          :interactive-dynamic (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name))
+                                                          :add-hist ,add-hist
+                                                          :intactive ,interactive
+                                                          :static-command (and (functionp (consult-omni--func-name ,source-name nil "-static")) (consult-omni--func-name ,source-name nil "-static"))
+                                                          :dynamic-command (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name))
                                                           :enabled ,enabled
                                                           :sort ,sort
                                                           :predicate ,predicate)))
@@ -2128,7 +2173,7 @@ DOCSTRING    the docstring for the function that is returned."
                                              )))
                              results)))))))
 
-(cl-defun consult-omni--make-source-from-consult-source (consult-source &rest args &key type request transform on-setup on-preview on-return on-exit state on-callback on-new group narrow-char category static search-hist select-hist face annotate enabled sort predicate preview-key require-match docstring &allow-other-keys)
+(cl-defun consult-omni--make-source-from-consult-source (consult-source &rest args &key type request transform on-setup on-preview on-return on-exit state on-callback on-new group narrow-char category interactive search-hist select-hist face annotate enabled sort predicate preview-key require-match docstring &allow-other-keys)
   "Makes a consult-omni source from a consult source plist, CONSULT-SOURCE.
 
 All other input variables are passed to `consult-omni-define-source'
@@ -2146,7 +2191,9 @@ macro. See `consult-omni-define-source' for more details."
                         (t annotate)))
              (preview-key (or preview-key (and (plistp source) (plist-get source :preview-key)) consult-omni-preview-key))
              (predicate (or predicate (and (plistp source) (plist-get source :predicate))))
-             (require-match (or require-match (and (plistp source) (plist-get source :require-match))))
+             (require-match (if (plist-member args :require-match)
+                                (plist-get args :require-match)
+                              (and (plistp source) (plist-get source :require-match))))
              (group (or group (and (plistp source) (plist-get source :group))))
              (sort (or sort (and (plistp source) (plist-get source :sort))))
              (enabled (or enabled (and (plistp source) (plist-get source :enabled))))
@@ -2173,7 +2220,7 @@ macro. See `consult-omni-define-source' for more details."
                                             :predicate ',predicate
                                             :group ',group
                                             :sort ',sort
-                                            :static ',static
+                                            :interactive ',interactive
                                             :annotate ',annotate
                                             :require-match ',require-match)))))
 
@@ -2262,6 +2309,7 @@ here: URL `https://github.com/minad/consult'."
            :sort t
            :require-match nil
            :history '(:input consult-omni--search-history)
+           :add-history (consult-omni--add-history '(symbol))
            :initial (consult--async-split-initial initial)))
          (match (plist-get (cdr selected) :match))
          (source  (plist-get (cdr selected) :name))

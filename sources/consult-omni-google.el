@@ -104,7 +104,7 @@ URL `https://developers.google.com/custom-search/' for more info."
 (consult-omni-define-source "Google"
                             :narrow-char ?g
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--google-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "Google")
@@ -114,7 +114,7 @@ URL `https://developers.google.com/custom-search/' for more info."
                             :enabled (lambda () (bound-and-true-p consult-omni-google-customsearch-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-google' module

@@ -31,7 +31,7 @@ Description of Arguments:
   SNIPPET    a string containing a snippet/description of candidate"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
-         (match-str (and (stringp query) (consult--split-escaped query) nil))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 4 frame-width-percent)))
@@ -47,7 +47,7 @@ Description of Arguments:
          (str (concat title-str
                       (when url-str (concat "\s" url-str))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -87,7 +87,7 @@ Description of Arguments:
                             :enabled (lambda () (fboundp 'browser-hist-search))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-browser-history' module

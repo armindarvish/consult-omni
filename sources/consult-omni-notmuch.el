@@ -65,7 +65,7 @@ Description of Arguments:
   FACE   the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (date (if (stringp date) (propertize date 'face 'consult-omni-date-face) "            "))
          (from (if (stringp from) (propertize from 'face 'consult-omni-path-face) ""))
          (from-str (and (stringp from) (consult-omni--set-string-width from (* 2 frame-width-percent))))
@@ -83,7 +83,7 @@ Description of Arguments:
                         (if title-str title-str)
                         (if tags (format "\s\s%s" tags))
                         (if source (concat "\t" source))))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((and (listp match-str) (stringp str))
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -245,11 +245,10 @@ parsing outputs of “notmuch search”, and
                             :select-hist 'consult-omni--email-select-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :transform (lambda (candidates &optional query) (funcall (consult-omni--notmuch-get-transform-func) candidates query))
-                            :enabled (lambda () (if (and (bound-and-true-p notmuch-command) (executable-find notmuch-command))
-                                                    t
-                                                  nil))
+                            :enabled (lambda () (and (bound-and-true-p notmuch-command)
+                                                (executable-find notmuch-command)))
                             :annotate nil)
 
 ;;; provide `consult-omni-notmuch' module

@@ -58,7 +58,7 @@ Description of Arguments:
                                    title-width
                                    elfeed-search-title-max-width)
                             :left))
-             (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
+             (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped (car (consult--command-split query))) nil))
              (str (concat (propertize title-column 'face title-faces 'kbd-help title) " "
                           (propertize date 'face 'elfeed-search-date-face)
                           (when feed-title
@@ -66,7 +66,7 @@ Description of Arguments:
                           (when tags (concat " " "(" tags-str ")"))
                           (when domain (concat "\t" domain (when path path)))
                           (concat "\t" (propertize "elfeed" 'face 'consult-omni-source-type-face)))))
-        (if consult-omni-highlight-matches
+        (if consult-omni-highlight-matches-in-minibuffer
             (cond
              ((listp match-str)
               (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -150,7 +150,7 @@ if FILTER is non-nil, it is used as additional filter parameters."
                             :enabled (lambda () (boundp 'elfeed-db))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-elfeed' module

@@ -80,7 +80,7 @@
                             :enabled (lambda () (bound-and-true-p consult-omni-doiorg-search-url))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 
 ;;; provide `consult-omni-doi' module
 

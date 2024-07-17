@@ -33,9 +33,9 @@
   "Regexp pattern to find system applications"
   :type 'regexp)
 
-(defcustom consult-omni-apps-default-launch-function #'consult-omni--apps-lauch-app
+(defcustom consult-omni-apps-default-launch-function #'consult-omni--apps-launch-app
   "Default function to launch an app"
-  :type '(choice (function :tag "(Default) Use System Shell" consult-omni--apps-lauch-app)
+  :type '(choice (function :tag "(Default) Use System Shell" consult-omni--apps-launch-app)
                  (function :tag "Custom Function")))
 
 (defcustom consult-omni-open-with-prompt ">|  "
@@ -84,7 +84,7 @@ If FILE is non-nil, returns a command line for opeing the FILE with APP."
           (list (format "%s" app))
           (if (and file (file-exists-p (file-truename file))) (list (format "%s" file)))))
 
-(defun consult-omni--apps-lauch-app (app &optional file)
+(defun consult-omni--apps-launch-app (app &optional file)
   "Makes an async process for opening APP.
 
 Uses `consult-omni--apps-cmd-args' to get the command line args string.
@@ -131,13 +131,13 @@ Description of Arguments:
   SNIPPET the description of the app (from Desktop Entry)
   VISIBLE whether the applicaiton is visible (from Desktop Entry)
   FACE    the face to apply to TITLE"
-  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
+  (let* ((frame-width-percent (max 10 (floor (* (frame-width) 0.1))))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (directory (and path (file-name-directory path)))
          (directory (and (stringp directory) (propertize directory 'face 'consult-omni-path-face)))
          (snippet (and (stringp snippet) (consult-omni--set-string-width snippet (* 3 frame-width-percent))))
          (snippet (and (stringp snippet) (propertize snippet 'face 'consult-omni-snippet-face)))
-         (match-str (and (stringp query) (consult--split-escaped query) nil))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-files-title-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 4 frame-width-percent)))
@@ -146,7 +146,7 @@ Description of Arguments:
                       (when snippet (concat "\t" snippet))
                       (when directory (concat "\t" directory))
                       (when source (concat "\t" source)))))
-     (if consult-omni-highlight-matches
+     (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -175,6 +175,10 @@ match `consult-omni-apps-regexp-pattern' in `consult-omni-apps-paths'."
 
 ;; set the `consult-omni-apps-cached-apps'
 (setq consult-omni-apps-cached-apps (consult-omni--apps-get-desktop-apps))
+
+(defun consult-omni--apps-update-cached-apps ()
+(let ((consult-omni-apps-use-cache nil))
+  (consult-omni--apps-get-desktop-apps)))
 
 (defun consult-omni--apps-parse-app-file (file)
   "Parses a desktop entry FILE.
@@ -250,6 +254,7 @@ For each file in files, if it contains the QUERY
                     (title (or name (file-name-base file) ""))
                     (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
                     (search-url nil)
+                    (consult-omni-highlight-matches-in-minibuffer nil)
                     (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
                (propertize decorated
                            :source source
@@ -266,6 +271,10 @@ For each file in files, if it contains the QUERY
              files)))))
 
 (setq consult-omni-apps--cached-items  (consult-omni-apps--cached-items consult-omni-apps-cached-apps ".*"))
+
+(defun consult-omni--apps-update-cached-items ()
+(let ((consult-omni-apps-use-cache nil))
+  (consult-omni-apps--cached-items consult-omni-apps-cached-apps ".*")))
 
 (cl-defun consult-omni--apps-list-apps (input &rest args &key callback &allow-other-keys)
   "Get a list of applications from OS.
@@ -289,6 +298,7 @@ a new list is generated."
                     (title (or name (file-name-base file) ""))
                     (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
                     (search-url nil)
+                    (consult-omni-highlight-matches-in-minibuffer nil)
                     (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
                (propertize decorated
                            :source source
@@ -319,7 +329,7 @@ a new list is generated."
                             :enabled (lambda () (boundp 'consult-omni-apps-paths))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil
                             :category 'file)
 

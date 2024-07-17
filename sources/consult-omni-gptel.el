@@ -76,7 +76,7 @@ Description of Arguments:
   FACE     the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
-         (match-str (and (stringp query) (consult--split-escaped query) nil))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (backend (and (stringp backend) (propertize backend 'face 'consult-omni-domain-face)))
          (model (and (stringp model) (propertize model 'face 'consult-omni-path-face)))
          (stream (and stream (propertize "~stream~" 'face 'consult-omni-snippet-face)))
@@ -87,7 +87,7 @@ Description of Arguments:
                       (when backend (concat "\t" backend))
                       (when model (concat ":" model))
                       (when stream (concat "\s" stream "\s")))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -132,7 +132,7 @@ If STREAM is non-nil, the response is streamed."
           (gptel-send)))
       (current-buffer))))
 
-(defun consult-omni--gptelbuffer-preview (cand)
+(defun consult-omni--gptel-preview (cand)
   "Shows a preview buffer of CAND for `consult-omni-gptel'.
 
 The preview buffer is from `consult-omni--gptel-response-preview'."
@@ -234,16 +234,16 @@ metadata so it can be send to `gptel'."
                             :require-match t
                             :face 'consult-omni-ai-title-face
                             :request #'consult-omni--gptel-fetch-results
-                            :on-preview #'consult-omni--gptelbuffer-preview
+                            :on-preview #'consult-omni--gptel-preview
                             :on-return #'identity
-                            :on-callback #'consult-omni--gptelbuffer-preview
+                            :on-callback #'consult-omni--gptel-preview
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :enabled (lambda () (fboundp 'gptel))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-gptel' module

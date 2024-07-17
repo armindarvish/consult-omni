@@ -244,42 +244,48 @@ This would add interactive commands only for searching wikipedia (e.g. =consult-
 *** List of Sources Provided by Default
 Here is a list of current sources. For details on how to set and use each source, refer to the [[https://github.com/armindarvish/consult-omni/wiki][wiki pages]] (under construction now).
 
-|--------------------------+--------------------------------------|
-| Source                   | Category                             |
-|--------------------------+--------------------------------------|
-| Apps                     | Desktop Applications                 |
-| Bing                     | Web Search Engine                    |
-| Brave AutoSuggest        | Web Word Completion/AutoSuggest      |
-| Brave                    | Web Search Engine                    |
-| Browser History          | Web Browser History                  |
-| consult buffer sources   | Emacs Buffers, Files, Bookmarks, ... |
-| calc                     | Emacs Calculator                     |
-| chatGPT                  | Simple AI prompts                    |
-| consult-notes            | Local Notes                          |
-| doiorg                   | Academic Reference                   |
-| DuckDuckGo (Limited API) | Search Suggestions                   |
-| elfeed                   | Feeds (RSS, videos,...)              |
-| find                     | Search Local Files                   |
-| GitHub                   | Search GitHub Repos                  |
-| Google                   | Web Search Engine                    |
-| Google AutoSuggest       | Web Word Completion/AutoSuggest      |
-| grep                     | Search Local Files                   |
-| ripgrep                  | Search Local Files                   |
-| gptel                    | AI Assistant                         |
-| Invidious                | Online Videos (YouTube)              |
-| buffers text search      | Search Text in Emacs Buffers         |
-| locate                   | Search Local Files                   |
-| mdfind                   | Search Local Files/Apps/...          |
-| mu4e                     | Search Emails                        |
-| Notes Search             | Search Local Note Files              |
-| notmuch                  | Search Emails                        |
-| Numi                     | Calculator (uses Numi)               |
-| PubMed                   | Academic Reference                   |
-| Scopus                   | Academic Reference                   |
-| StackOverflow            | Community Forum                      |
-| Wikipedia                | Encyclopedia                         |
-| YouTube                  | Online Videos (YouTube)              |
-|--------------------------+--------------------------------------|
+|--------------------------+----------------------------------------------|
+| Source                   | Category                                     |
+|--------------------------+----------------------------------------------|
+| Apps                     | Desktop Applications                         |
+| Bing                     | Web Search Engine                            |
+| Brave AutoSuggest        | Web Word Completion/AutoSuggest              |
+| Brave                    | Web Search Engine                            |
+| Browser History          | Web Browser History                          |
+| consult buffer sources   | Emacs Buffers, Files, Bookmarks, ...         |
+| calc                     | Emacs Calculator                             |
+| chatGPT                  | Simple AI prompts                            |
+| consult-notes            | Local Notes                                  |
+| Dictionary               | Emacs Built-in Dictionary                    |
+| doiorg                   | Academic Reference                           |
+| DuckDuckGo (Limited API) | Search Suggestions                           |
+| elfeed                   | Feeds (RSS, videos,...)                      |
+| fd                       | Search Local Files with /fd/ Command           |
+| find                     | Search Local Files with /find/ Command         |
+| GitHub                   | Search GitHub Repos with /gh/ Command          |
+| Google                   | Web Search Engine                            |
+| Google AutoSuggest       | Web Word Completion/AutoSuggest              |
+| grep                     | Search Local Files with /grep/ Command         |
+| git-grep                 | Search Local Git Files with /grep/ Command     |
+| ripgrep                  | Search Local Files with /rg/ Command           |
+| ripgrep-all              | Search Local Files with /rga/ Command          |
+| gptel                    | AI Assistant                                 |
+| Invidious                | Online Videos (YouTube)                      |
+| buffers text search      | Search Text in Emacs Buffers                 |
+| locate                   | Search Local Files with /local/ Command        |
+| man                      | Search Manual Pages with  /man/ Command        |
+| mdfind                   | Search Local Files with OSX /mdfind/ Command   |
+| mu4e                     | Search Emails                                |
+| Notes Search             | Search Local Note Files                      |
+| notmuch                  | Search Emails                                |
+| Numi                     | Calculator with numi-cli/ command from [[https://github.com/nikolaeu/numi][Numi]]) |
+| Org agenda               | Search Org Agenda Items                      |
+| PubMed                   | Academic Reference                           |
+| Scopus                   | Academic Reference                           |
+| StackOverflow            | Community Forum                              |
+| Wikipedia                | Encyclopedia                                 |
+| YouTube                  | Online Videos (YouTube)                      |
+|--------------------------+----------------------------------------------|
 
 
 ** Configuration

@@ -60,6 +60,22 @@ This variable is a list of symbols;
 each symbol being a source featue (e.g. consult-omni-brave)"
   :type '(repeat :tag "list of source modules/features to load" symbol))
 
+(defcustom consult-omni-intereactive-commands-type 'both
+  "Type of interactive commands to make?.
+
+This variable can be a  symbol:
+  'static  only make statis commands
+  'dynamic only make dynamic commands
+  otherwise make both commands
+
+dynamic commands are dynamically completed  in the minibuffer.
+static commands fetch search results once without dynamic completion"
+  :type '(choice (const :tag "(Default) Make both static and dynamic commands" 'both)
+                 (const :tag "Only make DYNAMIC interactive commands" 'dynamic)
+                 (const :tag "Only make STATIC interactive commands" 'static)
+                 ))
+
+
 
 (defcustom consult-omni-default-browse-function #'browse-url
   "consult-omni default function when selecting a link"
@@ -193,8 +209,12 @@ This variable is a list of strings or symbols;
    (see `consult-buffer-sources' for example.)"
   :type '(choice (repeat :tag "list of source names" string)))
 
-(defcustom consult-omni-highlight-matches t
+(defcustom consult-omni-highlight-matches-in-minibuffer t
   "Should `consult-omni' highlight search queries in the minibuffer?"
+  :type 'boolean)
+
+(defcustom consult-omni-highlight-matches-in-file t
+  "Should `consult-omni' highlight search queries in files (preview or return)?"
   :type 'boolean)
 
 (defcustom consult-omni-highlight-match-ignore-case t
@@ -279,6 +299,10 @@ By default inherits from `consult-async-refresh-delay'. "
 
 (defvar consult-omni-video-category 'consult-omni-video
   "Category symbol for video search")
+
+
+(defvar consult-omni-dictionary-category 'consult-omni-dictionary
+  "Category symbol for dictionary search")
 #+end_src
 
 **** history variables
@@ -335,15 +359,29 @@ This is used in dynamic collection to change grouping.")
 (defvar consult-omni--async-log-buffer " *consult-omni--async-log*"
   "name of buffer for logging async processes info")
 
-(defvar consult-omni--search-engine-alist '(("Bing" . "https://www.bing.com/search")
-                                            ("Brave" .  "https://search.brave.com/search")
-                                            ("DuckDuckGo" . "https://duckduckgo.com/")
-                                            ("Google" . "https://www.google.com/search")
-                                            ("Perplexity" .  "https://www.perplexity.ai/search")
-                                            ("PubMed" . "https://pubmed.ncbi.nlm.nih.gov/")
-                                            ("Wikipedia" . "https://www.wikipedia.org/search-redirect.php")
-                                            ("YouTube" . "https://www.youtube.com/search"))
-"Alist of search engine name and URLs")
+(defvar consult-omni-dynamic-timers (list)
+  "List of timers for dynamic candidates colleciton")
+
+(defvar consult-omni--async-log-buffer " *consult-omni--async-log*"
+  "name of buffer for logging async processes info")
+
+(defvar consult-omni--search-engine-alist '(("Bing" . "https://www.bing.com/search?q=%s")
+                                            ("Brave" .  "https://search.brave.com/search?q=%s")
+                                            ("DuckDuckGo" . "https://duckduckgo.com/?q=%s")
+                                            ("Google" . "https://www.google.com/search?q=%s")
+                                            ("Perplexity" .  "https://www.perplexity.ai/search?q=%s")
+                                            ("PubMed" . "https://pubmed.ncbi.nlm.nih.gov/?q=%s")
+                                            ("Wikipedia" . "https://www.wikipedia.org/search-redirect.php?q=%s")
+                                            ("YouTube" . "https://www.youtube.com/search?q=%s")
+                                            ("gptel" . #'consult-omni--gptel-preview
+)
+)
+"Alist of search engine name and URLs.
+
+car of each item is the name of the engine
+cdr of items must be:
+- a search url string with %s for the query
+- an elisp funciton that takes query string")
 
 #+end_src
 
@@ -530,6 +568,7 @@ If a regular expression contains capturing groups,
 If no capturing groups are used, highlight the whole match.
 Case is ignored, if ignore-case is non-nil.
 (This is adapted from `consult--highlight-regexps'.)"
+  (save-match-data
   (let ((i 0))
     (while (and (let ((case-fold-search ignore-case))
                   (string-match regexp str i))
@@ -541,9 +580,10 @@ Case is ignored, if ignore-case is non-nil.
           (when (car m)
             (add-face-text-property (car m) (cadr m)
                                     'consult-omni-highlight-match-face nil str))
-          (setq m (cddr m))))))
+          (setq m (cddr m)))))))
   str)
 #+end_src
+
 ***** highlight match with overlay
 #+begin_src emacs-lisp
 
@@ -556,6 +596,7 @@ or preview buffers."
   (let ((buffer (or (and buffer (get-buffer buffer)) (current-buffer))))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
+        (save-match-data
         (save-mark-and-excursion
           (remove-overlays (point-min) (point-max) 'consult-omni-overlay t)
           (goto-char (point-min))
@@ -567,7 +608,7 @@ or preview buffers."
                     (end (cadr m))
                     (overlay (make-overlay beg end)))
           (overlay-put overlay 'consult-omni-overlay t)
-          (overlay-put overlay 'face 'consult-omni-highlight-match-face)))))))))
+          (overlay-put overlay 'face 'consult-omni-highlight-match-face))))))))))
 
 (defun consult-omni-overlays-toggle (&optional buffer)
   "Toggles overlay highlights in consult-omni view/preview buffers."
@@ -661,7 +702,7 @@ Ommits keys in IGNORE-KEYS."
 **** pulse
 ***** pulse-regexp
 #+begin_src emacs-lisp
-(defun consult-omni--pulse-regexp (regexp)
+(defun consult-omni--pulse-regexp (regexp &optional delay)
   "Finds and pulses REGEXP"
   (goto-char (point-min))
   (while (re-search-forward regexp nil t)
@@ -669,17 +710,17 @@ Ommits keys in IGNORE-KEYS."
            (beg (car m))
            (end (cadr m))
            (ov (make-overlay beg end))
-           (pulse-delay 0.075)
+           (pulse-delay (or delay 0.075))
            )
       (pulse-momentary-highlight-overlay ov 'highlight))
     ))
 #+end_src
 ***** pulse-region
 #+begin_src emacs-lisp
-(defun consult-omni--pulse-region (beg end)
+(defun consult-omni--pulse-region (beg end &optional delay)
   "Finds and pulses region from BEG to END"
   (let ((ov (make-overlay beg end))
-        (pulse-delay 0.075)
+        (pulse-delay (or delay 0.075))
         )
       (pulse-momentary-highlight-overlay ov 'highlight))
     )
@@ -687,9 +728,9 @@ Ommits keys in IGNORE-KEYS."
 #+end_src
 ***** pulse line
 #+begin_src emacs-lisp
-(defun consult-omni--pulse-line ()
+(defun consult-omni--pulse-line (&optional delay)
 "Pulses line at point momentarily"
-(let* ((pulse-delay 0.055)
+(let* ((pulse-delay (or delay 0.075))
       (ov (make-overlay (car (bounds-of-thing-at-point 'line)) (cdr (bounds-of-thing-at-point 'line)))))
 (pulse-momentary-highlight-overlay ov 'highlight))
 )
@@ -1038,7 +1079,7 @@ This is used to get initial input for static commands, when
                  :initial initial
                  :category 'consult-omni
                  :history 'consult-omni--search-history
-                 :add-history (consult-omni--add-history)))
+                 :add-history (consult-omni--add-history '(symbol))))
 #+end_src
 **** format / annotate candidates
 ***** simple no highlighting and metadata
@@ -1077,7 +1118,7 @@ Description of Arguments:
   FACE        the face used for the title"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
-         (match-str (and (stringp query) (consult--split-escaped query) nil))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 4 frame-width-percent)))
@@ -1093,7 +1134,7 @@ Description of Arguments:
                       (when url-str (concat "\s" url-str))
                       (when snippet (concat "\s\s" snippet))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -1136,12 +1177,12 @@ and is used to define the grouping for CAND."
 
 **** add-history
 #+begin_src emacs-lisp
-(defun consult-omni--add-history (&rest args)
+(defun consult-omni--add-history (&optional things &rest args)
   "Makes a list for future history based on at-point items."
   (delq nil
         (cl-remove-duplicates
-         (append (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing nil))
-                         (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line)) (list isearch-string)))))
+         (append (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing t))
+                         (or things (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line))) (list isearch-string)))))
 #+end_src
 **** lookup function
 #+begin_src emacs-lisp
@@ -1239,18 +1280,21 @@ CALLBACK is used as a fall back."
 (defun consult-omni-external-search (cand &optional engine)
   "Default NEW function for a non-existing CAND."
   (interactive (list (consult--read nil :prompt "Search: ")))
-  (if-let* ((engine (or engine consult-omni-default-search-engine (consult--read consult-omni--search-engine-alist :prompt "Select Search Engine: ")))
-            (search-url (cdr (assoc engine consult-omni--search-engine-alist)))
-            (params `(("q" . ,(substring-no-properties cand))))
-            (url (consult-omni--make-url-string search-url params)))
-      (funcall consult-omni-default-browse-function url)))
+  (let* ((cand (or (and (stringp cand) (propertize cand :query (substring-no-properties cand) :title cand)) cand))
+         (engine (or engine consult-omni-default-search-engine (consult--read consult-omni--search-engine-alist :prompt "Select Search Engine: ")))
+            (func (cdr (assoc engine consult-omni--search-engine-alist)))
+            (search-url (if (stringp func) func nil))
+            (url (if (stringp search-url) (format search-url (url-hexify-string cand)) nil)))
+      (cond
+       (url (funcall consult-omni-default-browse-function url))
+       ((functionp (cadr func)) (funcall (cadr func) cand)))
+))
 #+end_src
 ***** external search with engine
 #+begin_src emacs-lisp
 (defun consult-omni-external-search-with-engine (engine &optional cand)
   "Funtion for new non-existing CAND in `consult-omni-brave'."
-  (let* ((consult-omni-default-search-engine engine))
-    (funcall #'consult-omni-external-search cand)))
+    (funcall #'consult-omni-external-search cand engine))
 #+end_src
 ***** consult-omni--default-new
 #+begin_src emacs-lisp
@@ -2016,7 +2060,7 @@ This is used to make docstring for function made by `consult-omni-define-source'
 #+end_src
 *** make a consult--read source list
 #+begin_src emacs-lisp
-(defun consult-omni--make-source-list (source-name request annotate face narrow-char state preview-key category lookup group require-match sort enabled predicate select-hist)
+(defun consult-omni--make-source-list (source-name request annotate face narrow-char state preview-key category lookup group require-match sort enabled predicate select-hist add-hist)
   "Internal function to make a source for `consult-omni--multi'.
 
 Do not use this function directly, use `consult-omni-define-source' macro
@@ -2032,10 +2076,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
           :state ,(or state #'consult-omni--dynamic-state-function)
           :category ,(or category 'consult-omni)
           :history ,select-hist
-          :add-history (delq nil
-                             (cl-remove-duplicates
-                              (append (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing))
-                                              (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line)) (list isearch-string))))
+          :add-history ,(or add-hist #'consult-omni--add-history)
           :items  ,request
           :annotate ,(cond
                       ((and annotate (functionp annotate))
@@ -2055,6 +2096,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
           ,(when predicate predicate)
           :require-match ,require-match))
 #+end_src
+
 *** make a static interactive command
 #+begin_src emacs-lisp
 
@@ -2093,7 +2135,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
 #+end_src
 *** make a dynamic interactive command
 #+begin_src emacs-lisp
-(defun consult-omni--call-dynamic-command (initial prompt no-callback args source-name request category face lookup require-match search-hist-var select-hist-var preview-key sort)
+(defun consult-omni--call-dynamic-command (initial prompt no-callback args source-name request category face lookup require-match search-hist-var select-hist-var add-hist preview-key sort)
   "Internal function to make dynamic `consult--read' command.
 
 Do not use this function directly, use `consult-omni-define-source' macro
@@ -2106,6 +2148,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
                                                 args
                                                 :prompt prompt
                                                 :history '(:input search-hist-var)
+                                                :add-history (or add-hist (consult-omni--add-history))
                                                 :initial (consult--async-split-initial initial)
                                                 :sort sort
                                                 :require-match require-match))
@@ -2132,7 +2175,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
 #+begin_src emacs-lisp
 ;;; Macros
 ;;;###autoload
-(cl-defmacro consult-omni-define-source (source-name &rest args &key type request transform filter on-setup on-preview on-return on-exit state on-callback on-new require-match static lookup group narrow-char category search-hist select-hist face annotate enabled sort predicate preview-key docstring  &allow-other-keys)
+(cl-defmacro consult-omni-define-source (source-name &rest args &key type request transform filter on-setup on-preview on-return on-exit state on-callback on-new require-match interactive lookup group narrow-char category search-hist select-hist add-hist face annotate enabled sort predicate preview-key docstring  &allow-other-keys)
   "Macro to make a consult-omni-source for SOURCE-NAME.
 
 Generates the following:
@@ -2161,13 +2204,14 @@ Description of Arguments:
   ON-CALLBACK  (function)            Function called on selected candidate
   ON-NEW       (function)            Function called on non-existing candidate
   REUIRE-MATCH (function)            Can non-matching candidates be selected
-  STATIC       (boolean|'both)       Whether to make static commands or not
+  INTERACTIVE  (symbol)              make 'dynamic, 'static or 'both commands
   LOOKUP       (function)            Lookup function for `consult--read'
   GROUP        (function)            Passed as GROUP to `consult--read'
   NARROW-CHAR  (char)                Passed as NARROW to `consult-read'
   CATEGORY     (symbol)              Passed as CATEGORY to `consult--read'
   SEARCH-HIST  (symbol)              Passed as HISTORY to `consult--read'
   SELECT-HIST  (symbol)              Collects list of selected items
+  ADD-HIST     (list)                List of items to add to the history.
   FACE         (face)                Passed as FACE to `consult--read-multi'
   ANNOTATE     (function)            Passed as ANNOTATE to `consult--read'
   ENABLED      (function)            Passed as ENABLED to `consult--read'
@@ -2288,12 +2332,12 @@ Description of Arguments:
   REQUIRE-MATCH is a boolean. When non-nil non-matching candidates (e.g.
                 the minibuffer content itself) can be selected as a candidate.
 
-  STATIC can be a boolean (nil or t) or the symbol 'both.
-         - If nil, only \*non-dynamic\* interactive commands are created
+  INTERACTIVE can be a symbol of the list:
+         - If 'dynamic, only \*dynamic\* interactive commands are created
            in this macro.
-         - If t, only \*dynamic\* interactive commands are created
+         - If 'static, only \*static\* interactive commands are created
            in this macro.
-         - If something else (e.g. 'both) \*Both\* dynamic and non-dynamic
+         - Otherwise, \*Both\* dynamic and static
            commands are created.
 
   LOOKUP is passed to `consult--read'.
@@ -2308,6 +2352,7 @@ Description of Arguments:
 
   SEARCH-HIST is history list varibale to keep records of search terms.
   SELECT-HIST is history list varibale to keep records of selected candidates.
+  ADD-HIST is a list of items to add to the history list.
 
   FACE is used to format the candidate. This is useful for simple formating
        without making using TRANSFORM or formatin candidates inside the REQUEST
@@ -2319,15 +2364,15 @@ Description of Arguments:
   `(progn
      ;; make a variable called consult-omni--source-%s (%s=source-name)
      (defvar ,(consult-omni--source-name source-name) nil)
-     (setq ,(consult-omni--source-name source-name) (consult-omni--make-source-list ,source-name ,request ,annotate ,face ,narrow-char ,state ,preview-key ,category ,lookup ,group ,require-match ,sort ,enabled ,predicate ,select-hist))
+     (setq ,(consult-omni--source-name source-name) (consult-omni--make-source-list ,source-name ,request ,annotate ,face ,narrow-char ,state ,preview-key ,category ,lookup ,group ,require-match ,sort ,enabled ,predicate ,select-hist ,add-hist))
      ;; make a dynamic interactive command consult-omni-dynamic-%s (%s=source-name)
-     (unless (eq ,static t)
+     (unless (eq ,interactive 'dynamic)
        (defun ,(consult-omni--func-name source-name) (&optional initial prompt no-callback &rest args)
          ,(or docstring (consult-omni--func-generate-docstring source-name t))
          (interactive "P")
-         (consult-omni--call-dynamic-command initial prompt no-callback args ,source-name ,request ,category ,face ,lookup ,require-match ,search-hist ,select-hist ,preview-key ,sort)))
+         (consult-omni--call-dynamic-command initial prompt no-callback args ,source-name ,request ,category ,face ,lookup ,require-match ,search-hist ,select-hist ,add-hist ,preview-key ,sort)))
      ;; make a static interactive command consult-omni-%s (%s=source-name)
-     (if ,static
+     (unless (eq ,interactive 'static)
          (defun ,(consult-omni--func-name source-name nil "-static") (&optional input prompt no-callback &rest args)
            ,(or docstring (consult-omni--func-generate-docstring source-name))
            (interactive "P")
@@ -2356,8 +2401,10 @@ Description of Arguments:
                                                           :category (or ',category 'consult-omni)
                                                           :search-hist ,search-hist
                                                           :select-hist ,select-hist
-                                                          :interactive-static (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name nil "-static"))
-                                                          :interactive-dynamic (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name))
+                                                          :add-hist ,add-hist
+                                                          :intactive ,interactive
+                                                          :static-command (and (functionp (consult-omni--func-name ,source-name nil "-static")) (consult-omni--func-name ,source-name nil "-static"))
+                                                          :dynamic-command (and (functionp (consult-omni--func-name ,source-name)) (consult-omni--func-name ,source-name))
                                                           :enabled ,enabled
                                                           :sort ,sort
                                                           :predicate ,predicate)))
@@ -2405,7 +2452,7 @@ DOCSTRING    the docstring for the function that is returned."
 **** define source
 #+begin_src emacs-lisp
 
-(cl-defun consult-omni--make-source-from-consult-source (consult-source &rest args &key type request transform on-setup on-preview on-return on-exit state on-callback on-new group narrow-char category static search-hist select-hist face annotate enabled sort predicate preview-key require-match docstring &allow-other-keys)
+(cl-defun consult-omni--make-source-from-consult-source (consult-source &rest args &key type request transform on-setup on-preview on-return on-exit state on-callback on-new group narrow-char category interactive search-hist select-hist face annotate enabled sort predicate preview-key require-match docstring &allow-other-keys)
   "Makes a consult-omni source from a consult source plist, CONSULT-SOURCE.
 
 All other input variables are passed to `consult-omni-define-source'
@@ -2423,7 +2470,9 @@ macro. See `consult-omni-define-source' for more details."
                         (t annotate)))
              (preview-key (or preview-key (and (plistp source) (plist-get source :preview-key)) consult-omni-preview-key))
              (predicate (or predicate (and (plistp source) (plist-get source :predicate))))
-             (require-match (or require-match (and (plistp source) (plist-get source :require-match))))
+             (require-match (if (plist-member args :require-match)
+                                (plist-get args :require-match)
+                              (and (plistp source) (plist-get source :require-match))))
              (group (or group (and (plistp source) (plist-get source :group))))
              (sort (or sort (and (plistp source) (plist-get source :sort))))
              (enabled (or enabled (and (plistp source) (plist-get source :enabled))))
@@ -2450,7 +2499,7 @@ macro. See `consult-omni-define-source' for more details."
                                             :predicate ',predicate
                                             :group ',group
                                             :sort ',sort
-                                            :static ',static
+                                            :interactive ',interactive
                                             :annotate ',annotate
                                             :require-match ',require-match)))))
 #+end_src
@@ -2544,6 +2593,7 @@ here: URL `https://github.com/minad/consult'."
            :sort t
            :require-match nil
            :history '(:input consult-omni--search-history)
+           :add-history (consult-omni--add-history '(symbol))
            :initial (consult--async-split-initial initial)))
          (match (plist-get (cdr selected) :match))
          (source  (plist-get (cdr selected) :name))
@@ -3064,8 +3114,7 @@ Can be:
 ;;; consult-omni-embark.el ends here
 #+end_src
 * sources
-** Multi Sources
-*** all sources
+** Module
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-sources.el
 :END:
@@ -3106,6 +3155,7 @@ Can be:
         'consult-omni-calc
         'consult-omni-chatgpt
         'consult-omni-consult-notes
+        'consult-omni-dict
         'consult-omni-doi
         'consult-omni-duckduckgo
         'consult-omni-elfeed
@@ -3154,7 +3204,7 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
 (provide 'consult-omni-sources)
 ;;; consult-omni-sources.el ends here
 #+end_src
-** Single Source
+** Single Source Definition
 *** Desktop Apps
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-apps.el
@@ -3199,9 +3249,9 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
   "Regexp pattern to find system applications"
   :type 'regexp)
 
-(defcustom consult-omni-apps-default-launch-function #'consult-omni--apps-lauch-app
+(defcustom consult-omni-apps-default-launch-function #'consult-omni--apps-launch-app
   "Default function to launch an app"
-  :type '(choice (function :tag "(Default) Use System Shell" consult-omni--apps-lauch-app)
+  :type '(choice (function :tag "(Default) Use System Shell" consult-omni--apps-launch-app)
                  (function :tag "Custom Function")))
 
 (defcustom consult-omni-open-with-prompt ">|  "
@@ -3260,7 +3310,7 @@ If FILE is non-nil, returns a command line for opeing the FILE with APP."
 
 ***** make process
 #+begin_src emacs-lisp
-(defun consult-omni--apps-lauch-app (app &optional file)
+(defun consult-omni--apps-launch-app (app &optional file)
   "Makes an async process for opening APP.
 
 Uses `consult-omni--apps-cmd-args' to get the command line args string.
@@ -3317,13 +3367,13 @@ Description of Arguments:
   SNIPPET the description of the app (from Desktop Entry)
   VISIBLE whether the applicaiton is visible (from Desktop Entry)
   FACE    the face to apply to TITLE"
-  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
+  (let* ((frame-width-percent (max 10 (floor (* (frame-width) 0.1))))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (directory (and path (file-name-directory path)))
          (directory (and (stringp directory) (propertize directory 'face 'consult-omni-path-face)))
          (snippet (and (stringp snippet) (consult-omni--set-string-width snippet (* 3 frame-width-percent))))
          (snippet (and (stringp snippet) (propertize snippet 'face 'consult-omni-snippet-face)))
-         (match-str (and (stringp query) (consult--split-escaped query) nil))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-files-title-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 4 frame-width-percent)))
@@ -3332,7 +3382,7 @@ Description of Arguments:
                       (when snippet (concat "\t" snippet))
                       (when directory (concat "\t" directory))
                       (when source (concat "\t" source)))))
-     (if consult-omni-highlight-matches
+     (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -3366,7 +3416,12 @@ match `consult-omni-apps-regexp-pattern' in `consult-omni-apps-paths'."
 ;; set the `consult-omni-apps-cached-apps'
 (setq consult-omni-apps-cached-apps (consult-omni--apps-get-desktop-apps))
 #+end_src
-
+***** update list of system apps
+#+begin_src emacs-lisp
+(defun consult-omni--apps-update-cached-apps ()
+(let ((consult-omni-apps-use-cache nil))
+  (consult-omni--apps-get-desktop-apps)))
+#+end_src
 ***** parse app for name, comment and exec
 #+begin_src emacs-lisp
 (defun consult-omni--apps-parse-app-file (file)
@@ -3424,8 +3479,6 @@ URL https://github.com/abo-abo/swiper/blob/master/counsel.el"
            (list name comment exec visible)))))))
 #+end_src
 
-
-
 ***** cached items
 #+begin_src emacs-lisp
 (defun consult-omni-apps--cached-items (files query)
@@ -3448,6 +3501,7 @@ For each file in files, if it contains the QUERY
                     (title (or name (file-name-base file) ""))
                     (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
                     (search-url nil)
+                    (consult-omni-highlight-matches-in-minibuffer nil)
                     (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
                (propertize decorated
                            :source source
@@ -3466,6 +3520,14 @@ For each file in files, if it contains the QUERY
 (setq consult-omni-apps--cached-items  (consult-omni-apps--cached-items consult-omni-apps-cached-apps ".*"))
 
 #+end_src
+
+****** update cahced items
+#+begin_src emacs-lisp
+(defun consult-omni--apps-update-cached-items ()
+(let ((consult-omni-apps-use-cache nil))
+  (consult-omni-apps--cached-items consult-omni-apps-cached-apps ".*")))
+#+end_src
+
 ***** items
 #+begin_src emacs-lisp
 
@@ -3491,6 +3553,7 @@ a new list is generated."
                     (title (or name (file-name-base file) ""))
                     (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
                     (search-url nil)
+                    (consult-omni-highlight-matches-in-minibuffer nil)
                     (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
                (propertize decorated
                            :source source
@@ -3525,7 +3588,7 @@ a new list is generated."
                             :enabled (lambda () (boundp 'consult-omni-apps-paths))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil
                             :category 'file)
 #+end_src
@@ -3634,7 +3697,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
 (consult-omni-define-source "Bing"
                             :narrow-char ?i
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--bing-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "Bing")
@@ -3644,7 +3707,7 @@ Refer to URL `https://programmablesearchengine.google.com/about/' and `https://d
                             :enabled (lambda () (bound-and-true-p consult-omni-bing-search-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 **** provide and footer
@@ -3757,7 +3820,7 @@ See URL `https://brave.com/search/api/' for more info"
 (consult-omni-define-source "Brave"
                             :narrow-char ?b
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--brave-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "Brave")
@@ -3767,7 +3830,7 @@ See URL `https://brave.com/search/api/' for more info"
                             :enabled (lambda () (bound-and-true-p consult-omni-brave-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 #+end_src
 
 **** provide and footer
@@ -3911,7 +3974,7 @@ See URL `https://brave.com/search/api/' for more info"
                             :select-hist t
                             :enabled (lambda () (bound-and-true-p consult-omni-brave-autosuggest-api-key))
                             :sort t
-                            :static nil)
+                            :interactive consult-omni-intereactive-commands-type)
 #+end_src
 **** provide and footer
 #+begin_src emacs-lisp
@@ -3966,7 +4029,7 @@ Description of Arguments:
   SNIPPET    a string containing a snippet/description of candidate"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
-         (match-str (and (stringp query) (consult--split-escaped query) nil))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 4 frame-width-percent)))
@@ -3982,7 +4045,7 @@ Description of Arguments:
          (str (concat title-str
                       (when url-str (concat "\s" url-str))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -4027,7 +4090,7 @@ Description of Arguments:
                             :enabled (lambda () (fboundp 'browser-hist-search))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 **** provide and footer
@@ -4077,7 +4140,7 @@ Description of Arguments:
   "Regexp to detect calculator formula?
 
 The first capturing group will be used as input for `calc-eval'.
-If there is no capture group, the user's query will be used when matching."
+If there is no capture group, the whole input query."
   :type '(choice (regexp :tag "(Default) formula after =" "^=\\(.*\\)?")
                  (regexp :tag "Any string with digits, operators or brackets" "\\(.*[[:digit:]\/\*\+-=%^&$\(\{\[].*\\)")))
 
@@ -4124,8 +4187,11 @@ This uses `calc-eval' to return the result of input"
                (calc-eval-error t)
                (result)
                (annotated-result))
-    (when (string-match consult-omni-calc-regexp-pattern query nil)
-      (setq query (or (match-string 1 query) query))
+    (when consult-omni-calc-regexp-pattern
+      (if (string-match consult-omni-calc-regexp-pattern query nil)
+          (setq query (or (match-string 1 query) query))
+        (setq query nil)))
+    (when query
       (condition-case err
           (if convert
               (cl-letf* (((symbol-function 'calc-convert-units)
@@ -4137,7 +4203,7 @@ This uses `calc-eval' to return the result of input"
             (if consult-omni-calc-number-only
                 (setq result (apply #'calc-eval (list query) 'num extra-args))
               (setq result (apply #'calc-eval (list query) nil extra-args))))
-        ('error (and consult-omni-calc-message-errors (message (error-message-string err))))))
+        ('error (and consult-omni-calc-message-errors (message (error-message-string err)))))
     (when result (setq annotated-result (propertize result
                                                     :source source
                                                     :title result
@@ -4145,7 +4211,7 @@ This uses `calc-eval' to return the result of input"
                                                     :query query)))
     (if annotated-result
         (list annotated-result)
-      nil)))
+      nil))))
 
 #+end_src
 **** define source
@@ -4168,7 +4234,7 @@ This uses `calc-eval' to return the result of input"
                             :enabled (lambda () (fboundp 'calc-eval))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static nil
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -4249,8 +4315,8 @@ Description of Arguments:
                       (propertize " " 'display '(space :align-to center))
                       (if model (propertize (format "model: %s" model) 'face 'consult-omni-path-face))
                       (if source (concat "\t" source))))
-         (match-str (if (stringp query) (consult--split-escaped query) nil)))
-    (if consult-omni-highlight-matches
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil)))
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -4344,7 +4410,7 @@ Description of Arguments:
                             :enabled (lambda () (bound-and-true-p consult-omni-openai-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 **** provide and footer
@@ -4420,7 +4486,7 @@ Description of Arguments:
          (pos (marker-position marker))
          (buff (and buff (propertize (format "%s" buff) 'face 'consult-omni-domain-face)))
          (pos (and pos (propertize (format "%s" pos) 'face 'consult-omni-path-face)))
-         (match-str (if (stringp query)
+         (match-str (if (and (stringp query) (not (equal query ".*")))
                         (consult--split-escaped (car (consult--command-split query)))
                       nil))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
@@ -4430,7 +4496,7 @@ Description of Arguments:
                       (when buff (concat "\t" buff))
                       (when pos (concat "\s\s" pos ))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -4486,7 +4552,7 @@ Description of Arguments:
                             :enabled (lambda () (fboundp 'consult-omni--line-multi-candidates))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 **** provide and footer
@@ -4544,10 +4610,11 @@ Description of Arguments:
                                                :on-callback #'consult--buffer-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--buffer-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-buffer)))
 #+end_src
 ****** modified buffer
 #+begin_src emacs-lisp
@@ -4558,10 +4625,11 @@ Description of Arguments:
                                                :on-callback #'consult--buffer-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--buffer-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-modified-buffer)))
 #+end_src
 ****** hidden buffer
 #+begin_src emacs-lisp
@@ -4572,10 +4640,11 @@ Description of Arguments:
                                                :on-callback #'consult--buffer-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--buffer-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-hidden-buffer)))
 #+end_src
 ****** project buffer
 #+begin_src emacs-lisp
@@ -4586,10 +4655,11 @@ Description of Arguments:
                                                :on-callback #'consult--buffer-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--buffer-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled :enabled (lambda () (bound-and-true-p consult--source-project-buffer)))
 #+end_src
 ****** recent file
 #+begin_src emacs-lisp
@@ -4600,10 +4670,11 @@ Description of Arguments:
                                                :on-callback #'consult--file-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--file-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-recent-file)))
 #+end_src
 ****** project recent file
 #+begin_src emacs-lisp
@@ -4614,10 +4685,11 @@ Description of Arguments:
                                                :on-callback #'consult--file-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--file-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-project-recent-file)))
 #+end_src
 ****** bookmark
 #+begin_src emacs-lisp
@@ -4628,10 +4700,11 @@ Description of Arguments:
                                                :on-callback #'consult--bookmark-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'bookmark-set
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-bookmark)))
 #+end_src
 
 ***** provide and footer
@@ -4754,11 +4827,9 @@ Similar to `consult-fd-args' bur for consult-omni."
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            :enabled (lambda () (if (or (executable-find "fdfind")
-                                                        (executable-find "fd"))
-                                                    t
-                                                  nil))
+                            :interactive consult-omni-intereactive-commands-type
+                            :enabled (lambda () (or (executable-find "fdfind")
+                                               (executable-find "fd")))
                             :annotate nil)
 #+end_src
 
@@ -4887,8 +4958,8 @@ Similar to `consult-find-args' bur for consult-omni."
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            :enabled (lambda () (if (executable-find "find") t nil))
+                            :interactive consult-omni-intereactive-commands-type
+                            :enabled (lambda () (executable-find "find"))
                             :annotate nil)
 #+end_src
 
@@ -4965,17 +5036,15 @@ Similar to `consult-find-args' bur for consult-omni."
                             :transform #'consult-omni--git-grep-transform
                             :on-preview #'consult-omni--grep-preview
                             :on-return #'identity
-                            :on-callback #'consult-omni--grep-callback
+                            :on-callback #'consult-omni--grep-preview
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (and (executable-find "git")
-                                                         (fboundp 'consult-git-grep))
-                                                    t
-                                                  nil))
-                            :sort t
-                            :static 'both
+                            :enabled (lambda () (and (executable-find "git")
+                                                    (fboundp 'consult-git-grep)))
+                            :sort nil
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -5023,11 +5092,11 @@ Similar to `consult-find-args' bur for consult-omni."
 Adopted from `consult--grep-format'."
 (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (file "")
+         (filename "")
          (file-len 0)
-         (file-str)
-         (cand)
+         (file-str "")
+         (file-str-len 0)
          result)
-    (save-match-data
       (dolist (str candidates)
         (when (and (string-match regexp-pattern str)
                    ;; Filter out empty context lines
@@ -5039,26 +5108,37 @@ Adopted from `consult--grep-format'."
                        (eq t (compare-strings
                               file 0 file-len
                               str (match-beginning 1) (match-end 1) nil)))
-            (setq file (file-truename (match-string 1 str)))
-            (if (and file (stringp file) (> file-len (* frame-width-percent 2)))
-              (setq file-str (consult-omni--set-string-width (string-remove-prefix (file-truename default-directory) file) (* frame-width-percent 2) (* frame-width-percent 1)))
-              (setq file-str (string-remove-prefix (file-truename default-directory) file)))
-            (setq file-len (length file-str)))
+            (setq file (match-string 1 str)
+                  file-len (length file)))
           (let* ((line (match-string 2 str))
                  (ctx (= (aref str (match-beginning 3)) ?-))
                  (sep (if ctx "-" ":"))
                  (content (substring str (match-end 0)))
-                 (line-len (length line)))
+                 (line-len (length line))
+                 (cand)
+                 (file-str (string-remove-prefix (file-truename default-directory) (file-truename file)))
+                 (file-str (if (> (length file-str) (* frame-width-percent 5))
+                               (consult-omni--set-string-width file-str (* frame-width-percent 5) (* frame-width-percent 1))
+                             file-str))
+                 (file-str-len (length file-str)))
             (when (length> content consult-grep-max-columns)
               (setq content  (consult-omni--set-string-width content consult-grep-max-columns)))
              (setq cand (concat file-str sep line sep content))
             ;; Store file name in order to avoid allocations in `consult--prefix-group'
-            (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) cand)
-            (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number cand)
+            (add-text-properties 0 1 `(:source ,source :title ,cand :query ,query :file ,file :pos ,line :content ,content) cand)
+            (add-text-properties 0 file-str-len `(face consult-file consult--prefix-group ,file) cand)
+            (put-text-property (1+ file-str-len) (+ 1 file-str-len line-len) 'face 'consult-line-number cand)
             (when ctx
-              (add-face-text-property (+ 2 file-len line-len) (length str) 'consult-grep-context 'append cand))
-            (push (propertize cand :source source :title cand :query query :file file :pos line :content content) result)))))
+              (add-face-text-property (+ 2 file-str-len line-len) (length cand) 'consult-grep-context 'append cand))
+(push cand result)
+            )))
     result))
+#+end_src
+****** transform
+#+begin_src emacs-lisp
+(defun consult-omni--grep-transform (candidates &optional query)
+  "Formats candidates for `consult-omni-grep'."
+  (consult-omni--grep-format candidates :source "grep" :query query :regexp-pattern consult--grep-match-regexp))
 #+end_src
 ****** grep-builder
 #+begin_src emacs-lisp
@@ -5073,12 +5153,6 @@ Adopted from `consult--grep-format'."
 
 
 
-****** transform
-#+begin_src emacs-lisp
-(defun consult-omni--grep-transform (candidates &optional query)
-  "Formats candidates for `consult-omni-grep'."
-  (consult-omni--grep-format candidates :source "grep" :query query :regexp-pattern consult--grep-match-regexp))
-#+end_src
 ****** preview
 #+begin_src emacs-lisp
 
@@ -5088,41 +5162,17 @@ Adopted from `consult--grep-format'."
         (pos (get-text-property 0 :pos cand))
         (content (get-text-property 0 :content cand))
         (query (get-text-property 0 :query cand)))
-    (with-current-buffer (funcall #'consult--file-action file)
-      (if (buffer-narrowed-p) (widen))
-      (and (stringp pos) (goto-line (string-to-number pos)))
-      (when (derived-mode-p 'org-mode)
-        (org-fold-show-entry))
-      (recenter nil t)
-      (when consult-omni-highlight-matches
-        (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
-        (add-to-history 'search-ring (isearch-string-propertize query)))
-     (consult-omni--pulse-line))
-nil))
+    (when file
+      (with-current-buffer (funcall #'consult--file-action file)
+        (and (stringp pos) (goto-line (string-to-number pos)))
+        (consult--invisible-open-permanently)
+        (recenter nil t)
+        (when consult-omni-highlight-matches-in-file
+          (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
+          (add-to-history 'search-ring (isearch-string-propertize query)))
+        (consult-omni--pulse-line))
+      nil)))
 
-#+end_src
-
-****** callback
-#+begin_src emacs-lisp
-
-(defun consult-omni--grep-callback (cand)
-  "Callback function for `consult-omni-grep'."
-  (let ((file (get-text-property 0 :file cand))
-        (pos (get-text-property 0 :pos cand))
-        (content (get-text-property 0 :content cand))
-        (query (get-text-property 0 :query cand)))
-    (with-current-buffer (funcall #'consult--file-action file)
-       (if (buffer-narrowed-p) (widen))
-       (and (stringp pos) (goto-line (string-to-number pos)))
-       (when (derived-mode-p 'org-mode)
-        (org-fold-show-entry))
-       (recenter nil t)
-      (when consult-omni-highlight-matches
-        (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
-        (add-to-history 'search-ring (isearch-string-propertize query))
-        (consult-omni-overlays-toggle))
-      (consult-omni--pulse-line))
-nil))
 #+end_src
 
 ***** items
@@ -5154,17 +5204,17 @@ nil))
                             :transform #'consult-omni--grep-transform
                             :on-preview #'consult-omni--grep-preview
                             :on-return #'identity
-                            :on-callback #'consult-omni--grep-callback
+                            :on-callback #'consult-omni--grep-preview
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :sort t
-                            :static 'both
+                            :sort nil
+                            :interactive consult-omni-intereactive-commands-type
                             :transform #'consult-omni--ripgrep-transform
-                            :enabled (lambda () (if (and (executable-find "grep")
-                                                         (fboundp 'consult-grep))
-                                                    t nil))
+                            :enabled (lambda () (and (executable-find "grep")
+                                                (fboundp 'consult-grep)
+                                                t))
                             :annotate nil)
 #+end_src
 
@@ -5292,11 +5342,9 @@ Similar to `consult-locate-args' bur for consult-omni."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (executable-find "locate")
-                                                    t
-                                                  nil))
+                            :enabled (lambda () (executable-find "locate"))
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -5371,7 +5419,7 @@ Similar to `consult-man-args' bur for consult-omni."
 (defun consult-omni--man-transform (candidates &optional query)
   "Formats candidates of `consult-omni-man'."
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (source (propertize "man" 'face 'consult-omni-source-type-face))
          (results))
     (save-match-data
@@ -5389,7 +5437,7 @@ Similar to `consult-man-args' bur for consult-omni."
                  (str (concat title-str
                               (and desc "\t") desc
                               (and source "\t") source)))
-            (if consult-omni-highlight-matches
+            (if consult-omni-highlight-matches-in-minibuffer
                 (cond
                  ((listp match-str)
                   (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -5430,9 +5478,9 @@ Similar to `consult-man-args' bur for consult-omni."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (executable-find "man") t nil))
+                            :enabled (lambda () (executable-find "man"))
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -5541,9 +5589,9 @@ See `consult-locate-args' for example."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (executable-find "mdfind") t nil))
-                            :sort t
-                            :static 'both
+                            :enabled (lambda () (executable-find "mdfind"))
+                            :sort nil
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -5621,16 +5669,15 @@ See `consult-locate-args' for example."
                             :transform #'consult-omni--ripgrep-transform
                             :on-preview #'consult-omni--grep-preview
                             :on-return #'identity
-                            :on-callback #'consult-omni--grep-callback
+                            :on-callback #'consult-omni--grep-preview
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (and (executable-find "rg")
-                                                         (fboundp 'consult-ripgrep))
-                                                    t nil))
-                            :sort t
-                            :static 'both
+                            :enabled (lambda () (and (executable-find "rg")
+                                                (fboundp 'consult-ripgrep)))
+                            :sort nil
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -5705,29 +5752,38 @@ Adopted from `consult--grep-format'."
                    ;; Filter out empty context lines
                    (or (/= (aref str (match-beginning 3)) ?-)
                        (/= (match-end 0) (length str))))
-            (let* ((file (file-truename (match-string 1 str)))
-                   (line (match-string 2 str))
+          ;; We share the file name across candidates to reduce
+          ;; the amount of allocated memory.
+          (unless (and (= file-len (- (match-end 1) (match-beginning 1)))
+                       (eq t (compare-strings
+                              file 0 file-len
+                              str (match-beginning 1) (match-end 1) nil)))
+            (setq file (match-string 1 str)
+                  file-len (length file)))
+
+            (let* ((line (match-string 2 str))
                    (ctx (and (numberp (match-beginning 3)) (= (aref str (match-beginning 3)) ?-)))
                    (sep (if ctx "-" ":"))
                    (content (substring str (or (match-end 5) (match-end 4) (match-end 3) (match-end 2) (match-end 1) (match-end 0))))
-                   (content (if (length> content (* frame-width-percent 6)) (consult-omni--set-string-width content (* frame-width-percent 6))
-                              content))
                    (page (match-string 5 str))
                    (page-str (and page (concat "Page " page)))
                    (line-len (length line))
-                   (file-str (string-remove-prefix (file-truename default-directory) file))
-                   (file-str (if (and (stringp file-str) (> (length file-str) (* frame-width-percent 5)))
-                                 (consult-omni--set-string-width file-str (* frame-width-percent 5) (* frame-width-percent 1))
+                   (file-str (string-remove-prefix (file-truename default-directory) (file-truename file)))
+                   (file-str (if (and (stringp file-str) (> (length file-str) (* frame-width-percent 2)))
+                                 (consult-omni--set-string-width file-str (* frame-width-percent 2) (* frame-width-percent 1))
                                file-str))
-                   (file-len (length file-str))
+                   (file-str-len (length file-str))
                    (cand (concat file-str sep line sep page-str sep content)))
 
+              (when (length> content (* frame-width-percent 6)) (setq content (consult-omni--set-string-width content (* frame-width-percent 6))))
+
             ;; Store file name in order to avoid allocations in `consult--prefix-group'
-            (add-text-properties 0 file-len `(face consult-file consult--prefix-group ,file) cand)
-            (put-text-property (1+ file-len) (+ 1 file-len line-len) 'face 'consult-line-number cand)
+            (add-text-properties 0 1 `(:source ,source :title ,cand :query ,query :file ,file :pos ,line :page ,page :content ,content) cand)
+            (add-text-properties 0 file-str-len `(face consult-file consult--prefix-group ,file) cand)
+            (put-text-property (1+ file-str-len) (+ 1 file-str-len line-len) 'face 'consult-line-number cand)
             (when ctx
-              (add-face-text-property (+ 2 file-len line-len) (length cand) 'consult-grep-context 'append cand))
-            (push (propertize cand :source source :title cand :query query :file file :pos line :page page :content content) result)))))
+              (add-face-text-property (+ 2 file-str-len line-len) (length cand) 'consult-grep-context 'append cand))
+            (push cand result)))))
     result))
 #+end_src
 ****** transform
@@ -5755,7 +5811,7 @@ Adopted from `consult--grep-format'."
            (and (stringp page) (doc-view-goto-page (string-to-number page))))
           ('pdf-view-mode
            (and (stringp page) (pdf-view-goto-page (string-to-number page)))
-           (when consult-omni-highlight-matches
+           (when consult-omni-highlight-matches-in-file
              (add-to-history 'search-ring (isearch-string-propertize query))
              (when-let ((matches (pdf-isearch-search-page query)))
                (setq pdf-isearch-current-matches matches)
@@ -5769,50 +5825,15 @@ Adopted from `consult--grep-format'."
         (when (derived-mode-p 'org-mode)
           (org-fold-show-entry))
         (recenter nil t)
-        (when consult-omni-highlight-matches
+        (when consult-omni-highlight-matches-in-file
           (add-to-history 'search-ring (isearch-string-propertize query))
           (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case))
         (consult-omni--pulse-line))))
     nil))
+
+
 #+end_src
 
-****** callback
-#+begin_src emacs-lisp
-(defun consult-omni--ripgrep-all-callback (cand)
-  "Callback function for `consult-omni-ripgrep-all'."
-  (let ((file (get-text-property 0 :file cand))
-        (pos (get-text-property 0 :pos cand))
-        (page (get-text-property 0 :page cand))
-        (content (get-text-property 0 :content cand))
-        (query (get-text-property 0 :query cand)))
-    (funcall  #'consult--file-action file)
-    (cond
-     ((string-suffix-p ".pdf" file)
-      (pcase major-mode
-        ('doc-view-mode
-         (and (stringp page) (doc-view-goto-page (string-to-number page))))
-        ('pdf-view-mode
-         (and (stringp page) (pdf-view-goto-page (string-to-number page)))
-         (when consult-omni-highlight-matches
-             (add-to-history 'search-ring (isearch-string-propertize query))
-             (when-let ((matches (pdf-isearch-search-page query)))
-               (setq pdf-isearch-current-matches matches)
-               (setq pdf-isearch-current-match (car-safe matches))
-               (pdf-isearch-hl-matches pdf-isearch-current-match pdf-isearch-current-matches t)
-               (pdf-isearch-focus-match pdf-isearch-current-match))))
-        (_ nil)))
-     (t
-      (if (buffer-narrowed-p) (widen))
-      (and (stringp pos) (goto-line (string-to-number pos)))
-      (when (derived-mode-p 'org-mode)
-        (org-fold-show-entry))
-      (recenter nil t)
-      (when consult-omni-highlight-matches
-        (add-to-history 'search-ring (isearch-string-propertize query))
-        (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
-        (consult-omni-overlays-toggle))
-      (consult-omni--pulse-line)))))
-#+end_src
 
 ***** items
 #+begin_src emacs-lisp
@@ -5844,16 +5865,15 @@ Adopted from `consult--grep-format'."
                             :transform #'consult-omni--ripgrep-all-transform
                             :on-preview #'consult-omni--ripgrep-all-preview
                             :on-return #'identity
-                            :on-callback #'consult-omni--ripgrep-all-callback
+                            :on-callback #'consult-omni--ripgrep-all-preview
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (and (executable-find "rga")
-                                                        (fboundp 'consult--ripgrep-make-builder))
-                                                    t nil))
-                            :sort t
-                            :static 'both
+                            :enabled (lambda () (and (executable-find "rga")
+                                                 (fboundp 'consult--ripgrep-make-builder)))
+                            :sort nil
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -5912,6 +5932,15 @@ Adopted from `consult--grep-format'."
              (marker (get-text-property 0 'consult--candidate title)))
         (if marker
             (consult--jump marker)))))
+
+(defun consult-omni--consult-notes-denote-preview (cand)
+  "Preview function for denote file."
+  (if (and cand
+           (not (consult-notes-denote--excluded-p cand)))
+      (let* ((title (get-text-property 0 :title cand))
+             (file (format "%s" (get-text-property 0 'denote-path title))))
+        (if file
+            (consult--file-action file)))))
 #+end_src
 
 ***** callback
@@ -5934,48 +5963,99 @@ Adopted from `consult--grep-format'."
                          (if pos (goto-char pos))
                          (funcall consult--buffer-display buff)
                          (recenter nil t))))))))
+
+(defun consult-omni--consult-notes-denote-callback (cand &rest args)
+  "Callback function for denote files."
+  (if (and cand
+           (not (consult-notes-denote--excluded-p cand)))
+      (let* ((title (get-text-property 0 :title cand))
+             (file (format "%s" (get-text-property 0 'denote-path title))))
+        (if file
+            (consult--file-action file)))))
 #+end_src
 
+***** new
+#+begin_src emacs-lisp
+(defun consult-omni--consult-notes-org-headings-new (cand)
+  "Callback function for org headings."
+    (org-capture-string cand))
+
+(defun consult-omni--consult-notes-org-roam-note-new (cand)
+  "Callback function for org-roam files."
+    (org-roam-node-find nil cand))
+
+(defun consult-omni--consult-notes-denote-new (cand)
+  (consult-notes-denote--new-note cand)
+  )
+#+end_src
 **** define source
 ***** consult-notes-org-headings
 #+begin_src emacs-lisp
 ;; make consult-omni sources from consult-notes sources
 (when consult-notes-org-headings-mode
-  (consult-omni--make-source-from-consult-source (plist-put consult-notes-org-headings--source :name "Consult Notes Headings")
+  (consult-omni--make-source-from-consult-source (plist-put consult-notes-org-headings--source :name "Consult Notes Org")
                                                  :category 'file
                                                  :type 'sync
+                                                 :require-match nil
                                                  :face 'consult-omni-notes-title-face
                                                  :search-hist 'consult-omni--search-history
                                                  :select-hist 'consult-omni--selection-history
                                                  :on-preview #'consult-omni--consult-notes-org-headings-preview
                                                  :on-return #'identity
                                                  :on-callback #'consult-omni--consult-notes-org-headings-callback
+                                                 :on-new #'consult-omni--consult-notes-org-headings-new
                                                  :search-hist 'consult-omni--search-history
                                                  :select-hist 'consult-omni--selection-history
-                                                 :preview-key 'consult-preview-key
+                                                 :preview-key 'consult-omni-preview-key
                                                  :group #'consult-omni--group-function
                                                  :enabled (lambda () (bound-and-true-p consult-notes-org-headings-mode))
-                                                 :static 'both))
+                                                 :interactive consult-omni-intereactive-commands-type))
 #+end_src
 
 ***** consult-notes-org-roam
 #+begin_src emacs-lisp
 (when consult-notes-org-roam-mode
   (cl-loop for source in '(consult-notes-org-roam--refs consult-notes-org-roam--nodes)
-           do (consult-omni--make-source-from-consult-source source
+           do (let ((name (plist-get (eval source) :name)))
+                (plist-put (eval source) :name (concat "Consult Notes " name))
+                (consult-omni--make-source-from-consult-source source
                                                              :category 'file
                                                              :type 'sync
+                                                             :require-match nil
                                                              :face 'consult-omni-notes-title-face
                                                              :search-hist 'consult-omni--search-history
                                                              :select-hist 'consult-omni--selection-history
                                                              :on-preview #'consult-omni--consult-notes-org-roam-note-preview
                                                              :on-return #'identity
                                                              :on-callback #'consult-omni--consult-notes-org-roam-note-callback
-                                                             :preview-key 'consult-preview-key
-                                                             :static 'both
+                                                             :on-new #'consult-omni--consult-notes-org-roam-note-new
+                                                             :preview-key 'consult-omni-preview-key
+                                                             :interactive consult-omni-intereactive-commands-type
                                                              :group #'consult-omni--group-function
                                                              :enabled (lambda () consult-notes-org-roam-mode)
-                                                             :annotate nil)))
+                                                             :annotate nil))))
+#+end_src
+
+***** consult-notes-denote
+#+begin_src emacs-lisp
+(when consult-notes-denote-mode
+  (consult-omni--make-source-from-consult-source (plist-put consult-notes-denote--source :name "Consult Notes Denote")
+                                                 :category 'file
+                                                 :type 'sync
+                                                 :require-match nil
+                                                 :face 'consult-omni-notes-title-face
+                                                 :search-hist 'consult-omni--search-history
+                                                 :select-hist 'consult-omni--selection-history
+                                                 :on-preview #'consult-omni--consult-notes-denote-preview
+                                                 :on-return #'identity
+                                                 :on-callback #'consult-omni--consult-notes-denote-callback
+                                                 :on-new #'consult-omni--consult-notes-denote-new
+                                                 :preview-key 'consult-omni-preview-key
+                                                 :interactive consult-omni-intereactive-commands-type
+                                                 :group #'consult-omni--group-function
+                                                 :enabled (lambda () consult-notes-denote-mode)
+                                                 :annotate nil))
+
 #+end_src
 
 **** provide and footer
@@ -6092,12 +6172,10 @@ Adopted from `consult--grep-format'."
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :transform #'consult-omni--gh-transform
-                            :enabled (lambda () (if (and (executable-find "gh")
-                                                         (fboundp 'consult-gh-search-repos))
-                                                    t
-                                                  nil))
+                            :enabled (lambda () (and (executable-find "gh")
+                                                (fboundp 'consult-gh-search-repos)))
                             :annotate nil)
 #+end_src
 
@@ -6153,7 +6231,7 @@ Description of Arguments:
          (info (cadr cand))
          (msg (plist-get info :msg))
          (query (plist-get info :query))
-         (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped (car (consult--command-split query))) nil))
          (headers-template (consult-mu--headers-template))
          (str (if headers-template
                  (consult-mu--expand-headers-template msg headers-template)
@@ -6214,8 +6292,8 @@ Description of Arguments:
 #+begin_src emacs-lisp
 (cl-defun consult-omni--mu-fetch-results (input &rest args &key callback &allow-other-keys)
   "Makes builder command line args for “mu4e”."
-  (save-mark-and-excursion
-    (consult-mu--execute-all-marks))
+  (save-window-excursion
+    (consult-mu--execute-all-marks)
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
@@ -6232,7 +6310,7 @@ Description of Arguments:
                                                 (consult-omni-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
                                       do (forward-line 1)))))
     (when (and messages callback)
-      (funcall callback messages))))
+      (funcall callback messages)))))
 #+end_src
 **** define source
 #+begin_src emacs-lisp
@@ -6252,12 +6330,11 @@ Description of Arguments:
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--email-select-history
-                            :enabled (lambda () (if (and (executable-find "mu")
-                                                         (fboundp 'consult-mu))
-                                                    t nil))
+                            :enabled (lambda () (and (executable-find "mu")
+                                                (fboundp 'consult-mu)))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -6271,6 +6348,320 @@ Description of Arguments:
 ;;; consult-omni-mu4e.el ends here
 #+end_src
 
+
+
+*** dictionary
+:PROPERTIES:
+:header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-dict.el
+:END:
+**** header
+#+begin_src emacs-lisp
+;;; consult-omni-dict.el --- Consulting Dictionary -*- lexical-binding: t -*-
+
+;; Copyright (C) 2024 Armin Darvish
+
+;; Author: Armin Darvish
+;; Maintainer: Armin Darvish
+;; Created: 2024
+;; Version: 0.1
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1") (gptel "0.7.0"))
+;; Homepage: https://github.com/armindarvish/consult-omni
+;; Keywords: convenience
+
+;;; Commentary:
+
+;;; Code:
+
+(require 'dictionary)
+(require 'consult-omni)
+(ignore-errors (with-temp-buffer (dictionary-mode)))
+#+end_src
+**** variables
+***** custom
+#+begin_src emacs-lisp
+;;; Customization Variables
+
+(defcustom consult-omni-dict-server (or (and (bound-and-true-p dictionary-server) dictionary-server) "dict.org")
+"This server is contacted for searching the dictionary.
+
+For details see `dictionary-server'."
+  :type '(choice (const :tag "Automatic" nil)
+                 (const :tag "localhost" "localhost")
+                 (const :tag "dict.org" "dict.org")
+                 (string :tag "User-defined")))
+
+
+(defcustom consult-omni-dict-use-single-buffer (or (and (bound-and-true-p dictionary-use-single-buffer) dictionary-use-single-buffer) t)
+  "Should the dictionary command reuse previous dictionary buffers?
+See `dictionary-use-single-buffer' for reference"
+  :type 'boolean)
+
+
+(defcustom consult-omni-dict-search-interface (or (and (bound-and-true-p dictionary-search-interface) dictionary-search-interface) 'help)
+  "Controls how `dictionary-search' prompts for words and displays definitions.
+
+See `dictionary-search-interface' for details."
+  :type '(choice (const :tag "Dictionary buffer" nil)
+                 (const :tag "Help buffer" help)))
+
+(defcustom consult-omni-dict-default-strategy (or (and (bound-and-true-p dictionary-default-strategy) dictionary-default-strategy) ".")
+  "The default strategy for listing matching words.
+
+See `dictionary-default-strategy' for details."
+  :type 'string)
+
+(defcustom consult-omni-dict-short-definition-wordcount 1000
+  "Number of words to use in a short definition"
+  :type 'integer)
+
+(defcustom consult-omni-dict-number-of-lines nil
+"How many lines of definition to show in minibuffer?
+
+Truncate the definition to this many lines in minibuffer."
+  :type '(choice (const :tag "(Default) Do not truncate" nil)
+                 (const :tag "Just use the first line" 1)
+                 (int :tag "Custom Number of Lines")))
+
+(defcustom consult-omni-dict-external-dictionary-url "https://www.merriam-webster.com/dictionary/%s"
+"Format string for external dictionary website.
+
+This is a string with url and %s as placeholder for the query term."
+:type '(choice (const :tag "(Defualt) Meriam Webster" "https://www.merriam-webster.com/dictionary/%s")
+               (const :tag "GNU Collaborative International Dictionary of English" "https://gcide.gnu.org.ua/?q=%s")
+               (const :tag "The American Heritage Dictionary" "https://www.ahdictionary.com/word/search.html?q=%s")
+               (const :tag "Cambridge English Dictionary" "dictionary.cambridge.org/dictionary/english/%s")
+               (const :tag "Oxford English Dictionary" "https://www.oed.com/search/dictionary/?&q=%s")
+               (const :tag "Dictionary.com" "https://www.dictionary.com/browse/%s")))
+
+
+(defcustom consult-omni-dict-predicate #'consult-omni-dict-default-pred-func
+"Function to use as predicate for dictionary source.
+
+This is called as (funcall consult-omni-dict-predicate query) to
+determine if the query should be checked in the dictionary."
+:type '(choice (function :tag "(Default) use “define ” prefix" consult-omni-dict-default-pred-func)
+               (function :tag "Custom Function")))
+#+end_src
+
+**** helper function
+***** format
+#+begin_src emacs-lisp
+(cl-defun consult-omni--dict-format-candidates (&rest args &key source query dict def buffer pos  idx face &allow-other-keys)
+  "Returns a formatted string for Dictionary candidates
+
+Description of Arguments:
+
+  SOURCE the name to use (e.g. “Dictionary”)
+  QUERY  query input from the user
+  DICT   name of dictionary for current item
+  DEF    definition of current item
+  BUFFER the current buffer for dictionary
+  POS    position of definition in BUFFER
+  IDX    index of definition in current definitions
+  FACE   the face to apply to DEFINITION"
+  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
+         (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
+         (dict (and (stringp dict) (propertize dict 'face 'consult-omni-date-face)))
+         (search-url (format consult-omni-dict-external-dictionary-url (url-hexify-string query)))
+         (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
+         (answer (and (stringp def) (if (length> def consult-omni-dict-short-definition-wordcount) (substring def 0 consult-omni-dict-short-definition-wordcount) def)))
+         (items (and (stringp answer) (split-string answer "\n")))
+         (items (and items (if (integerp consult-omni-dict-number-of-lines) (seq-take items consult-omni-dict-number-of-lines) items)))
+         (first-item t))
+    (mapcar (lambda (item)
+              (if-let ((str (propertize item 'face face)))
+                  (progn
+                    (if consult-omni-highlight-matches-in-minibuffer
+                        (cond
+                         ((listp match-str)
+                          (mapcar (lambda (match)
+                                    (setq str (consult-omni--highlight-match match str t)))
+                                  match-str))
+                         ((stringp match-str)
+                          (setq str (consult-omni--highlight-match match-str str t)))))
+                    (setq str (if first-item
+                                  (concat dict "\t" str)
+                                (concat (make-string (length dict) ?\s) "\t" str)))
+                    (setq first-item nil)
+                    (propertize str
+                                :source source
+                                :query query
+                                :title def
+                                :dict dict
+                                :url nil
+                                :search-url search-url
+                                :buffer buffer
+                                :pos pos))))
+            items)))
+#+end_src
+***** predicate
+#+begin_src emacs-lisp
+(defun consult-omni-dict-default-pred-func (query)
+  "Checks if the query is intended for `consult-omni-dictionary'."
+  (cond
+   ((string-prefix-p "define " query)
+    (string-remove-prefix "define " query))
+   ((string-prefix-p "Define " query)
+    (string-remove-prefix "Define " query))
+    nil))
+#+end_src
+***** preview
+#+begin_src emacs-lisp
+(defun consult-omni--dict-preview (cand)
+  "Shows a preview buffer of CAND for `consult-omni-dict'."
+  (if (listp cand) (setq cand (or (car-safe cand) cand)))
+  (let*  ((query (get-text-property 0 :query cand))
+          (buffer (get-text-property 0 :buffer cand))
+          (pos (get-text-property 0 :pos cand)))
+      (when buffer
+        (with-current-buffer buffer (when pos (goto-char pos))))
+      (funcall (consult--buffer-preview) 'preview
+                 buffer)
+      (save-excursion
+        (with-selected-window (get-buffer-window buffer)
+          (recenter 1 t)))
+      (consult-omni--pulse-line 0.15)))
+#+end_src
+***** return
+#+begin_src emacs-lisp
+(defun consult-omni--dict-return (cand)
+"Returns definition string of CAND for `consult-omni-dict'."
+(if-let  ((def (get-text-property 0 :title cand)))
+    def
+cand))
+#+end_src
+***** new
+#+begin_src emacs-lisp
+(defun consult-omni--dict-new (cand)
+  (let ((url (format consult-omni-dict-external-dictionary-url (url-hexify-string cand))))
+  (funcall consult-omni-default-browse-function url)))
+#+end_src
+**** items
+***** get suggestions
+#+begin_src emacs-lisp
+(defun consult-omni-dict-word-suggestions-maybe (query buffer &optional maxcount)
+"Get list of word suggestions up to MAXCOUNT from dictionaries."
+  (goto-char (point-min))
+  (let ((source "Dictionary")
+        (annotated-results)
+        (idx 0))
+  (while (re-search-forward "Matches from \\(?1:.*?\\):\n\\(?2:[[:ascii:][:nonascii:]]*?\\)\n\n" nil t)
+    (when-let* ((dict (match-string 1))
+           (def (match-string 2))
+           (line (+ (match-end 1) 2)))
+      (when (or (not maxcount) (and maxcount (< idx maxcount))) (setq annotated-results (append annotated-results (consult-omni--dict-format-candidates :source source :query query :dict dict :def def :pos line :buffer buffer :idx idx))))
+      (cl-incf idx)))
+annotated-results
+))
+#+end_src
+***** search query
+#+begin_src emacs-lisp
+(defun consult-omni--dict-search-query (query &optional maxcount)
+  "Finds definitions for QUERY from `dictionary'.
+
+if MAXCOUNT is non-nil, only find top MAXCOUNT definitions."
+  (let* ((dictionary-server consult-omni-dict-server)
+         (dictionary-search-interface consult-omni-dict-search-interface)
+         (dictionary-use-single-buffer consult-omni-dict-use-single-buffer)
+         (buffer (save-mark-and-excursion (dictionary) (current-buffer)))
+         (annotated-results))
+    (when (and buffer (buffer-live-p buffer))
+      (with-current-buffer buffer
+        (condition-case err
+            (progn
+              (setq-local dictionary-default-strategy consult-omni-dict-default-strategy)
+              (setq-local dictionary-server consult-omni-dict-server)
+              (dictionary-new-search-internal query "*"
+                                              (lambda (result)
+                                                (let ((inhibit-read-only t)
+                                                      (source "Dictionary")
+                                                      (idx 0)
+                                                      (reply (if result (dictionary-read-reply-and-split))))
+                                                  (when reply
+                                                    (while (dictionary-check-reply reply 151)
+                                                      (let* ((reply-list (dictionary-reply-list reply))
+                                                             (dictionary (nth 2 reply-list))
+	                                                     (description (nth 3 reply-list))
+	                                                     (word (nth 1 reply-list))
+                                                             (def)
+                                                             (dict)
+                                                             (line))
+                                                        (dictionary-display-word-entry dictionary description)
+	                                                (setq reply (dictionary-read-answer))
+	                                                (setq def (dictionary-decode-charset reply dictionary))
+                                                        (setq line (point))
+                                                        (dictionary-display-word-definition reply word dictionary)
+
+                                                        (setq reply (dictionary-read-reply-and-split))
+                                                        (when (or (not maxcount) (and maxcount (< idx maxcount))) (setq annotated-results (append annotated-results (consult-omni--dict-format-candidates :source source :query query :dict dictionary :def def :pos line :buffer buffer :idx idx) )))
+                                                        (cl-incf idx)))
+                                                    (when (> idx 0) (dictionary-post-buffer))))))
+              (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
+              (unless annotated-results
+                  (setq annotated-results (consult-omni-dict-word-suggestions-maybe query buffer maxcount))))
+          ('user-error
+           (progn
+             (message (format "Dictionary: %s" (error-message-string err)))
+             (unless annotated-results
+             (setq annotated-results (consult-omni-dict-word-suggestions-maybe query buffer maxcount)))))
+          ('error (message (if consult-omni-log-level
+                               (format "Dictionary: %s" (error-message-string err))))))
+        (quit-window)))
+    annotated-results))
+#+end_src
+***** fetch results
+#+begin_src emacs-lisp
+(cl-defun consult-omni--dict-fetch-results (input &rest args &key callback &allow-other-keys)
+  "Fetches word definitions for INPUT from `dictionary'."
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (opts (car-safe opts))
+               (count (plist-get opts :count))
+               (count (or (and count (integerp (read count)) (string-to-number count))
+                          consult-omni-default-count))
+               (query (if (and consult-omni-dict-predicate (stringp query)) (funcall consult-omni-dict-predicate query)
+                        query))
+               (query (if (stringp query) (unless (string-empty-p (string-trim query)) (string-trim-left query)) nil))
+               (annotated-results (and query (not (string-empty-p query)) (consult-omni--dict-search-query query (if count count)))))
+    (when (and annotated-results (functionp callback))
+      (funcall callback (nreverse annotated-results))
+    annotated-results)))
+#+end_src
+**** define source
+#+begin_src emacs-lisp
+
+;; Define the Dictionary Source
+(consult-omni-define-source "Dictionary"
+                            :narrow-char ?D
+                            :category 'consult-omni-dictionary
+                            :type 'dynamic
+                            :require-match nil
+                            :face 'consult-omni-snippet-face
+                            :request #'consult-omni--dict-fetch-results
+                            :on-preview #'consult-omni--dict-preview
+                            :on-return #'consult-omni--dict-return
+                            :on-callback #'consult-omni--dict-preview
+                            :on-new #'consult-omni--dict-new
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (fboundp 'dictionary))
+                            :group #'consult-omni--group-function
+                            :sort nil
+                            :interactive consult-omni-intereactive-commands-type
+                            :annotate nil)
+
+#+end_src
+
+**** provide and footer
+#+begin_src emacs-lisp
+;;; provide `consult-omni-dict' module
+
+(provide 'consult-omni-dict)
+
+(add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-dict)
+;;; consult-omni-dict.el ends here
+#+end_src
 
 
 *** Doi.org
@@ -6377,7 +6768,7 @@ Description of Arguments:
                             :enabled (lambda () (bound-and-true-p consult-omni-doiorg-search-url))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 #+end_src
 **** provide and footer
 #+begin_src emacs-lisp
@@ -6484,7 +6875,7 @@ for some limited documentation"
 (consult-omni-define-source "DuckDuckGo API"
                             :narrow-char ?d
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--duckduckgoapi-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "DuckDuckGo")
@@ -6494,7 +6885,7 @@ for some limited documentation"
                             :enabled (lambda () (bound-and-true-p consult-omni-duckduckgo-search-url))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 **** provide and footer
@@ -6582,7 +6973,7 @@ Description of Arguments:
                                    title-width
                                    elfeed-search-title-max-width)
                             :left))
-             (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
+             (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped (car (consult--command-split query))) nil))
              (str (concat (propertize title-column 'face title-faces 'kbd-help title) " "
                           (propertize date 'face 'elfeed-search-date-face)
                           (when feed-title
@@ -6590,7 +6981,7 @@ Description of Arguments:
                           (when tags (concat " " "(" tags-str ")"))
                           (when domain (concat "\t" domain (when path path)))
                           (concat "\t" (propertize "elfeed" 'face 'consult-omni-source-type-face)))))
-        (if consult-omni-highlight-matches
+        (if consult-omni-highlight-matches-in-minibuffer
             (cond
              ((listp match-str)
               (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -6688,7 +7079,7 @@ if FILTER is non-nil, it is used as additional filter parameters."
                             :enabled (lambda () (boundp 'elfeed-db))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 #+end_src
@@ -6830,7 +7221,7 @@ URL `https://developers.google.com/custom-search/' for more info."
 (consult-omni-define-source "Google"
                             :narrow-char ?g
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--google-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "Google")
@@ -6840,7 +7231,7 @@ URL `https://developers.google.com/custom-search/' for more info."
                             :enabled (lambda () (bound-and-true-p consult-omni-google-customsearch-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 **** provide and footer
@@ -6965,7 +7356,7 @@ Uses `consult-omni-google-autosuggest-api-url' as autosuggest api url."
                             :group #'consult-omni--group-function
                             :enabled (lambda () (bound-and-true-p consult-omni-google-autosuggest-api-url))
                             :sort t
-                            :static nil)
+                            :interactive consult-omni-intereactive-commands-type)
 #+end_src
 **** provide and footer
 #+begin_src emacs-lisp
@@ -7070,7 +7461,7 @@ Description of Arguments:
   FACE     the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
-         (match-str (and (stringp query) (consult--split-escaped query) nil))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (backend (and (stringp backend) (propertize backend 'face 'consult-omni-domain-face)))
          (model (and (stringp model) (propertize model 'face 'consult-omni-path-face)))
          (stream (and stream (propertize "~stream~" 'face 'consult-omni-snippet-face)))
@@ -7081,7 +7472,7 @@ Description of Arguments:
                       (when backend (concat "\t" backend))
                       (when model (concat ":" model))
                       (when stream (concat "\s" stream "\s")))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -7132,7 +7523,7 @@ If STREAM is non-nil, the response is streamed."
           (gptel-send)))
       (current-buffer))))
 
-(defun consult-omni--gptelbuffer-preview (cand)
+(defun consult-omni--gptel-preview (cand)
   "Shows a preview buffer of CAND for `consult-omni-gptel'.
 
 The preview buffer is from `consult-omni--gptel-response-preview'."
@@ -7243,16 +7634,16 @@ metadata so it can be send to `gptel'."
                             :require-match t
                             :face 'consult-omni-ai-title-face
                             :request #'consult-omni--gptel-fetch-results
-                            :on-preview #'consult-omni--gptelbuffer-preview
+                            :on-preview #'consult-omni--gptel-preview
                             :on-return #'identity
-                            :on-callback #'consult-omni--gptelbuffer-preview
+                            :on-callback #'consult-omni--gptel-preview
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :enabled (lambda () (fboundp 'gptel))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 #+end_src
@@ -7348,7 +7739,7 @@ Description of Arguments:
   FACE         the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (videocount-str (and videocount (consult-omni--numbers-human-readable (or videocount 0) "videos")))
          (viewcount-str (and viewcount (consult-omni--numbers-human-readable (or viewcount 0) "views")))
          (subcount-str (and subcount (consult-omni--numbers-human-readable (or subcount 0) "subs")))
@@ -7384,7 +7775,7 @@ Description of Arguments:
                       (unless (string-empty-p stats) (concat "\s" stats))
                       (when snippet (concat "\s\s" snippet))
                       (concat "\t" source))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -7507,7 +7898,7 @@ Description of Arguments:
                             :enabled (lambda () (bound-and-true-p consult-omni-invidious-server-url))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -7551,7 +7942,7 @@ Description of Arguments:
 
 **** custom variables
 #+begin_src emacs-lisp
-(defcustom consult-omni-notes-files (apply #'append
+(defcustom consult-omni-notes-files (append
                                            (when (bound-and-true-p consult-notes-file-dir-sources)
                                              ;; dir sources
                                              (apply #'append (mapcar #'cddr consult-notes-file-dir-sources)))
@@ -7563,11 +7954,13 @@ Description of Arguments:
                                              (list (expand-file-name denote-directory)))
                                            ;; org agenda files
                                            (when (bound-and-true-p consult-notes-org-headings-mode)
-                                             (list (mapcar #'expand-file-name consult-notes-org-headings-files))))
+                                             (mapcar #'expand-file-name consult-notes-org-headings-files)))
   "List of all note files for consult-omni-notes."
   :type '(repeat :tag "list of files" string))
 
-(defcustom consult-omni-notes-backend-command "rga"
+(defcustom consult-omni-notes-backend-command (or (and (executable-find "rga") "rga")
+                                                  (and (executable-find "rg") "rg")
+                                                  (and (executable-find "grep") "grep"))
   "What command-line program to use for searching files?
 
 Can be either:
@@ -7580,8 +7973,10 @@ Can be either:
 "Function to use to create new notes.
 
 This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)"
-:type '(choice (function :tag "(Default) Use org-capture" consult-omni--notes-new-capture-org)
-                 (function :tag "Custom Function")))
+:type '(choice (function :tag "(Default) Use Org Capture" consult-omni--notes-new-capture-org)
+               (function :tag "Use Org Roam" consult-omni--notes-new-capture-org-roam)
+               (function :tag "Use Denote" consult-omni--notes-new-create-denote)
+               (function :tag "Custom Function")))
 
 #+end_src
 
@@ -7591,14 +7986,13 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
 (defun consult-omni--notes-transform (candidates &optional query)
   "Formats `consult-omni-notes' candidates."
 
-(if-let ((regexp-pattern (cond
-                       ((and (equal consult-omni-notes-backend-command "rga") (executable-find consult-omni-notes-backend-command))
-                                consult-omni-ripgrep-all-match-regexp)
-                       ((and (or (equal consult-omni-notes-backend-command "rg") (equal consult-omni-notes-backend-command "grep")) (executable-find consult-omni-notes-backend-command))
-                          consult--grep-match-regexp)
-                       (t nil))))
-(consult-omni--grep-format candidates :source "Notes Search" :query query :regexp-pattern regexp-pattern)
-))
+(cond
+ ((and (equal consult-omni-notes-backend-command "rga") (executable-find consult-omni-notes-backend-command))
+  (consult-omni--ripgrep-all-format candidates :source "Notes Search" :query query :regexp-pattern consult-omni-ripgrep-all-match-regexp)
+  )
+ ((and (or (equal consult-omni-notes-backend-command "rg") (equal consult-omni-notes-backend-command "grep")) (executable-find consult-omni-notes-backend-command))
+  (consult-omni--grep-format candidates :source "Notes Search" :query query :regexp-pattern consult--grep-match-regexp))
+ (t nil)))
 #+end_src
 
 ***** preview
@@ -7616,8 +8010,8 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
 (defun consult-omni--notes-callback (cand)
   "Callback function for `consult-omni-ripgrep-all'."
   (if (equal consult-omni-notes-backend-command "rga")
-      (consult-omni--ripgrep-all-callback cand)
-    (consult-omni--grep-callback cand)))
+      (consult-omni--ripgrep-all-preview cand)
+    (consult-omni--grep-preview cand)))
 #+end_src
 
 ***** new
@@ -7667,8 +8061,9 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
                                 #'consult--ripgrep-make-builder)
                        ((and (equal consult-omni-notes-backend-command "grep") (executable-find "grep")) #'consult--ripgrep-make-builder)
                        (t nil))))
-  (when backend-builder
-    (funcall (consult-omni--grep-make-builder backend-builder dir) query))))
+      (let ((consult-ripgrep-args (if (equal consult-omni-notes-backend-command "rga") consult-omni-ripgrep-all-args consult-ripgrep-args)))
+        (when backend-builder
+          (funcall (consult-omni--grep-make-builder backend-builder dir) query)))))
 #+end_src
 
 
@@ -7692,8 +8087,9 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            :annotate nil)
+                            :interactive consult-omni-intereactive-commands-type
+                            :annotate nil
+                            :enabled (lambda () (bound-and-true-p consult-omni-notes-files)))
 #+end_src
 
 
@@ -7792,7 +8188,7 @@ Description of Arguments:
   FACE   the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (date (if (stringp date) (propertize date 'face 'consult-omni-date-face) "            "))
          (from (if (stringp from) (propertize from 'face 'consult-omni-path-face) ""))
          (from-str (and (stringp from) (consult-omni--set-string-width from (* 2 frame-width-percent))))
@@ -7810,7 +8206,7 @@ Description of Arguments:
                         (if title-str title-str)
                         (if tags (format "\s\s%s" tags))
                         (if source (concat "\t" source))))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((and (listp match-str) (stringp str))
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -7988,11 +8384,10 @@ parsing outputs of “notmuch search”, and
                             :select-hist 'consult-omni--email-select-history
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :transform (lambda (candidates &optional query) (funcall (consult-omni--notmuch-get-transform-func) candidates query))
-                            :enabled (lambda () (if (and (bound-and-true-p notmuch-command) (executable-find notmuch-command))
-                                                    t
-                                                  nil))
+                            :enabled (lambda () (and (bound-and-true-p notmuch-command)
+                                                (executable-find notmuch-command)))
                             :annotate nil)
 #+end_src
 
@@ -8095,11 +8490,9 @@ See `consult-locate-args' for example."
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function
-                            :enabled (lambda () (if (executable-find "numi-cli")
-                                                    t
-                                                  nil))
+                            :enabled (lambda () (executable-find "numi-cli"))
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -8148,46 +8541,93 @@ See `consult-locate-args' for example."
 agenda items for +/- days around a given date will be listed.
 See `consult-omni--org-agenda-around' for more details."
   :type 'integer)
+
+
+(defcustom consult-omni-org-agenda-transform-prefix "?"
+  "Prefix in query to trigeer transofrmation (i.e. for today, this week, ...).
+
+If the user input includes this prefix string, `consult-omni-org-agenda'
+tries to transform the query if needed.
+See `consult-omni--org-agenda-query-dwim-transform' for details."
+  :type 'string)
+
+
+(defcustom consult-omni-org-agenda-timestamp-format (or (and (bound-and-true-p org-timestamp-formats) (car org-timestamp-formats)) "%Y-%m-%d %a")
+"Timestamp format for time string in `consult-omni-org-agenda'
+
+This string is used to fromat timestamps in the marginalia info.
+See `org-timestamp-formats' and `org-time-stamp-format'
+for org fomrating, and `format-time-string' for more details."
+
+:type 'string)
+
+
+(defcustom consult-omni-org-agenda-regexp-builder #'consult-omni--org-agenda-split-by-space
+"Function to transform query to a regexp pattern
+
+This funciton is called with the input query to get a
+matching regexp pattern"
+
+:type '(choice (const :tag "(Default) match any word sepearated by space" consult-omni--org-agenda-split-by-space)
+               (funciton :tag "custom function")))
+
+
 #+end_src
 **** helper functions
 
 ***** transform dates and queries
 
+****** format time-strings
+#+begin_src emacs-lisp
+(defun consult-omni--org-agenda-format-time-string (date &optional format)
+"Formats DATE according to FORMAT using `format-time-string'
+
+if FORMAT is nil, uses `consult-omni-org-agenda-timestamp-format' as fallback."
+(condition-case err
+    (format-time-string (or format consult-omni-org-agenda-timestamp-format) date)
+('error (progn (message (error-message-string err))
+               nil))))
+#+end_src
+
 ****** regexp for date ranges
 #+begin_src emacs-lisp
-(defun consult-omni--org-agenda-date-range-regexp (date-strings)
+(defun consult-omni--org-agenda-date-range-regexp (date-strings &optional format-func)
 "Makes a regexp matching DATE-STRINGS trings.
 
 DATE-STRINGS is a list of date strings."
-  (mapconcat #'identity date-strings "\\|")
-)
+(let ((format-func (or format-func #'consult-omni--org-agenda-format-time-string)))
+  (mapconcat (lambda (date) (if (stringp date) date (funcall format-func date))) date-strings "\\|")
+))
 #+end_src
 
+****** relative date
+#+begin_src emacs-lisp
+(defun consult-omni--org-agenda-relative-date (date int unit)
+  "Get the date for INT*UNIT relative to DATE
+
+INT is an integer (for number of days, or months or years)
+UNIT is either :day, :month or :year."
+  (if (stringp date) (setq date  (date-to-time date)))
+  (setq int (or (and (numberp int) int)
+                 (and (stringp int) (string-to-number int))))
+  (unless (member unit '(:day :month :year :week)) (setq unit (intern (concat ":" (format "%s" unit)))))
+  (when (eq unit :week) (setq int (* int 7)
+                              unit :day))
+  (if (member unit '(:day :month :year))
+   (encode-time (decoded-time-add (decode-time date) (make-decoded-time unit int)))
+   (message "Cannot use %s in calculating relative date." unit)))
+#+end_src
 ****** previous day
 #+begin_src emacs-lisp
 (defun consult-omni--org-agenda-previous-day (date)
   "Get the date for one day before DATE"
-  (if (stringp date) (setq date  (date-to-time date)))
-  (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time date) (make-decoded-time :day -1)))))
+  (consult-omni--org-agenda-relative-date date -1 :day))
 #+end_src
 ****** next day
 #+begin_src emacs-lisp
 (defun consult-omni--org-agenda-next-day (date)
   "Get the date for the next day after DATE"
-  (if (stringp date) (setq date  (date-to-time date)))
-  (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time date) (make-decoded-time :day 1)))))
-#+end_src
-****** around date
-#+begin_src emacs-lisp
-(defun consult-omni--org-agenda-relative-day (date days past)
-  "Get the date for DAYS relative to DATE
-
-if PAST is non-nil get the date for DAYS days before DATE,
-otherwise get the date for DAYS days after DATE."
-  (if (stringp date) (setq date  (date-to-time date)))
-  (setq days (or (and (numberp days) days)
-                 (and (stringp days) (string-to-number days))))
-  (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time date) (make-decoded-time :day (if past (- 0 days) days))))))
+  (consult-omni--org-agenda-relative-date date 1 :day))
 #+end_src
 ****** begin of week
 #+begin_src emacs-lisp
@@ -8195,7 +8635,7 @@ otherwise get the date for DAYS days after DATE."
   "Get the date of the first day of the week for DATE"
   (if (stringp date) (setq date  (date-to-time date)))
   (let ((day-of-week (decoded-time-weekday (decode-time date))))
-    (consult-omni--org-agenda-relative-day date day-of-week t)))
+    (consult-omni--org-agenda-relative-date date (- 0 day-of-week) :day)))
 #+end_src
 ****** begin work week
 #+begin_src emacs-lisp
@@ -8203,80 +8643,161 @@ otherwise get the date for DAYS days after DATE."
   "Get the date of the first working day of the week for DATE"
   (consult-omni--org-agenda-next-day (consult-omni--org-agenda-begin-week date)))
 #+end_src
-****** next week
-#+begin_src emacs-lisp
-(defun consult-omni--org-agenda-next-week (date)
-  "Get the list of dates for the calendar week after DATE"
-  (consult-omni--org-agenda-week-of (consult-omni--org-agenda-relative-day date 7 nil)))
-#+end_src
-****** next work week
-#+begin_src emacs-lisp
-(defun consult-omni--org-agenda-next-work-week (date)
-  "Get the list of dates for the work week after DATE"
-  (consult-omni--org-agenda-work-week-of (consult-omni--org-agenda-relative-day date 7 nil)))
-#+end_src
-
-****** week of
-
-#+begin_src emacs-lisp
-(defun consult-omni--org-agenda-week-of (date)
-  "Get the dates one week starting at DATE"
-  (if (stringp date) (setq date (date-to-time date)))
-  (cl-loop for d from 0 to 6
-           collect (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time (date-to-time (consult-omni--org-agenda-begin-week date))) (make-decoded-time :day d))))))
-#+end_src
 ****** week from
 
 #+begin_src emacs-lisp
 (defun consult-omni--org-agenda-week-from (date)
-  "Get the dates one week starting at DATE"
-  (if (stringp date) (setq date (date-to-time date)))
+  "Get the dates for one week starting at DATE"
   (cl-loop for d from 0 to 6
-           collect (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time date) (make-decoded-time :day d))))))
+           collect (consult-omni--org-agenda-relative-date date d :day)))
+#+end_src
+****** week of
+
+#+begin_src emacs-lisp
+(defun consult-omni--org-agenda-week-of (date)
+  "Get the dates for the calendar week of DATE"
+   (consult-omni--org-agenda-week-from (consult-omni--org-agenda-begin-week date)))
+
 #+end_src
 ****** work week of
 
 #+begin_src emacs-lisp
 (defun consult-omni--org-agenda-work-week-of (date)
-  "Get the dates one week starting at DATE"
-  (if (stringp date) (setq date (date-to-time date)))
-  (butlast (cdr (cl-loop for d from 0 to 6
-           collect (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time (date-to-time (consult-omni--org-agenda-begin-week date))) (make-decoded-time :day d))))))))
+  "Get the dates for the working week of DATE"
+  (cl-loop for d from 0 to 4
+           collect (consult-omni--org-agenda-relative-date
+                    (consult-omni--org-agenda-begin-work-week date) d :day)))
 #+end_src
+
+****** next week
+#+begin_src emacs-lisp
+(defun consult-omni--org-agenda-next-week (date)
+  "Get the list of dates for the calendar week after DATE"
+  (consult-omni--org-agenda-week-of (consult-omni--org-agenda-relative-date date 7 :day)))
+#+end_src
+****** next work week
+#+begin_src emacs-lisp
+(defun consult-omni--org-agenda-next-work-week (date)
+  "Get the list of dates for the working week after DATE"
+  (consult-omni--org-agenda-work-week-of (consult-omni--org-agenda-relative-date date 7 :day)))
+#+end_src
+****** previous week
+#+begin_src emacs-lisp
+(defun consult-omni--org-agenda-previous-week (date)
+  "Get the list of dates for the calendar week before DATE"
+  (consult-omni--org-agenda-week-of (consult-omni--org-agenda-relative-date date -7 :day)))
+#+end_src
+****** previous work week
+#+begin_src emacs-lisp
+(defun consult-omni--org-agenda-previous-work-week (date)
+  "Get the list of dates for the working week before DATE"
+  (consult-omni--org-agenda-work-week-of (consult-omni--org-agenda-relative-date date -7 :day)))
+#+end_src
+****** next month
+#+begin_src emacs-lisp
+(defun consult-omni--org-agenda-next-month (date)
+  "Get the year-month string for one month after the DATE."
+(consult-omni--org-agenda-relative-date date 1 :month))
+
+#+end_src
+
+****** previous month
+#+begin_src emacs-lisp
+(defun consult-omni--org-agenda-previous-month (date)
+  "Get the year-month string for one month before the DATE."
+(consult-omni--org-agenda-relative-date date -1 :month))
+
+#+end_src
+
+
+****** next year
+#+begin_src emacs-lisp
+(defun consult-omni--org-agenda-next-year (date)
+  "Get the year-month string for one year after the DATE."
+(consult-omni--org-agenda-relative-date date 1 :year))
+
+#+end_src
+
+****** previous year
+#+begin_src emacs-lisp
+(defun consult-omni--org-agenda-previous-year (date)
+  "Get the year-month string for one year before the DATE."
+(consult-omni--org-agenda-relative-date date -1 :year))
+
+#+end_src
+
+
 
 ****** around day
 #+begin_src emacs-lisp
-(defun consult-omni--org-agenda-around (date days)
-  "Get the dates for (+/-)DAYS around  DATE"
-  (if (stringp date) (setq date (date-to-time date)))
-  (cl-loop for d from (- 0 days) to days
-           collect (format-time-string "%Y-%m-%d" (encode-time (decoded-time-add (decode-time (date-to-time (consult-omni--org-agenda-begin-week date))) (make-decoded-time :day d))))))
+(defun consult-omni--org-agenda-around (date int unit)
+  "Get the dates for (+/-)INT*UNIT around the DATE
+
+INT is an integer (for number of days, or months or years)
+UNIT is either :day, :month or :year"
+  (cl-loop for d from (- 0 int) to int
+           collect (consult-omni--org-agenda-relative-date date d unit)))
 #+end_src
-****** transform query
+****** transform dwim query
 #+begin_src emacs-lisp
-(defun consult-omni--org-agenda-transform-query (query)
+(defun consult-omni--org-agenda-query-dwim-transform (query)
   "Transform QUERY to what the user means.
 
 Tries to guess the dates based on user input query.
 For example to get the date for tommorrow, next week, ..."
-  (when (string-prefix-p "=" query)
-    (cond
-     ((equal query "=yesterday") (consult-omni--org-agenda-previous-day (current-time)))
-     ((equal query "=today") (format-time-string "%Y-%m-%d" (current-time)))
-     ((equal query "=tomorrow") (consult-omni--org-agenda-next-day (current-time)))
-     ((equal query "=this week") (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-week-of (current-time))))
-     ((equal query "=next week") (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-next-week (current-time))))
-     ((equal query "=next work week") (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-next-work-week (current-time))))
-     ((equal query "=this month") (format-time-string "%Y-%m" (current-time)))
-     ((equal query "=this year") (format-time-string "%Y" (current-time)))
-     ((string-match "=\\([0-9]+\\) day[s]? ago" query)
-      (consult-omni--org-agenda-relative-day (current-time) (string-to-number (match-string 1 query)) t))
-     ((string-match "=\\([-+]?[0-9]+\\) day[s]? from now" query)
-      (consult-omni--org-agenda-relative-day (current-time) (string-to-number (match-string 1 query)) nil))
-     ((string-match "=around \\(.*\\)?" query)
-      (when-let ((date (consult-omni--org-agenda-transform-query (concat "=" (match-string 1  query)))))
-        (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-around (or (car-safe date) date) consult-omni-org-agenda-number-of-days-around))))
-     (t nil))))
+  (save-match-data
+    (if consult-omni-org-agenda-transform-prefix
+        (cond
+         ((string-prefix-p consult-omni-org-agenda-transform-prefix query)
+          (setq query (s-downcase (string-remove-prefix consult-omni-org-agenda-transform-prefix query))))
+         (t
+          (setq query nil))))
+    (if query
+        (cond
+         ((string-match "around \\(.*\\)" query)
+          (when-let ((date (consult-omni--org-agenda-query-dwim-transform (concat consult-omni-org-agenda-transform-prefix (match-string 1 query)))))
+            (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-around (or (car-safe date) date) consult-omni-org-agenda-number-of-days-around :day))))
+         ((equal query "yesterday") (consult-omni--org-agenda-format-time-string
+                                     (consult-omni--org-agenda-previous-day (current-time))))
+         ((equal query "today") (consult-omni--org-agenda-format-time-string (current-time)))
+         ((equal query "tomorrow") (consult-omni--org-agenda-format-time-string
+                                    (consult-omni--org-agenda-next-day (current-time))))
+         ((equal query "this week") (consult-omni--org-agenda-date-range-regexp
+                                     (consult-omni--org-agenda-week-of (current-time))))
+         ((equal query "this work week") (consult-omni--org-agenda-date-range-regexp
+                                          (consult-omni--org-agenda-work-week-of (current-time))))
+         ((equal query "next week") (consult-omni--org-agenda-date-range-regexp
+                                     (consult-omni--org-agenda-next-week (current-time))))
+         ((equal query "next work week") (consult-omni--org-agenda-date-range-regexp
+                                          (consult-omni--org-agenda-next-work-week (current-time))))
+         ((equal query "last week") (consult-omni--org-agenda-date-range-regexp
+                                     (consult-omni--org-agenda-previous-week (current-time))))
+         ((equal query "last work week") (consult-omni--org-agenda-date-range-regexp
+                                          (consult-omni--org-agenda-previous-work-week (current-time))))
+         ((equal query "this month") (consult-omni--org-agenda-format-time-string (current-time) "%Y-%m"))
+         ((equal query "next month") (consult-omni--org-agenda-format-time-string
+                                      (consult-omni--org-agenda-next-month (current-time))
+                                      "%Y-%m"))
+         ((equal query "last month") (consult-omni--org-agenda-format-time-string
+                                      (consult-omni--org-agenda-previous-month (current-time))
+                                      "%Y-%m"))
+         ((equal query "this year") (consult-omni--org-agenda-format-time-string
+                                     (current-time)
+                                     "%Y"))
+         ((equal query "next year") (consult-omni--org-agenda-format-time-string
+                                     (consult-omni--org-agenda-next-year (current-time))
+                                     "%Y"))
+         ((equal query "last year") (consult-omni--org-agenda-format-time-string
+                                      (consult-omni--org-agenda-previous-year (current-time))
+                                      "%Y"))
+         ((string-match "\\([0-9]+\\) \\(.+?\\)[s]? ago" query)
+          (consult-omni--org-agenda-format-time-string
+           (consult-omni--org-agenda-relative-date (current-time) (- 0 (string-to-number (match-string 1 query))) (match-string 2 query))))
+         ((string-match "\\([0-9]+\\) \\(.+?\\)[s]? from now" query)
+          (consult-omni--org-agenda-format-time-string
+           (consult-omni--org-agenda-relative-date (current-time) (string-to-number (match-string 1 query)) (match-string 2 query))))
+         (t query))
+      nil)))
 #+end_src
 ***** format agenda items
 #+begin_src emacs-lisp
@@ -8293,44 +8814,50 @@ Description of Arguments:
   FACE         the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (buffer (and buffer (propertize (format "%s" buffer) 'face 'consult-omni-domain-face)))
          (prio (and (stringp prio) (propertize (format "[#%s]" prio) 'face 'consult-omni-prompt-face)))
-         (todo (and (stringp todo) (propertize todo 'face (or (and org-todo-keyword-faces (cdr (assoc todo org-todo-keyword-faces)))
+         (todo (or (and (stringp todo) (propertize todo 'face (or (and org-todo-keyword-faces (cdr (assoc todo org-todo-keyword-faces)))
                                                               (and (member todo org-done-keywords) 'org-done)
-                                                              'org-todo))))
+                                                              'org-todo))) ""))
          (tags (and tags (stringp tags) (propertize tags 'face 'consult-omni-keyword-face)))
          (snippet (and snippet (stringp snippet) (propertize snippet 'face 'consult-omni-snippet-face)))
          (snippet (if (stringp snippet) (consult-omni--set-string-width (replace-regexp-in-string "\n" "  " snippet) (* 2 frame-width-percent))))
-         (sched (or (and sched (stringp sched) (propertize sched 'face (or 'org-agenda-date 'consult-omni-date-face))) (make-string 15 ?\s)))
+         (sched (or (and sched (stringp sched) (propertize sched 'face (or 'org-agenda-date 'consult-omni-date-face))) (make-string 16 ?\s)))
          (fraction (and dead (- 1 (min (/ (float (- (org-agenda--timestamp-to-absolute dead) (org-today))) (max (org-get-wdays dead) 1)) 1.0))))
          (dead-face (and dead
                          (org-agenda-deadline-face
 			  fraction)))
-         (dead (or (and dead (stringp dead) (propertize dead 'face (or dead-face 'consult-omni-warning-face))) (make-string 15 ?\s)))
+         (dead (or (and dead (stringp dead) (propertize dead 'face (or dead-face 'consult-omni-warning-face))) (make-string 16 ?\s)))
          (date (concat (and (stringp sched) sched) (and (stringp sched) " ") (and (stringp dead) dead)))
          (face (or (consult-omni--get-source-prop source :face) face))
          (todo-str (concat (or prio "    ") " " todo))
+         (todo-str (and (stringp todo-str) (consult-omni--set-string-width todo-str 15)))
          (title (if (and face (stringp title)) (propertize title 'face face) title))
          (title-str (if (and (stringp tags) (stringp title)) (concat title " " tags) title))
          (title-str (and (stringp title-str)
-                         (consult-omni--set-string-width title-str (* 5 frame-width-percent))))
+                         (consult-omni--set-string-width title-str (* 4 frame-width-percent))))
          (str (concat title-str
                       (and todo-str "\t") todo-str
                       (and buffer "\s") buffer
                       (and date "\s\s") date
                       (and snippet "\s\s") snippet
                       (and source "\t") source)))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
          ((stringp match-str)
-          (setq str (consult-omni--highlight-match match-str str t)))))
+          (setq str (consult-omni--highlight-match match-str str t)))
+        ))
     str))
 #+end_src
-
-
+***** consult-omni--org-agenda-regexp-pattern
+#+begin_src emacs-lisp
+(defun consult-omni--org-agenda-split-by-space (query)
+  (string-join (split-string query "\s" t) "\\|")
+)
+#+end_src
 ***** consult-omni--org-agenda-items
 #+begin_src emacs-lisp
 
@@ -8366,10 +8893,9 @@ Adopted from `consult-org--headings'."
                     (sched (cdr (assoc "TIMESTAMP" props)))
                     (dead (cdr (assoc "DEADLINE" props)))
                     (snippet nil)
-                    (query (or (consult-omni--org-agenda-transform-query query) query)))
-         (org-format-timestamp (org-timestamp-from-time (org-today)) "%Y")
-         (if (string-match-p (concat ".*" query ".*") (concat todo " " prio " " _hl " " sched " " dead " " tags))
-             (propertize (consult-omni--org-agenda-format-candidate :source source :query query :title title :buffer buffer :todo todo :prio prio :tags tags :filepath filepath :snippet snippet :sched sched :dead dead) :source source :title title :query query :url nil :search-url nil :tags tags :filepath filepath :marker marker))))
+                    (transform (or (consult-omni--org-agenda-query-dwim-transform query) query)))
+         (if (string-match-p (or transform (funcall consult-omni-org-agenda-regexp-builder query)) (concat todo " " prio " " _hl " " sched " " dead " " tags))
+             (propertize (consult-omni--org-agenda-format-candidate :source source :query (or transform query) :title title :buffer buffer :todo todo :prio prio :tags tags :filepath filepath :snippet snippet :sched sched :dead dead) :source source :title title :query query :url nil :search-url nil :tags tags :filepath filepath :marker marker))))
      match 'agenda skip)))
 #+end_src
 
@@ -8436,7 +8962,7 @@ Adopted from `consult-org--headings'."
                             :enabled (lambda () (bound-and-true-p org-agenda-files))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 #+end_src
 
 
@@ -8529,7 +9055,7 @@ Description of Arguments:
                    (t nil)))
          (authors (if (and authors (stringp authors)) (propertize authors 'face 'consult-omni-source-type-face)))
          (doi (if (stringp doi) (propertize doi 'face 'link)))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 5 frame-width-percent)))
@@ -8538,7 +9064,7 @@ Description of Arguments:
                       (if date (format "\s\s%s" date))
                       (if authors (format "\s\s%s" authors))
                       (if source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -8688,7 +9214,7 @@ for more info."
 (consult-omni-define-source "PubMed"
                            :narrow-char ?p
                            :type 'dynamic
-                           :require-match t
+                           :require-match nil
                            :category 'consult-omni-scholar
                            :face 'consult-omni-scholar-title-face
                            :request #'consult-omni--pubmed-fetch-results
@@ -8699,7 +9225,7 @@ for more info."
                            :enabled (lambda () (bound-and-true-p consult-omni-pubmed-api-key))
                            :group #'consult-omni--group-function
                            :sort t
-                           :static 'both
+                           :interactive consult-omni-intereactive-commands-type
                            :annotate nil)
 #+end_src
 **** provide and footer
@@ -8791,7 +9317,7 @@ Description of Arguments:
                    (t nil)))
          (authors (if (and authors (stringp authors)) (propertize authors 'face 'consult-omni-source-type-face)))
          (doi (if (stringp doi) (propertize doi 'face 'link) nil))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 5 frame-width-percent)))
@@ -8800,7 +9326,7 @@ Description of Arguments:
                       (if date (format "\s\s%s" date))
                       (if authors (format "\s\s%s" authors))
                       (if source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -8896,7 +9422,7 @@ Description of Arguments:
 (consult-omni-define-source "Scopus"
                             :narrow-char ?s
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :category 'consult-omni-scholar
                             :face 'consult-omni-scholar-title-face
                             :request #'consult-omni--scopus-fetch-results
@@ -8909,7 +9435,7 @@ Description of Arguments:
                             :enabled (lambda () (bound-and-true-p consult-omni-scopus-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 #+end_src
@@ -8999,7 +9525,7 @@ Description of Arguments:
          (answered (if answered (propertize consult-omni-stackoverflow-answered-mark 'face 'consult-omni-domain-face)
                      (propertize consult-omni-stackoverflow-unanswered-mark 'face 'error)))
          (score (and score (propertize (format "%s" score) 'face 'consult-omni-path-face)))
-         (match-str (and (stringp query) (consult--split-escaped query) nil))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 7 frame-width-percent)))
@@ -9008,7 +9534,7 @@ Description of Arguments:
                       (when answered (concat "\s" answered))
                       (when score (concat "\s" score))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -9085,7 +9611,7 @@ See URL `https://api.stackexchange.com/' for more info."
 (consult-omni-define-source "StackOverflow"
                             :narrow-char ?s
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--stackoverflow-fetch-results
                             :preview-key consult-omni-preview-key
@@ -9094,7 +9620,7 @@ See URL `https://api.stackexchange.com/' for more info."
                             :enabled (lambda () (bound-and-true-p consult-omni-stackexchange-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 
@@ -9167,17 +9693,17 @@ Description of Arguments:
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (date (and (stringp date) (propertize date 'face 'consult-omni-date-face)))
-         (match-str (and (stringp query) (consult--split-escaped query) nil))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 3 frame-width-percent)))
-         (snippet (and (stringp snippet) (consult-omni--set-string-width (string-trim snippet) (* 6 frame-width-percent))))
+         (snippet (and (stringp snippet) (consult-omni--set-string-width (string-trim snippet) (* 4 frame-width-percent))))
          (snippet (and (stringp snippet) (propertize snippet 'face 'consult-omni-snippet-face)))
          (str (concat title-str
                       (when date (concat "\s" date))
                       (when snippet (concat "\s\s" snippet))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -9247,18 +9773,18 @@ Description of Arguments:
 (consult-omni-define-source "Wikipedia"
                             :narrow-char ?w
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--wikipedia-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "Wikipedia")
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
-                            :enabled (lambda () (boundp  'consult-omni-wikipedia-api-url))
+                            :enabled (lambda () (bound-and-true-p consult-omni-wikipedia-api-url))
                             :group #'consult-omni--group-function
                             :sort t
                             :type 'dynamic
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 #+end_src
 
 **** provide and footer
@@ -9362,7 +9888,7 @@ Description of Arguments:
   FACE         the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (date (and (stringp date) (propertize date 'face 'consult-omni-date-face)))
          (channeltitle (and (stringp channeltitle) (propertize channeltitle 'face 'consult-omni-path-face)))
          (channeltitle (consult-omni--set-string-width channeltitle (* 2 frame-width-percent)))
@@ -9395,7 +9921,7 @@ Description of Arguments:
                       (unless (string-empty-p stats) (concat "\s" stats))
                       (when snippet (concat "\s\s" snippet))
                       (concat "\t" source))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -9735,7 +10261,7 @@ This is a version with  statistics (e.g. view counts)
                             :enabled (lambda () (bound-and-true-p consult-omni-youtube-search-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 #+end_src
 

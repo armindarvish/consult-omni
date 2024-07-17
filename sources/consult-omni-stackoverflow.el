@@ -58,7 +58,7 @@ Description of Arguments:
          (answered (if answered (propertize consult-omni-stackoverflow-answered-mark 'face 'consult-omni-domain-face)
                      (propertize consult-omni-stackoverflow-unanswered-mark 'face 'error)))
          (score (and score (propertize (format "%s" score) 'face 'consult-omni-path-face)))
-         (match-str (and (stringp query) (consult--split-escaped query) nil))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 7 frame-width-percent)))
@@ -67,7 +67,7 @@ Description of Arguments:
                       (when answered (concat "\s" answered))
                       (when score (concat "\s" score))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -139,7 +139,7 @@ See URL `https://api.stackexchange.com/' for more info."
 (consult-omni-define-source "StackOverflow"
                             :narrow-char ?s
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--stackoverflow-fetch-results
                             :preview-key consult-omni-preview-key
@@ -148,7 +148,7 @@ See URL `https://api.stackexchange.com/' for more info."
                             :enabled (lambda () (bound-and-true-p consult-omni-stackexchange-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-stackoverflow' module

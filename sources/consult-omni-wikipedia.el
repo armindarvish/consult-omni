@@ -43,17 +43,17 @@ Description of Arguments:
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (and (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (date (and (stringp date) (propertize date 'face 'consult-omni-date-face)))
-         (match-str (and (stringp query) (consult--split-escaped query) nil))
+         (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 3 frame-width-percent)))
-         (snippet (and (stringp snippet) (consult-omni--set-string-width (string-trim snippet) (* 6 frame-width-percent))))
+         (snippet (and (stringp snippet) (consult-omni--set-string-width (string-trim snippet) (* 4 frame-width-percent))))
          (snippet (and (stringp snippet) (propertize snippet 'face 'consult-omni-snippet-face)))
          (str (concat title-str
                       (when date (concat "\s" date))
                       (when snippet (concat "\s\s" snippet))
                       (when source (concat "\t" source)))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -117,18 +117,18 @@ Description of Arguments:
 (consult-omni-define-source "Wikipedia"
                             :narrow-char ?w
                             :type 'dynamic
-                            :require-match t
+                            :require-match nil
                             :face 'consult-omni-engine-title-face
                             :request #'consult-omni--wikipedia-fetch-results
                             :on-new (apply-partially #'consult-omni-external-search-with-engine "Wikipedia")
                             :preview-key consult-omni-preview-key
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
-                            :enabled (lambda () (boundp  'consult-omni-wikipedia-api-url))
+                            :enabled (lambda () (bound-and-true-p consult-omni-wikipedia-api-url))
                             :group #'consult-omni--group-function
                             :sort t
                             :type 'dynamic
-                            :static 'both)
+                            :interactive consult-omni-intereactive-commands-type)
 
 ;;; provide `consult-omni-wikipedia' module
 

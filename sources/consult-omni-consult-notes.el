@@ -33,6 +33,15 @@
         (if marker
             (consult--jump marker)))))
 
+(defun consult-omni--consult-notes-denote-preview (cand)
+  "Preview function for denote file."
+  (if (and cand
+           (not (consult-notes-denote--excluded-p cand)))
+      (let* ((title (get-text-property 0 :title cand))
+             (file (format "%s" (get-text-property 0 'denote-path title))))
+        (if file
+            (consult--file-action file)))))
+
 (defun consult-omni--consult-notes-org-roam-note-callback (cand &rest args)
   "Callback function for org-roam files."
   (let* ((title (get-text-property 0 :title cand))
@@ -52,40 +61,85 @@
                          (funcall consult--buffer-display buff)
                          (recenter nil t))))))))
 
+(defun consult-omni--consult-notes-denote-callback (cand &rest args)
+  "Callback function for denote files."
+  (if (and cand
+           (not (consult-notes-denote--excluded-p cand)))
+      (let* ((title (get-text-property 0 :title cand))
+             (file (format "%s" (get-text-property 0 'denote-path title))))
+        (if file
+            (consult--file-action file)))))
+
+(defun consult-omni--consult-notes-org-headings-new (cand)
+  "Callback function for org headings."
+    (org-capture-string cand))
+
+(defun consult-omni--consult-notes-org-roam-note-new (cand)
+  "Callback function for org-roam files."
+    (org-roam-node-find nil cand))
+
+(defun consult-omni--consult-notes-denote-new (cand)
+  (consult-notes-denote--new-note cand)
+  )
+
 ;; make consult-omni sources from consult-notes sources
 (when consult-notes-org-headings-mode
-  (consult-omni--make-source-from-consult-source (plist-put consult-notes-org-headings--source :name "Consult Notes Headings")
+  (consult-omni--make-source-from-consult-source (plist-put consult-notes-org-headings--source :name "Consult Notes Org")
                                                  :category 'file
                                                  :type 'sync
+                                                 :require-match nil
                                                  :face 'consult-omni-notes-title-face
                                                  :search-hist 'consult-omni--search-history
                                                  :select-hist 'consult-omni--selection-history
                                                  :on-preview #'consult-omni--consult-notes-org-headings-preview
                                                  :on-return #'identity
                                                  :on-callback #'consult-omni--consult-notes-org-headings-callback
+                                                 :on-new #'consult-omni--consult-notes-org-headings-new
                                                  :search-hist 'consult-omni--search-history
                                                  :select-hist 'consult-omni--selection-history
-                                                 :preview-key 'consult-preview-key
+                                                 :preview-key 'consult-omni-preview-key
                                                  :group #'consult-omni--group-function
                                                  :enabled (lambda () (bound-and-true-p consult-notes-org-headings-mode))
-                                                 :static 'both))
+                                                 :interactive consult-omni-intereactive-commands-type))
 
 (when consult-notes-org-roam-mode
   (cl-loop for source in '(consult-notes-org-roam--refs consult-notes-org-roam--nodes)
-           do (consult-omni--make-source-from-consult-source source
+           do (let ((name (plist-get (eval source) :name)))
+                (plist-put (eval source) :name (concat "Consult Notes " name))
+                (consult-omni--make-source-from-consult-source source
                                                              :category 'file
                                                              :type 'sync
+                                                             :require-match nil
                                                              :face 'consult-omni-notes-title-face
                                                              :search-hist 'consult-omni--search-history
                                                              :select-hist 'consult-omni--selection-history
                                                              :on-preview #'consult-omni--consult-notes-org-roam-note-preview
                                                              :on-return #'identity
                                                              :on-callback #'consult-omni--consult-notes-org-roam-note-callback
-                                                             :preview-key 'consult-preview-key
-                                                             :static 'both
+                                                             :on-new #'consult-omni--consult-notes-org-roam-note-new
+                                                             :preview-key 'consult-omni-preview-key
+                                                             :interactive consult-omni-intereactive-commands-type
                                                              :group #'consult-omni--group-function
                                                              :enabled (lambda () consult-notes-org-roam-mode)
-                                                             :annotate nil)))
+                                                             :annotate nil))))
+
+(when consult-notes-denote-mode
+  (consult-omni--make-source-from-consult-source (plist-put consult-notes-denote--source :name "Consult Notes Denote")
+                                                 :category 'file
+                                                 :type 'sync
+                                                 :require-match nil
+                                                 :face 'consult-omni-notes-title-face
+                                                 :search-hist 'consult-omni--search-history
+                                                 :select-hist 'consult-omni--selection-history
+                                                 :on-preview #'consult-omni--consult-notes-denote-preview
+                                                 :on-return #'identity
+                                                 :on-callback #'consult-omni--consult-notes-denote-callback
+                                                 :on-new #'consult-omni--consult-notes-denote-new
+                                                 :preview-key 'consult-omni-preview-key
+                                                 :interactive consult-omni-intereactive-commands-type
+                                                 :group #'consult-omni--group-function
+                                                 :enabled (lambda () consult-notes-denote-mode)
+                                                 :annotate nil))
 
 ;;; provide `consult-omni-consult-notes' module
 

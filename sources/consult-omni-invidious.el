@@ -63,7 +63,7 @@ Description of Arguments:
   FACE         the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (videocount-str (and videocount (consult-omni--numbers-human-readable (or videocount 0) "videos")))
          (viewcount-str (and viewcount (consult-omni--numbers-human-readable (or viewcount 0) "views")))
          (subcount-str (and subcount (consult-omni--numbers-human-readable (or subcount 0) "subs")))
@@ -99,7 +99,7 @@ Description of Arguments:
                       (unless (string-empty-p stats) (concat "\s" stats))
                       (when snippet (concat "\s\s" snippet))
                       (concat "\t" source))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -215,7 +215,7 @@ Description of Arguments:
                             :enabled (lambda () (bound-and-true-p consult-omni-invidious-server-url))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-invidious' module

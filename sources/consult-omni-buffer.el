@@ -30,10 +30,11 @@
                                                :on-callback #'consult--buffer-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--buffer-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-buffer)))
 
 (consult-omni--make-source-from-consult-source 'consult--source-modified-buffer
                                                :type 'sync
@@ -42,10 +43,11 @@
                                                :on-callback #'consult--buffer-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--buffer-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-modified-buffer)))
 
 (consult-omni--make-source-from-consult-source 'consult--source-hidden-buffer
                                                :type 'sync
@@ -54,10 +56,11 @@
                                                :on-callback #'consult--buffer-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--buffer-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-hidden-buffer)))
 
 (consult-omni--make-source-from-consult-source 'consult--source-project-buffer
                                                :type 'sync
@@ -66,10 +69,11 @@
                                                :on-callback #'consult--buffer-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--buffer-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled :enabled (lambda () (bound-and-true-p consult--source-project-buffer)))
 
 (consult-omni--make-source-from-consult-source 'consult--source-recent-file
                                                :type 'sync
@@ -78,10 +82,11 @@
                                                :on-callback #'consult--file-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--file-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-recent-file)))
 
 (consult-omni--make-source-from-consult-source 'consult--source-project-recent-file
                                                :type 'sync
@@ -90,10 +95,11 @@
                                                :on-callback #'consult--file-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'consult--file-action
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-project-recent-file)))
 
 (consult-omni--make-source-from-consult-source 'consult--source-bookmark
                                                :type 'sync
@@ -102,10 +108,11 @@
                                                :on-callback #'consult--bookmark-action
                                                :search-hist 'consult-omni--search-history
                                                :select-hist 'consult-omni--selection-history
-                                               :static 'both
+                                               :interactive consult-omni-intereactive-commands-type
                                                :preview-key 'consult-omni-preview-key
                                                :on-new #'bookmark-set
-                                               :group #'consult-omni--group-function)
+                                               :group #'consult-omni--group-function
+                                               :enabled (lambda () (bound-and-true-p consult--source-bookmark)))
 
 ;;; provide `consult-omni-buffer' module
 

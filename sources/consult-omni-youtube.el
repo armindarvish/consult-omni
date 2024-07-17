@@ -75,7 +75,7 @@ Description of Arguments:
   FACE         the face to apply to TITLE"
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (source (propertize source 'face 'consult-omni-source-type-face))
-         (match-str (if (stringp query) (consult--split-escaped query) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
          (date (and (stringp date) (propertize date 'face 'consult-omni-date-face)))
          (channeltitle (and (stringp channeltitle) (propertize channeltitle 'face 'consult-omni-path-face)))
          (channeltitle (consult-omni--set-string-width channeltitle (* 2 frame-width-percent)))
@@ -108,7 +108,7 @@ Description of Arguments:
                       (unless (string-empty-p stats) (concat "\s" stats))
                       (when snippet (concat "\s\s" snippet))
                       (concat "\t" source))))
-    (if consult-omni-highlight-matches
+    (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
           (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
@@ -426,7 +426,7 @@ This is a version with  statistics (e.g. view counts)
                             :enabled (lambda () (bound-and-true-p consult-omni-youtube-search-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
+                            :interactive consult-omni-intereactive-commands-type
                             :annotate nil)
 
 ;;; provide `consult-omni-youtube' module
