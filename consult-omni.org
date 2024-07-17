@@ -8742,7 +8742,7 @@ For example to get the date for tommorrow, next week, ..."
     (if consult-omni-org-agenda-transform-prefix
         (cond
          ((string-prefix-p consult-omni-org-agenda-transform-prefix query)
-          (setq query (string-remove-prefix consult-omni-org-agenda-transform-prefix query)))
+          (setq query (s-downcase (string-remove-prefix consult-omni-org-agenda-transform-prefix query))))
          (t
           (setq query nil))))
     (if query
