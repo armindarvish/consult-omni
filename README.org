@@ -387,11 +387,11 @@ This is a convenient feature to bind your favorite consult-omni interactive comm
 
 **** =consult-omni-http-retrieve-backend=
 This variable controls which backend is used by consult-omni for http requests. consult-omni supports 3 different backends:
-- (Default) built-in ='url-retrieve=
-- ='request= (see [[https://github.com/tkf/emacs-request][emacs-request]])
-- ='plz= (see [[https://github.com/alphapapa/plz.el][plz.el]])
+- (Default) built-in =url-retrieve=
+- =request= (see [[https://github.com/tkf/emacs-request][emacs-request]])
+- =plz= (see [[https://github.com/alphapapa/plz.el][plz.el]])
 
-For example to change the backend to ='plz=, you can do:
+For example to change the backend to =plz=, you can do:
 #+begin_src emacs-lisp
 (setq consult-omni-http-retrieve-backend 'plz)
 #+end_src
@@ -699,13 +699,13 @@ To report bug, first check if it is already reported in the [[https://github.com
 * Contributions
 This is an open source package, and I appreciate feedback, suggestions, ideas, etc. There are lots of functionalities or sources that can be added to this package to improve different user's workflows, so if you have some ideas, feel free to file an issue for a feature request.
 
-If you want to contribute to the code, please note that the main branch is currently stable (as stable as a work in progress like this can be) and the develop branch is the current work in progress. So, *start from the develop branch* to get the latest work-in-progress updates and create a new branch with names such as feature/name-of-the-feature or fix/issue, ... Do the edits and then create a new pull request to merge back with the *develop* branch when you are done with your edits.
+I would love to see help from other contributors both for improving/maintaining current sources/features as well as for working on new sources or features. If you are interested and want to contribute to the code, please note that the main branch is currently stable (as stable as a work in progress like this can be) and the develop branch is the current work in progress. So, *start from the develop branch* to get the latest work-in-progress updates and create a new branch with names such as feature/name-of-the-feature or fix/issue, ... Do the edits and then create a new pull request to merge back with the *develop* branch when you are done with your edits.
 
-Importantly, keep in mind that I am using a *literate programming approach* (given that this is a small project with very limited number of files) where everything goes into *consult-omni.org* and then gets tangled to appropriate files (e.g. consult-omni.el). If you open a pull-request where you directly edited the .el files, I will likely not approve it because that will then get overwritten later when I tangle from the .org file. In other words, *Do Not Edit The .el Files!* only edit the .org file and tangle to .el files.
+Importantly, keep in mind that I am using a *literate programming approach* where everything goes into a single source of truth *consult-omni.org* and then gets tangled to appropriate files (e.g. consult-omni.el). If you open a pull-request where you directly edited the .el files, I will likely not approve it because that will then get overwritten later when I tangle from the .org file. In other words, *Do Not Edit The .el Files!* only edit the .org file and tangle to .el files. Keep in mind that while literate programming may not make a lot of sense in other scenarios, in this case, it really helps with adding new sources/features by copying from other examples (since everything is in one org file), therefore in this case I insist o using the literate programming.
 
 
 * Acknowledgments
 
 Obviously this package would not have been possible without the fabulous [[https://github.com/minad/consult][consult]] and [[https://github.com/oantolin/embark][embark]] packages. It also took inspiration from other packages including but not limited to the predecessor [[https://github.com/mnewt/counsel-web][counsel-web]], as well as [[https://github.com/hrs/engine-mode][engine-mode]], [[https://github.com/Malabarba/emacs-google-this][emacs-google-this]], [[https://github.com/emacs-helm/helm][helm]].
 
-Furthermore I would like to thank [[https://github.com/karthink][@karthink]], and [[https://github.com/armindarvish/consult-omni][@minad]] for their fabulous suggestions, discussions, contributions, ... in reddit as well as on consult-web repo. This package would not have been possible without [[https://github.com/karthink][@karthink]]'s help in prototyping and ideation and [[https://github.com/armindarvish/consult-omni][@minad]]'s precious comments and suggestions
+Furthermore I would like to thank [[https://github.com/karthink][@karthink]], and [[https://github.com/armindarvish/consult-omni][@minad]] for their fabulous suggestions, discussions, contributions, etc. This package would not have been possible without [[https://github.com/karthink][@karthink]]'s help in prototyping and ideation (see [[https://github.com/karthink/consult-web-mini][consult-web-mini]]) and [[https://github.com/armindarvish/consult-omni][@minad]]'s precious comments and suggestions.
