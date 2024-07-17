@@ -49,8 +49,10 @@ Can be either:
 "Function to use to create new notes.
 
 This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)"
-:type '(choice (function :tag "(Default) Use org-capture" consult-omni--notes-new-capture-org)
-                 (function :tag "Custom Function")))
+:type '(choice (function :tag "(Default) Use Org Capture" consult-omni--notes-new-capture-org)
+               (function :tag "Use Org Roam" consult-omni--notes-new-capture-org-roam)
+               (function :tag "Use Denote" consult-omni--notes-new-create-denote)
+               (function :tag "Custom Function")))
 
 (defun consult-omni--notes-transform (candidates &optional query)
   "Formats `consult-omni-notes' candidates."
