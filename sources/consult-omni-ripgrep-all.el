@@ -118,39 +118,6 @@ Adopted from `consult--grep-format'."
         (consult-omni--pulse-line))))
     nil))
 
-;; (defun consult-omni--ripgrep-all-callback (cand)
-;;   "Callback function for `consult-omni-ripgrep-all'."
-;;   (let ((file (get-text-property 0 :file cand))
-;;         (pos (get-text-property 0 :pos cand))
-;;         (page (get-text-property 0 :page cand))
-;;         (content (get-text-property 0 :content cand))
-;;         (query (get-text-property 0 :query cand)))
-;;     (when file
-;;       (funcall  #'consult--file-action file)
-;;       (cond
-;;        ((string-suffix-p ".pdf" file)
-;;         (pcase major-mode
-;;           ('doc-view-mode
-;;            (and (stringp page) (doc-view-goto-page (string-to-number page))))
-;;           ('pdf-view-mode
-;;            (and (stringp page) (pdf-view-goto-page (string-to-number page)))
-;;            (when consult-omni-highlight-matches-in-file
-;;              (add-to-history 'search-ring (isearch-string-propertize query))
-;;              (when-let ((matches (pdf-isearch-search-page query)))
-;;                (setq pdf-isearch-current-matches matches)
-;;                (setq pdf-isearch-current-match (car-safe matches))
-;;                (pdf-isearch-hl-matches pdf-isearch-current-match pdf-isearch-current-matches t)
-;;                (pdf-isearch-focus-match pdf-isearch-current-match))))
-;;           (_ nil)))
-;;        (t
-;;         (and (stringp pos) (goto-line (string-to-number pos)))
-;;         (consult--invisible-open-permanently)
-;;         (recenter nil t)
-;;         (when consult-omni-highlight-matches-in-file
-;;           (add-to-history 'search-ring (isearch-string-propertize query))
-;;           (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case))
-;;         (consult-omni--pulse-line))))))
-
 (cl-defun consult-omni--ripgrep-all-builder (input &rest args &key callback &allow-other-keys)
   "Makes builder command line args for “ripgrep”."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))

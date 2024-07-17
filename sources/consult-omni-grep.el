@@ -93,23 +93,6 @@ Adopted from `consult--grep-format'."
         (consult-omni--pulse-line))
       nil)))
 
-;; (defun consult-omni--grep-callback (cand)
-;;   "Callback function for `consult-omni-grep'."
-;;   (let ((file (get-text-property 0 :file cand))
-;;         (pos (get-text-property 0 :pos cand))
-;;         (content (get-text-property 0 :content cand))
-;;         (query (get-text-property 0 :query cand)))
-;;     (when file
-;;       (with-current-buffer (funcall #'consult--file-action file)
-;;        (and (stringp pos) (goto-line (string-to-number pos)))
-;;         (consult--invisible-open-permanently)
-;;        (recenter nil t)
-;;       (when consult-omni-highlight-matches-in-file
-;;         (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)
-;;         (add-to-history 'search-ring (isearch-string-propertize query)))
-;;       (consult-omni--pulse-line))
-;; nil))
-
 (cl-defun consult-omni--grep-builder (input &rest args &key callback &allow-other-keys)
   "Makes builder command line args for “grep”."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))

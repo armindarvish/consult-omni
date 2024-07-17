@@ -74,8 +74,8 @@ This is used when the a new candidate is selcted (e.g. by `vertico-exit-input'.)
 (defun consult-omni--notes-callback (cand)
   "Callback function for `consult-omni-ripgrep-all'."
   (if (equal consult-omni-notes-backend-command "rga")
-      (consult-omni--ripgrep-all-callback cand)
-    (consult-omni--grep-callback cand)))
+      (consult-omni--ripgrep-all-preview cand)
+    (consult-omni--grep-preview cand)))
 
 (defun consult-omni--notes-new-capture-org (&optional string)
   "Makes new org note"
