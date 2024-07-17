@@ -3114,8 +3114,7 @@ Can be:
 ;;; consult-omni-embark.el ends here
 #+end_src
 * sources
-** Multi Sources
-*** all sources
+** Module
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-sources.el
 :END:
@@ -3205,7 +3204,7 @@ If list is nil, loads `consult-omni-sources-modules-to-load'and if that is nil a
 (provide 'consult-omni-sources)
 ;;; consult-omni-sources.el ends here
 #+end_src
-** Single Source
+** Single Source Definition
 *** Desktop Apps
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-apps.el
