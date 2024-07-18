@@ -36,8 +36,10 @@ Here is another screenshot demonstrating using consult-omni as an application la
 
 
 * Usage and Features
-For explanation of features and comparison to some other packages, you can watch my YouTube videos, both for consult-web and for consult-omni:
-https://www.youtube.com/watch?v=7pDfyqBZwvo
+For explanation of features and comparison to some other packages, you can watch my YouTube videos, both for consult-web and for consult-omni below:
+
+1. (video 1) in-depth tutorial for consult-omni: [[https://www.youtube.com/watch?v=wNH2E7iT__c][https://www.youtube.com/watch?v=wNH2E7iT__c]]
+2. (video 2) in-depth tutorial of consult-web: https://www.youtube.com/watch?v=7pDfyqBZwvo
 
 ** Interactive Commands
 *** single source commands
@@ -240,7 +242,7 @@ Alternatively you can load a single source by just requiring the corresponding f
 This would add interactive commands only for searching Wikipedia (e.g. =consult-omni-wikipedia= and/or =consult-omni-wikipedia-static=).
 
 *** List of Sources Provided by Default
-Here is a list of current sources. For details on how to set and use each source, refer to the [[https://github.com/armindarvish/consult-omni/wiki][wiki pages]] (under construction now).
+Here is a list of current sources. For details on how to set and use each source, refer to the [[https://github.com/armindarvish/consult-omni/wiki][wiki pages]] (under construction now). You can also watch the YouTube Tutorial video here: [[https://www.youtube.com/watch?v=wNH2E7iT__c][https://www.youtube.com/watch?v=wNH2E7iT__c]]
 
 |--------------------------+----------------------------------------------|
 | Source                   | Category                                     |
@@ -288,7 +290,7 @@ Here is a list of current sources. For details on how to set and use each source
 
 ** Configuration
 consult-omni is built with the idea that the user should be able to customize everything based on their use-case, therefore the user is very much expected to learn how to configure this package. Therefore, I recommend you read through this section and understand how to configure the package according to your needs and for your specific use-case.
-In addition to these settings, some sources have their own customization variables, etc. which is discussed in the [[https://github.com/armindarvish/consult-omni/wiki][wiki pages]] (under construction now).
+In addition to these settings, some sources have their own customization variables, etc. which is discussed in the [[https://github.com/armindarvish/consult-omni/wiki][wiki pages]] (under construction now) and inn this YouTube Tutorial: https://www.youtube.com/watch?v=wNH2E7iT__c.
 
 
 *** Customization  Variables
