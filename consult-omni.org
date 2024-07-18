@@ -6352,7 +6352,7 @@ Description of Arguments:
 
 
 
-*** dictionary
+*** Dictionary
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-dict.el
 :END:
