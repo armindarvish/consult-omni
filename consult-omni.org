@@ -552,7 +552,7 @@ This can be used for aligning marginalia info in minibuffer."
       (cond
        ((<= path-target-width 0)
         (setq result (consult-omni--set-string-width domain width)))
-       ((integerp path-width)
+       ((and (integerp path-target-width) (> path-target-width 10))
         (setq result (concat domain (consult-omni--set-string-width path path-target-width (floor (/ path-target-width 2))))))
        (t
         (setq result (consult-omni--set-string-width (concat domain path) width))))
