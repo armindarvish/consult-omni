@@ -491,15 +491,17 @@ This can be used for aligning marginalia info in minibuffer."
 (defun consult-omni--set-url-width (domain path width)
   "It sets the length of DOMAIN+PATH to fit within WIDTH."
   (when (stringp domain)
-    (let* ((path-width (and (stringp path) (length path)))
+    (let* ((result)
+           (path-width (and (stringp path) (length path)))
            (path-target-width (- width (length domain))))
       (cond
        ((<= path-target-width 0)
-        (consult-omni--set-string-width domain width))
-       ((integerp path-width)
-        (concat domain (consult-omni--set-string-width path path-target-width (floor (/ path-target-width 2)))))
+        (setq result (consult-omni--set-string-width domain width)))
+       ((and (integerp path-target-width) (> path-target-width 10))
+        (setq result (concat domain (consult-omni--set-string-width path path-target-width (floor (/ path-target-width 2))))))
        (t
-        (consult-omni--set-string-width (concat domain path) width))))))
+        (setq result (consult-omni--set-string-width (concat domain path) width))))
+result)))
 
 (defun consult-omni--highlight-match (regexp str ignore-case)
   "Highlights REGEXP in STR.

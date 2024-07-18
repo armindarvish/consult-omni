@@ -15,7 +15,7 @@ consult-omni is a package for getting search results from one or several custom 
 
 consult-omni provides wrappers and macros around [[https://github.com/minad/consult][consult]], to make it easier for users to get results from different sources and combine local and web sources in an omni-style search. In other words, consult-omni enables getting consult-style multi-source or dynamically completed results in minibuffer for a wide range of sources including Emacs functions/packages (e.g. Emacs buffers, org files, elfeed,...), command-line programs (grep, find, gh, ...), or web search engines (Google, Brave, Bing, ...).
 
-consult-omni can be an open-source free alternative to other omni-search tools such as alfred or MacOS spotlight. It provides a range of default sources as examples, but the main idea here is to remain agnostic of the source and provide the toolset for the users to define their own sources/workflows (a.k.a plugins).
+consult-omni can be an open-source free alternative to other omni-search tools such as Alfred or MacOS spotlight. It provides a range of default sources as examples, but the main idea here is to remain agnostic of the source and provide the toolset for the users to define their own sources/workflows (a.k.a plugins).
 
 Here is the mandatory screenshot:
 
@@ -25,7 +25,7 @@ Here is the mandatory screenshot:
 [[https://github.com/armindarvish/consult-web/blob/screenshots/screenshots/consult-omni.gif]]
 
 
-In the screenshot above, I use a key shortcut to open an emacs frame and call =consult-omni= (similar to calling MacOS spotlight) and search for the term “emacs”, then move around and look at previews from different sources including application, gptel, Brave, Google, youtube, elfeed, mu4e, ....
+In the screenshot above, I use a key shortcut to open an Emacs frame and call =consult-omni= (similar to calling MacOS spotlight) and search for the term “emacs”, then move around and look at previews from different sources including application, gptel, Brave, Google, YouTube, elfeed, mu4e, ....
 
 
 Here is another screenshot demonstrating using consult-omni as an application launcher:
@@ -60,14 +60,14 @@ For each source, you may have static or dynamic commands. Static commands query 
                             )
 #+end_src
 
-Here is a screenshot of *STATIC* interactive command for wikipedia:
+Here is a screenshot of *STATIC* interactive command for Wikipedia:
 #+ATTR_ORG: :width 800px
 #+ATTR_LATEX: :width 800px
 #+ATTR_HTML: :width 800px
 [[https://github.com/armindarvish/consult-web/blob/screenshots/screenshots/consult-omni-wikipedia-static.gif]]
 
 
-Here is a screenshot of *DYNAMIC* interactive command for wikipedia:
+Here is a screenshot of *DYNAMIC* interactive command for Wikipedia:
 #+ATTR_ORG: :width 800px
 #+ATTR_LATEX: :width 800px
 #+ATTR_HTML: :width 800px
@@ -75,7 +75,7 @@ Here is a screenshot of *DYNAMIC* interactive command for wikipedia:
 
 
 *** multi source commands
-By default consult-omni provides two main multi-source inteactive commands.
+By default consult-omni provides two main multi-source interactive commands.
 
 1. =consult-omni-multi=: This is an interactive *DYNAMIC* command that uses multiple sources, as defined by =consult-omni-multi-sources=, and shows the results in minibuffer completion with dynamic completion (results are fetched as the user types). Here is a screenshot:
 
@@ -87,13 +87,13 @@ By default consult-omni provides two main multi-source inteactive commands.
 2. =consult-omni-multi-static=: This is an interactive *STATIC* command that uses multiple sources, as defined by =consult-omni-multi-sources=, and shows the results in minibuffer completion. Note that consult-omni-multi-static does not provide dynamic completion but some might find using this more intuitive for narrowing down the results. The user provides one search term, and once the results are retrieved, typing in the minibuffer will narrow down the candidates.
 
 
-Note that unlike the predecessor consult-web, cosult-omni does not provide other multi-source interactive commands (e.g. scholar search) anymore. It's now up to the user to define such commands for their custom workflow. For example one user may define separate interactive commands to query web sources, v.s. local sources, while another user may want to define interactive commands for knowledge sources (acadmeic references, notes, ...) v.s. utilities (apps, buffers, files,...). Examples for how to define new interacitve commands are provided below in the advanced config [[id:DFBCF797-44D6-4265-B737-77916700C43D][here]].
+Note that unlike the predecessor consult-web, consult-omni does not provide other multi-source interactive commands (e.g. scholar search) anymore. It's now up to the user to define such commands for their custom workflow. For example one user may define separate interactive commands to query web sources, v.s. local sources, while another user may want to define interactive commands for knowledge sources (academic references, notes, ...) v.s. utilities (apps, buffers, files,...). Examples for how to define new interactive commands are provided below in the advanced config [[id:DFBCF797-44D6-4265-B737-77916700C43D][here]].
 
 ** Dynamic Completion: Passing Arguments and Narrow Down
 
-Arguments can be passed to the dynamic interactive commands and further narrowing down the results can be done using a syntax similar to the “perl splitting” style in [[https://github.com/minad/consult?tab=readme-ov-file#asynchronous-search][consult asynchronous search]].
+Arguments can be passed to the dynamic interactive commands and further narrowing down the results can be done using a syntax similar to the “Perl splitting” style in [[https://github.com/minad/consult?tab=readme-ov-file#asynchronous-search][consult asynchronous search]].
 
-For narrowing down the results you need adding =#= (or another charatcer defined in  =consult-async-split-style=) after the search query. For example typing the following in the minibuffer:
+For narrowing down the results you need adding =#= (or another character defined in  =consult-async-split-style=) after the search query. For example typing the following in the minibuffer:
 #+begin_example
 #emacs web search#github
 #+end_example
@@ -106,7 +106,7 @@ Furthermore, arguments can be passed to dynamic commands using similar syntax as
 #how to browse a url in emacs -- --model gpt-3.5-turbo
 #+end_example
 
-passes =gpt-3.5-turbo= as the value for the keyword argument =:model= to the backend functions of all the sources that fetch results. If any of those sources accept the keyword argument =:model=, the value =gpt-3.5-turbo= gets passed to them. For this reason it is recommended to always use functions that accept any keyword arguments (a.k.a. add =&allow-other-keys=) to avoid errors when non-existing keywords are passed to them.
+passes =gpt-3.5-turbo= as the value for the keyword argument =:model= to the back-end functions of all the sources that fetch results. If any of those sources accept the keyword argument =:model=, the value =gpt-3.5-turbo= gets passed to them. For this reason it is recommended to always use functions that accept any keyword arguments (a.k.a. add =&allow-other-keys=) to avoid errors when non-existing keywords are passed to them.
 
 instead of using =--= , you can also use a keyword with colon =:=. The following would be similar to the example above:
 
@@ -116,11 +116,11 @@ instead of using =--= , you can also use a keyword with colon =:=. The following
 
 ** Understanding different Type of Sources
 
-When using consult, we deal with differnet types of sources, either elisp functions (e.g. =buffer-list=, =re-search-forward=) or commandline programs (e.g. =grep=, =notmuch=, =gh=, =mu=, ...). They return a list of candidates, which in turn are passed to =completing--read=. While consult provides a way to combine multiple sources with =consult--multi=, the ability to combine sources of different types (commandline program with elisp for example) is limited. In consult-omni we solve this by creating some wrappers and machinery around built-in consult functions and by having each source declare its type. This type  tells consult-omni how to collect candidates from that source and combine with other sources. The type can be ='sync=, ='dynamic=, or ='async=.
+When using consult, we deal with different types of sources, either elisp functions (e.g. =buffer-list=, =re-search-forward=) or command-line programs (e.g. =grep=, =notmuch=, =gh=, =mu=, ...). They return a list of candidates, which in turn are passed to =completing--read=. While consult provides a way to combine multiple sources with =consult--multi=, the ability to combine sources of different types (command-line program with elisp for example) is limited. In consult-omni we solve this by creating some wrappers and machinery around built-in consult functions and by having each source declare its type. This type  tells consult-omni how to collect candidates from that source and combine with other sources. The type can be ='sync=, ='dynamic=, or ='async=.
 
-- ='sync=: This is a synchronous source, meaning that when consult-omni calls the request function to collect candidates from this source, it calls it synchronously (blocks the emacs pocess) and waits for a returned value (expecting a list of candidates or nil). This is for example suitbale for sources that simply run an elisp function and return a list quickly like =buffer-list=. There is almost no gain in calling this function asynchronously because the overhead for async control (timers and watchers,...) is probably going to cost more time than just calling the function directly and synchronously.
+- ='sync=: This is a synchronous source, meaning that when consult-omni calls the request function to collect candidates from this source, it calls it synchronously (blocks the Emacs process) and waits for a returned value (expecting a list of candidates or nil). This is for example suitable for sources that simply run an elisp function and return a list quickly like =buffer-list=. There is almost no gain in calling this function asynchronously because the overhead for async control (timers and watchers,...) is probably going to cost more time than just calling the function directly and synchronously.
 
-- ='dynamic=: Dynamic sources are those that would benefit or require calling the colecting elisp function asynchronously. For example, if colelcting items from a source requires to send an http request to a server and waiting for the response, then a dynamic type should be used, so that emacs process is not blocked while waiting for the response. In this case the request function for the source (the function that returns the items) should take a callback function that will be called when the response arrives. This is for example is suitable for getting resopnse from web search APIs like Google's, Brave's or OpenAI's APIs.
+- ='dynamic=: Dynamic sources are those that would benefit or require calling the collecting elisp function asynchronously. For example, if collecting items from a source requires to send an HTTP request to a server and waiting for the response, then a dynamic type should be used, so that Emacs process is not blocked while waiting for the response. In this case the request function for the source (the function that returns the items) should take a callback function that will be called when the response arrives. This is for example is suitable for getting response from web search APIs like Google's, Brave's or OpenAI's APIs.
 
 - ='async=: asynchronous sources, are those that use an external command line program and therefore require to create process, get the output of the command line program and parse it to collect candidates. This is for example suitable for getting candidates from =grep=, or =notmuch=, ....
 
@@ -141,7 +141,7 @@ See the YouTube video on consult-web for an example, here: [[https://youtu.be/7p
 Without doc-strings and whitespaces the code is less than 1000 lines and it only depends on [[https://github.com/minad/consult][consult]] and built-in url-retrieve.
 
 *** Modular
-You can only load the parts you need. For example if all you need is an autosuggestion utility similar to =helm-google-autosuggest=, then you can use aminimal config like this:
+You can only load the parts you need. For example if all you need is an autosuggestion utility similar to =helm-google-autosuggest=, then you can use minimal config like this:
 
 #+begin_src emacs-lisp
 (use-package consult-omni
@@ -234,12 +234,12 @@ You can also load multiple sources (but not all) by setting the list =consult-om
 This limits the sources that consult-omni loads to ONLY those defined in =consult-omni-sources-modules-to-load=.
 
 **** load a single source
-Alternatively you can load a single source by just requiring the corresponding file. For example for wikipedia, you can do:
+Alternatively you can load a single source by just requiring the corresponding file. For example for Wikipedia, you can do:
 #+begin_src emacs-lisp
 (require 'consult-omni-sources)
 (require 'consult-omni-wikipedia)
 #+end_src
-This would add interactive commands only for searching wikipedia (e.g. =consult-omni-wikipedia= and/or =consult-omni-wikipedia-static=).
+This would add interactive commands only for searching Wikipedia (e.g. =consult-omni-wikipedia= and/or =consult-omni-wikipedia-static=).
 
 *** List of Sources Provided by Default
 Here is a list of current sources. For details on how to set and use each source, refer to the [[https://github.com/armindarvish/consult-omni/wiki][wiki pages]] (under construction now).
@@ -297,7 +297,7 @@ In addition to these settings, some sources have their own customization variabl
 The following customizable variables are provided:
 
 **** =consult-omni-sources-modules-to-load=
-List of modules to load. By setting this you before calling =consult-omni-sources-load-modules=, you can limit the modules (sources) that are loaded and can avoid errors due to mising requirements for certain sources. For example for just loading Wikipedia:
+List of modules to load. By setting this you before calling =consult-omni-sources-load-modules=, you can limit the modules (sources) that are loaded and can avoid errors due to missing requirements for certain sources. For example for just loading Wikipedia:
 #+begin_src emacs-lisp
 (setq consult-omni-sources-modules-to-load (list 'consult-omni-wikipedia))
 #+end_src
@@ -335,7 +335,7 @@ This is the default preview key. A good choice might be "C-o".
 #+end_src
 
 **** =consult-omni-default-format-candidate=
-This variable a stores a function that is called for formating the candidates (on any source that does not have an explivit formating function). consult-omni provides two example functions:
+This variable a stores a function that is called for formatting the candidates (on any source that does not have an explicit formatting function). consult-omni provides two example functions:
  - =consult-omni--simple-format-candidate= shows the tile without marginalia annotation in minibuffer
  - (Default) =consult-omni--highlight-format-candidate= shows candidate with marginalia annotation and highlights the search term as well.
 
@@ -386,12 +386,12 @@ Whether consult-omni highlights matches of the search term in the minibuffer can
 This is a convenient feature to bind your favorite consult-omni interactive command to the command called =consult-omni=, so it is easier to remember and find when you call =M-x=. You can bind this to one of the interactive commands (such as =consult-omni-multi= or =consult-omni-multi-static=) or you can bind it to a single-source command (e.g. =consult-omni-google=, =consult-omni-google-static=,  =consult-omni-google-wikipedia=, ...) or alternatively you can define your own custom command (single or multi-source) and use that instead.
 
 **** =consult-omni-http-retrieve-backend=
-This variable controls which backend is used by consult-omni for http requests. consult-omni supports 3 different backends:
+This variable controls which back-end is used by consult-omni for HTTP requests. consult-omni supports 3 different back-ends:
 - (Default) built-in =url-retrieve=
 - =request= (see [[https://github.com/tkf/emacs-request][emacs-request]])
 - =plz= (see [[https://github.com/alphapapa/plz.el][plz.el]])
 
-For example to change the backend to =plz=, you can do:
+For example to change the back-end to =plz=, you can do:
 #+begin_src emacs-lisp
 (setq consult-omni-http-retrieve-backend 'plz)
 #+end_src
@@ -448,7 +448,7 @@ In dynamic commands, the completion UI is only updated every =consult-omni-dynam
   (require 'consult-omni-embark)
 
   ;; Only load wikipedia source
-  (setq consult-omni-sources-modules-to-load (list 'consult-omni-wkipedia))
+  (setq consult-omni-sources-modules-to-load (list 'consult-omni-wikipedia))
   (consult-omni-sources-load-modules)
 
   ;;; Set your shorthand favorite interactive command
@@ -677,7 +677,7 @@ To the best of my knowledge no other Emacs package provides the functionality an
 
 Outside Emacs, there are of course tolls like MacOS Spotlight and Alfred, that provide omni-search utilities, but compared to =consult-omni= they lack versatility, and customizability.
 - Spotlight: spotlight lacks advanced features and is not very customizable. For example it is not easy to access browser history or add an AI chatbot to search results. It's not even possible to get web search results directly in the spotlight. Instead, it suggests opening a web browser and jumping to the search homepage.
-- Alfred: Alfred does provide more customizability and advanced workflows, but that does not come for free. all advanced workflows need a paid lincense. The consistency of the overall workflow is not great either since plugins are made by various people and do not require to follw a consistent pattern (in terms of keybindings, ...).
+- Alfred: Alfred does provide more customizability and advanced workflows, but that does not come for free. all advanced workflows need a paid license. The consistency of the overall workflow is not great either since plugins are made by various people and do not require to follow a consistent pattern (in terms of keybindings, ...).
 
 
 * Bug Reports
