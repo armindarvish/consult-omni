@@ -56,8 +56,7 @@ For each source, you may have static or dynamic commands. Static commands query 
                             :enabled (lambda () (bound-and-true-p consult-omni-brave-api-key))
                             :group #'consult-omni--group-function
                             :sort t
-                            :static 'both
-                            )
+                            :static 'both)
 #+end_src
 
 Here is a screenshot of *STATIC* interactive command for Wikipedia:
@@ -155,8 +154,7 @@ You can only load the parts you need. For example if all you need is an autosugg
   ;; Only load brave-auto-suggest source
   (require 'consult-omni-brave-autosuggest)
   ;;; Set your shorthand favorite interactive command
-  (setq consult-omni-default-interactive-command #'consult-omni-brave-autosuggest)
-)
+  (setq consult-omni-default-interactive-command #'consult-omni-brave-autosuggest))
 #+end_src
 
 Note that every module (a.k.a. every source) adds an extra 100-200 lines of code. This also means to add a new source, you only need to write a short piece of code following those examples!
@@ -192,7 +190,7 @@ To install consult-omni with straight.el you can use the following command. Make
 
 #+begin_src emacs-lisp
 (straight-use-package
- '(consult-omni :type git :host github :repo "armindarvish/consult-omni" :files (:defaults "sources/*.el"))
+ '(consult-omni :type git :host github :repo "armindarvish/consult-omni" :files (:defaults "sources/*.el")))
 #+end_src
 
 or if you use =use-package= macro with straight, you can do:
@@ -452,8 +450,7 @@ In dynamic commands, the completion UI is only updated every =consult-omni-dynam
   (consult-omni-sources-load-modules)
 
   ;;; Set your shorthand favorite interactive command
-  (setq consult-omni-default-interactive-command #'consult-omni-wikipedia)
-)
+  (setq consult-omni-default-interactive-command #'consult-omni-wikipedia))
 #+end_src
 *** A reasonable config with mostly default Settings
 #+begin_src emacs-lisp
@@ -559,12 +556,15 @@ Here is a drop-in config snippet that puts everything mentioned above together. 
                                      "Apps"
                                      ;; "gptel"
                                      "Brave"
+                                     "calc"
+                                     "Dictionary"
                                      ;; "Google"
                                      "Wikipedia"
-                                     ;; "elfeed"
+                                     "elfeed"
                                      ;; "mu4e"
                                      ;; "buffers text search"
                                      "Notes Search"
+                                     "Org Agenda"
                                      "GitHub"
                                      ;; "YouTube"
                                      "Invidious"))
@@ -619,15 +619,14 @@ See `consult-omni-multi' for more details.
     (interactive "P")
     (let ((prompt (or prompt (concat "[" (propertize "consult-omni-web" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
           (sources (or sources consult-omni-web-sources)))
-      (consult-omni-multi initial prompt sources no-callback args)
-      ))
+      (consult-omni-multi initial prompt sources no-callback args)))
 
   ;; consult-omni-local
   (defvar consult-omni-local-sources (list "ripgrep"
                                            "mdfind"
                                            "Notes Search"
                                            "Apps"
-                                           ))
+                                           "Org Agenda"))
   (defun consult-omni-local (&optional initial prompt sources no-callback &rest args)
     "Interactive local search”
 
@@ -638,8 +637,7 @@ See `consult-omni-multi' for more details.
     (interactive "P")
     (let ((prompt (or prompt (concat "[" (propertize "consult-omni-local" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
           (sources (or sources consult-omni-local-sources)))
-      (consult-omni-multi initial prompt sources no-callback args)
-      ))
+      (consult-omni-multi initial prompt sources no-callback args)))
 
   ;; consult-omni-scholar
   (setq consult-omni-scholar-sources (list "PubMed" "Scopus" "Notes Search" "gptel"))
@@ -654,8 +652,7 @@ See `consult-omni-multi' for more details.
     (interactive "P")
     (let ((prompt (or prompt (concat "[" (propertize "consult-omni-multi" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
           (sources (or sources consult-omni-scholar-sources)))
-      (consult-omni-multi initial prompt sources no-callback args)
-      ))
+      (consult-omni-multi initial prompt sources no-callback args)))
 
   ;; AutoSuggest at point
   (defun consult-omni-autosuggest-at-point ()
@@ -664,11 +661,7 @@ See `consult-omni-multi' for more details.
     (when (and (minibuffer-window-active-p (selected-window))
                (equal (substring input 0 1) (consult--async-split-initial nil)))
       (setq input (substring input 1)))
-    (consult-omni-brave-autosuggest input)
-    ))
-
-
-  )
+    (consult-omni-brave-autosuggest input))))
 #+end_src
 
 
