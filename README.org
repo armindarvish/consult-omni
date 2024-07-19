@@ -379,8 +379,10 @@ This is the field that is used to group the results. By default, results are gro
 **** =consult-omni-multi-sources=
 This is a list of source name strings (e.g. ='("Google", "Wikipedia", "chatGPT")=) that will be used in the commands =consult-omni-multi=, and =consult-omni-multi-static= (see above for description).
 
-**** =consult-omni-highlight-matches=
+**** =consult-omni-highlight-matches-in-minibuffer=
 Whether consult-omni highlights matches of the search term in the minibuffer candidates. This is useful to highlight the relevance of the search results.
+**** =consult-omni-highlight-matches-in-file=
+Whether consult-omni highlights matches of the search term in files (e.g. in previews or when opening files). This is useful for finding matches of the search term aftr opening target files.
 
 **** =consult-omni-default-interactive-command=
 This is a convenient feature to bind your favorite consult-omni interactive command to the command called =consult-omni=, so it is easier to remember and find when you call =M-x=. You can bind this to one of the interactive commands (such as =consult-omni-multi= or =consult-omni-multi-static=) or you can bind it to a single-source command (e.g. =consult-omni-google=, =consult-omni-google-static=,  =consult-omni-google-wikipedia=, ...) or alternatively you can define your own custom command (single or multi-source) and use that instead.
@@ -526,7 +528,8 @@ Here is a drop-in config snippet that puts everything mentioned above together. 
 
   (consult-omni-show-preview t) ;;; show previews
   (consult-omni-preview-key "C-o") ;;; set the preview key to C-o
-  (consult-omni-highlight-matches t) ;;; highlight matches in minibuffer
+  (consult-omni-highlight-matches-in-minibuffer t) ;;; highlight matches in minibuffer
+  (consult-omni-highlight-matches-in-file t) ;;; highlight matches in files
   (consult-omni-default-count 5) ;;; set default count
   (consult-omni-default-page 0) ;;; set the default page (default is 0 for the first page)
 
