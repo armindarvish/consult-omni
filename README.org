@@ -604,6 +604,9 @@ Here is a drop-in config snippet that puts everything mentioned above together. 
   ;;; Set your shorthand favorite interactive command
   (setq consult-omni-default-interactive-command #'consult-omni-multi)
 
+  ;;; Optionally Set back-end for notes search to ripgrep-all (requires ripgrep-all)
+  ;; (setq consult-omni-notes-backend-command "rga")
+
   ;;; Optionally add more interactive commands
 
   ;; consult-omni-web
