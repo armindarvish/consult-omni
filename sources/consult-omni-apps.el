@@ -159,6 +159,7 @@ Description of Arguments:
 
 Finds all the desktop applications by finding files that
 match `consult-omni-apps-regexp-pattern' in `consult-omni-apps-paths'."
+  (save-match-data
   (if (and consult-omni-apps-use-cache consult-omni-apps-cached-apps)
       consult-omni-apps-cached-apps
     (let ((paths (if (stringp consult-omni-apps-paths)
@@ -171,7 +172,7 @@ match `consult-omni-apps-regexp-pattern' in `consult-omni-apps-paths'."
                                 (lambda (path)
                                   (when (file-exists-p path)
                                     (directory-files path t consult-omni-apps-regexp-pattern t)))
-                                paths))))))))
+                                paths)))))))))
 
 ;; set the `consult-omni-apps-cached-apps'
 (setq consult-omni-apps-cached-apps (consult-omni--apps-get-desktop-apps))
@@ -190,6 +191,7 @@ Returns
 
 Adopted from `counsel-linux-app--parse-file' in counsel:
 URL https://github.com/abo-abo/swiper/blob/master/counsel.el"
+  (save-match-data
   (pcase system-type
     ('darwin
      (let ((name (file-name-base file))
@@ -232,7 +234,7 @@ URL https://github.com/abo-abo/swiper/blob/master/counsel.el"
              (let ((try-exec (match-string 1)))
                (unless (locate-file try-exec exec-path nil #'file-executable-p)
                  (throw 'break nil))))
-           (list name comment exec visible)))))))
+           (list name comment exec visible))))))))
 
 (defun consult-omni-apps--cached-items (files query)
   "Makes a cahced list of Desktop Applications from FILES.
@@ -245,6 +247,7 @@ For each file in files, if it contains the QUERY
 (a.k.a. matches the regexp pattern “.*QUERY.*”), it is parsed by
 `consult-omni--apps-parse-app-file' and added to the
 `consult-omni-apps-cached-items'"
+  (save-match-data
 (if (and consult-omni-apps-use-cache consult-omni-apps--cached-items)
     consult-omni-apps-cached-items
 (setq consult-omni-apps-cached-items
@@ -268,7 +271,7 @@ For each file in files, if it contains the QUERY
                            :app app)))
            (if query
                (cl-remove-if-not (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
-             files)))))
+             files))))))
 
 (setq consult-omni-apps--cached-items  (consult-omni-apps--cached-items consult-omni-apps-cached-apps ".*"))
 
