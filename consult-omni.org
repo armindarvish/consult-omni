@@ -371,7 +371,7 @@ This is used in dynamic collection to change grouping.")
                                             ("Google" . "https://www.google.com/search?q=%s")
                                             ("Perplexity" .  "https://www.perplexity.ai/search?q=%s")
                                             ("PubMed" . "https://pubmed.ncbi.nlm.nih.gov/?q=%s")
-                                            ("Wikipedia" . "https://www.wikipedia.org/search-redirect.php?q=%s")
+                                            ("Wikipedia" . "https://en.wikipedia.org/wiki/Special:Search/%s")
                                             ("YouTube" . "https://www.youtube.com/search?q=%s")
                                             ("gptel" . #'consult-omni--gptel-preview
 )
