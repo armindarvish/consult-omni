@@ -9151,6 +9151,7 @@ Description of Arguments:
                            :require-match nil
                            :category 'project
                            ;; :face 'consult-omni-files-title-face
+                           :on-setup #'project--read-project-list
                            :request #'consult-omni--projects-fetch-results
                            :on-preview (lambda (cand) (funcall consult-omni--projects-default-preview-func cand))
                            :on-callback (lambda (cand) (funcall consult-omni--projects-default-callback-func cand))
