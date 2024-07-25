@@ -8577,7 +8577,7 @@ See `consult-omni--org-agenda-query-dwim-transform' for details."
 (defcustom consult-omni-org-agenda-timestamp-format (or (and (bound-and-true-p org-timestamp-formats) (car org-timestamp-formats)) "%Y-%m-%d %a")
 "Timestamp format for time string in `consult-omni-org-agenda'
 
-This string is used to fromat timestamps in the marginalia info.
+This string is used to format timestamps in the marginalia info.
 See `org-timestamp-formats' and `org-time-stamp-format'
 for org fomrating, and `format-time-string' for more details."
 
