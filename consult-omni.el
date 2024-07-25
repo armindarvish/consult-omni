@@ -935,7 +935,7 @@ If SPLIT-INITIAL is non-nil use `consult--async-split-initial'
 to format the string."
   (when-let (str (thing-at-point thing t))
     (if split-initial
-        (consult--async-split-initial str)
+        (consult--async-split-initial (format "%s" str))
       str)))
 
 (defun consult-omni--read-search-string (&optional initial)
