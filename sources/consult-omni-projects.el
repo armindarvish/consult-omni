@@ -17,6 +17,20 @@
 (require 'project)
 (require 'consult-omni)
 
+(defcustom consult-omni-projects-vc-backend 'vc
+"Backend to use for git operations
+
+Can be either:
+  'vc  uses built-in vc library
+  'magit  uses magit"
+:type '(choice (const :tag "(Default) Use built-in vc" vc)
+               (const :tag "Use Magit" magit)))
+
+(defcustom consult-omni-projects-default-projects-folder nil
+"Parent directory for making new projects"
+:type 'directory)
+
+
 (defcustom consult-omni-projects-default-fallback-switch-command #'dired
 "Function to call when project-switch-project is not available
 
@@ -125,24 +139,31 @@ dir))
 
 (defun consult-omni--projects-create-new-git-project (dir)
   "Makes a new Git project at DIR"
-  (if (and (featurep 'magit) (require 'magit nil nil))
-      (progn
-        (funcall-interactively #'magit-init dir)
-        (funcall consult-omni-projects-default-fallback-switch-command dir))
-    (progn
-      (make-directory dir t)
-      (funcall consult-omni-projects-default-fallback-switch-command dir)
-      (if-let ((default-directory dir)
-               (cmd (executable-find "git")))
-          (or (and (file-expand-wildcards (expand-file-name ".git" dir))
-                   (y-or-n-p "There is already a .git folder there, do you want to re-initialize?")
-                   (call-process cmd nil nil nil "init"))
-            (call-process cmd nil nil nil "init")))))
+  (pcase consult-omni-projects-vc-backend
+    ('vc
+     (if (and (featurep 'vc-git) (require 'vc-git nil nil))
+         (progn (make-directory dir t)
+                (if-let ((default-directory dir)
+                         (cmd (executable-find "git")))
+                    (or (and (file-expand-wildcards (expand-file-name ".git" dir))
+                             (y-or-n-p "There is already a .git folder there, do you want to re-initialize?")
+                             (vc-git-create-repo))
+                        (vc-git-create-repo))))
+       (message "vc not available. Change `consult-omni-projects-vc-backend' to use a different backend!"))
+     (funcall consult-omni-projects-default-fallback-switch-command dir))
+    ('magit
+     (if (and (featurep 'magit) (require 'magit nil nil))
+         (or (and (file-expand-wildcards (expand-file-name ".git" dir))
+                  (y-or-n-p "There is already a .git folder there, do you want to re-initialize?")
+                  (funcall-interactively #'magit-init dir))
+             (funcall-interactively #'magit-init dir))
+       (message "Magit not available. Change `consult-omni-projects-vc-backend' to use a different backend!"))
+     (funcall consult-omni-projects-default-fallback-switch-command dir)))
   dir)
 
 (defun consult-omni--projects-make-new-project (cand)
   "Make new project for project name CAND."
-  (let* ((dir (read-directory-name (concat "Select Parent Directory for %s: " (propertize cand 'face 'font-lock-keyword-face)) default-directory nil nil))
+  (let* ((dir (read-directory-name (concat "Select Parent Directory for %s: " (propertize cand 'face 'font-lock-keyword-face)) (or (and consult-omni-projects-default-projects-folder (file-name-as-directory consult-omni-projects-default-projects-folder)) default-directory) nil nil))
         (name (read-string (concat "Project Name for %s: " (propertize cand 'face 'font-lock-keyword-face)) cand))
         (target (expand-file-name (file-name-as-directory name) dir)))
       (funcall consult-omni-projects-create-new-func target)
@@ -151,12 +172,12 @@ target))
 
 (defun consult-omni--projects-make-new-project-dwim (cand)
  "Add existing ro make new project for CAND."
-  (let* ((dir (read-directory-name (format "Select Directory for %s: " (propertize cand 'face 'font-lock-keyword-face)) default-directory nil t))
+  (let* ((dir (read-directory-name (format "Select Directory for %s: " (propertize cand 'face 'font-lock-keyword-face)) (or (and consult-omni-projects-default-projects-folder (file-name-as-directory consult-omni-projects-default-projects-folder)) default-directory) nil t))
          (project (project--find-in-directory dir))
          (root (and project (project-root project)))
          (existing  (if project
-                        (y-or-n-p "There is an existing project in that directory. Do you want to add it to list of known projects?")))
-         (new (unless existing (y-or-n-p (format "Do you want to make a new project folder under %s?" dir)))))
+                        (y-or-n-p "There is an existing project in that directory. Do you want to open that project?")))
+         (new (unless existing (y-or-n-p (format "Do you want to make a new project under %s?" dir)))))
     (cond
       (existing
        (when (file-exists-p dir) (project--remember-dir dir)
