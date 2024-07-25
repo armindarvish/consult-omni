@@ -9027,7 +9027,15 @@ Adopted from `consult-org--headings'."
 **** variables
 ***** custom
 #+begin_src emacs-lisp
-(defcustom consult-omni-projects-default-preview-func #'consult-omni--projects-default-preview
+(defcustom consult-omni-projects-default-fallback-switch-command #'dired
+"Function to call when project-switch-project is not available
+
+The function should accept one argument, a project directory"
+:type '(choice (function :tag "Open directory in dired" dired)
+               (function :tag "Custom Function")))
+
+
+(defcustom consult-omni-projects-preview-func #'consult-omni--projects-default-preview
 "Function to call for previewing projects
 
 The function should accept one argument, a project candidate
@@ -9035,7 +9043,7 @@ The function should accept one argument, a project candidate
 :type '(choice (function :tag "Open project root in dired" consult-omni--projects-default-preview)
                (function :tag "Custom Function")))
 
-(defcustom consult-omni-projects-default-callback-func #'consult-omni--projects-default-callback
+(defcustom consult-omni-projects-callback-func #'consult-omni--projects-default-callback
 "Function to call when selecting a project
 
 The function should accept one argument, a project candidate
@@ -9043,7 +9051,7 @@ The function should accept one argument, a project candidate
 :type '(choice (function :tag "Call project-switch-project with project root" consult-omni--projects-default-callback)
                (function :tag "Custom Function")))
 
-(defcustom consult-omni-projects-default-new-func #'consult-omni--projects-make-new-project-dwim
+(defcustom consult-omni-projects-new-func #'consult-omni--projects-make-new-project-dwim
 "Function to call when selecting a new non-existinng project
 
 The function should accept one argument, a project candidate
@@ -9066,7 +9074,11 @@ the directory path where the new project will be created."
 
 ***** other
 #+begin_src emacs-lisp
+(defvar consult-omni--projects-create-new-project-hook nil
+"Function(s) called after `consult-omni-projects-create-new-func'.
 
+The return of `onsult-omni-projects-default-new-func'
+ is passed to these functions as input arg.")
 #+end_src
 **** helper functions
 ***** format
@@ -9123,53 +9135,60 @@ Description of Arguments:
          (project (get-text-property 0 :project cand))
          (root (and project (project-root project))))
       (if root (project-switch-project root)
-        (dired dir))))
+        (funcall consult-omni-projects-default-fallback-switch-command dir))))
 #+end_src
 
 ***** new
-
 ****** add existing project
 #+begin_src emacs-lisp
 (defun consult-omni--projects-add-project-to-list (cand)
   "Add the missing project CAND to `project--list'."
-  (let* ((dir (read-directory-name (concat "Find Project Directory for " (propertize (format "%s: " cand) 'face 'font-lock-keyword-face)) default-directory nil t))
+  (let* ((dir (read-directory-name (format "Find Project Directory for %s: " (propertize cand 'face 'font-lock-keyword-face)) default-directory nil t))
          (project (project--find-in-directory dir))
          (root (and project (project-root project))))
     (when (file-exists-p dir) (project--remember-dir dir)
           (if root (project-switch-project root)
-            (dired dir)))
+            (funcall consult-omni-projects-default-fallback-switch-command dir)))
 dir))
 #+end_src
 
 ****** default create project function
 #+begin_src emacs-lisp
 (defun consult-omni--projects-create-new-git-project (dir)
-"Makes a new Git project at DIR"
-(if (and (featurep 'magit) (require 'magit nil nil))
+  "Makes a new Git project at DIR"
+  (if (and (featurep 'magit) (require 'magit nil nil))
+      (progn
+        (funcall-interactively #'magit-init dir)
+        (funcall consult-omni-projects-default-fallback-switch-command dir))
     (progn
-      (funcall-interactively #'magit-init dir)
-            (dired dir))
-        ((make-directory dir t)
-         (dired dir))))
+      (make-directory dir t)
+      (funcall consult-omni-projects-default-fallback-switch-command dir)
+      (if-let ((default-directory dir)
+               (cmd (executable-find "git")))
+          (or (and (file-expand-wildcards (expand-file-name ".git" dir))
+                   (y-or-n-p "There is already a .git folder there, do you want to re-initialize?")
+                   (call-process cmd nil nil nil "init"))
+            (call-process cmd nil nil nil "init")))))
+  dir)
 #+end_src
 
 ****** make new project
 #+begin_src emacs-lisp
 (defun consult-omni--projects-make-new-project (cand)
   "Make new project for project name CAND."
-  (let* ((dir (read-directory-name (concat "Select Parent Directory for " (propertize (format "%s: " cand) 'face 'font-lock-keyword-face)) default-directory nil nil))
-        (name (read-string (concat "Project Name for " (propertize (format "%s: " cand) 'face 'font-lock-keyword-face)) cand))
-        (target (expand-file-name (concat name "/") dir)))
+  (let* ((dir (read-directory-name (concat "Select Parent Directory for %s: " (propertize cand 'face 'font-lock-keyword-face)) default-directory nil nil))
+        (name (read-string (concat "Project Name for %s: " (propertize cand 'face 'font-lock-keyword-face)) cand))
+        (target (expand-file-name (file-name-as-directory name) dir)))
       (funcall consult-omni-projects-create-new-func target)
       (when (file-exists-p target) (project--remember-dir target))
 target))
 #+end_src
 
-****** new dwim
+****** Make new project or add existing (dwim)
 #+begin_src emacs-lisp
 (defun consult-omni--projects-make-new-project-dwim (cand)
  "Add existing ro make new project for CAND."
-  (let* ((dir (read-directory-name (concat "Select Directory for" (propertize (format "%s: " cand) 'face 'font-lock-keyword-face)) default-directory nil t))
+  (let* ((dir (read-directory-name (format "Select Directory for %s: " (propertize cand 'face 'font-lock-keyword-face)) default-directory nil t))
          (project (project--find-in-directory dir))
          (root (and project (project-root project)))
          (existing  (if project
@@ -9179,10 +9198,10 @@ target))
       (existing
        (when (file-exists-p dir) (project--remember-dir dir)
              (if root (project-switch-project root)
-               (dired dir))))
+               (funcall consult-omni-projects-default-fallback-switch-command dir))))
       (new
-       (let* ((name (read-string (concat "Project Name for " (propertize (format "%s: " cand) 'face 'font-lock-keyword-face)) cand))
-        (target (expand-file-name (concat name "/") dir)))
+       (let* ((name (read-string (format "Project Name for %s: " (propertize cand 'face 'font-lock-keyword-face)) cand))
+        (target (expand-file-name (file-name-as-directory name) dir)))
        (funcall consult-omni-projects-create-new-func target)
       (when (file-exists-p target)
         (project--remember-dir target)
@@ -9205,8 +9224,8 @@ dir))
                  (p-files (and project (project-files project)))
                  (nfiles (and (listp p-files) (length p-files)))
                  (size (and (stringp title) (file-exists-p title) (file-size-human-readable (file-attribute-size (file-attributes title)))))
-                (decorated (consult-omni--projects-format-candidate :source source :title title :project project :name name :nfiles nfiles :size size)))
-            (when (stringp decorated) (add-text-properties 0 1 `(:source ,source :title ,title :query ,query :dir ,title :name ,name) decorated))
+                (decorated (consult-omni--projects-format-candidate :source source :title title  :name name :nfiles nfiles :size size)))
+            (when (stringp decorated) (add-text-properties 0 1 `(:source ,source :title ,title :query ,query :project ,project :dir ,title :name ,name) decorated))
             decorated))
         (cl-remove-if-not (lambda (item) (string-match (format ".*%s.*" query) (car item))) project--list)))))
 #+end_src
@@ -9223,9 +9242,9 @@ dir))
                            ;; :face 'consult-omni-files-title-face
                            :on-setup #'project--read-project-list
                            :request #'consult-omni--projects-fetch-results
-                           :on-preview (lambda (cand) (funcall consult-omni-projects-default-preview-func cand))
-                           :on-callback (lambda (cand) (funcall consult-omni-projects-default-callback-func cand))
-                           :on-new (lambda (cand) (funcall consult-omni-projects-default-new-func cand))
+                           :on-preview (lambda (cand) (funcall consult-omni-projects-preview-func cand))
+                           :on-callback (lambda (cand) (funcall consult-omni-projects-callback-func cand))
+                           :on-new (lambda (cand) (run-hook-with-args 'consult-omni-create-project-hook (funcall consult-omni-projects-new-func cand)))
                            :preview-key consult-omni-preview-key
                            :search-hist 'consult-omni--search-history
                            :select-hist 'consult-omni--selection-history
