@@ -9166,7 +9166,7 @@ Description of Arguments:
 dir))
 #+end_src
 
-****** default create project function
+****** default create git project function
 #+begin_src emacs-lisp
 (defun consult-omni--projects-create-new-git-project (dir)
   "Makes a new Git project at DIR"
