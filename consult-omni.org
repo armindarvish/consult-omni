@@ -1183,8 +1183,8 @@ and is used to define the grouping for CAND."
   "Makes a list for future history based on at-point items."
   (delq nil
         (cl-remove-duplicates
-         (append (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing t))
-                         (or things (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line))) (list isearch-string)))))
+         (append (when (region-active-p) (list (consult--async-split-initial (buffer-substring (region-beginning) (region-end))))) (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing t))
+                                                                                                            (or things (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line))) (list (consult--async-split-initial isearch-string))))))
 #+end_src
 **** lookup function
 #+begin_src emacs-lisp
