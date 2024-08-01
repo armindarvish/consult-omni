@@ -1034,8 +1034,11 @@ and is used to define the grouping for CAND."
   "Makes a list for future history based on at-point items."
   (delq nil
         (cl-remove-duplicates
-         (append (when (region-active-p) (list (consult--async-split-initial (buffer-substring (region-beginning) (region-end))))) (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing t))
-                                                                                                            (or things (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line))) (list (consult--async-split-initial isearch-string))))))
+         (append
+          (when (region-active-p) (list (consult--async-split-initial (buffer-substring (region-beginning) (region-end)))))
+          (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing t))
+                  (or things (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line)))
+          (list (consult--async-split-initial isearch-string))))))
 
 (defun consult-omni--lookup-function ()
   "Lookup function for `consult-omni' minibuffer candidates.
