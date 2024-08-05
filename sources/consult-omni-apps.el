@@ -340,5 +340,5 @@ a new list is generated."
 
 (provide 'consult-omni-apps)
 
-(add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-apss)
+(add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-apps)
 ;;; consult-omni-apps.el ends here
