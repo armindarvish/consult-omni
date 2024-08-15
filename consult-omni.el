@@ -935,7 +935,7 @@ If SPLIT-INITIAL is non-nil use `consult--async-split-initial'
 to format the string."
   (when-let (str (thing-at-point thing t))
     (if split-initial
-        (consult--async-split-initial str)
+        (consult--async-split-initial (format "%s" str))
       str)))
 
 (defun consult-omni--read-search-string (&optional initial)
@@ -1034,8 +1034,11 @@ and is used to define the grouping for CAND."
   "Makes a list for future history based on at-point items."
   (delq nil
         (cl-remove-duplicates
-         (append (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing t))
-                         (or things (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line))) (list isearch-string)))))
+         (append
+          (when (region-active-p) (list (consult--async-split-initial (buffer-substring (region-beginning) (region-end)))))
+          (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing t))
+                  (or things (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line)))
+          (list (consult--async-split-initial isearch-string))))))
 
 (defun consult-omni--lookup-function ()
   "Lookup function for `consult-omni' minibuffer candidates.
@@ -1085,25 +1088,18 @@ are all retrieved from `consult-omni-sources-alist'."
       (if cand
           (let* ((source (get-text-property 0 :source cand))
                  (state (consult-omni--get-source-prop source :state))
-                 (setup (consult-omni--get-source-prop source :on-setup))
                  (preview (consult-omni--get-source-prop source :on-preview))
                  (return (consult-omni--get-source-prop source :on-return))
                  (exit (consult-omni--get-source-prop source :on-exit)))
             (if state
                 (funcall state action cand args)
               (pcase action
-                ('setup
-                 (if setup (funcall setup cand)))
                 ('preview
                  (if preview (funcall preview cand) (consult-omni--default-url-preview cand)))
                 ('return
                  (if return (funcall return cand) cand))
                 ('exit
-                 (unless consult-omni-log-level
-                   (consult-omni--kill-hidden-buffers)
-                   (consult-omni--kill-url-dead-buffers))
-                 (funcall (consult--buffer-preview) 'exit cand)
-                 (if exit (funcall exit cand)))))))))
+                 (funcall (consult--buffer-preview) 'exit cand))))))))
 
 (defun consult-omni--default-callback (cand)
   "Default CALLBACK for CAND.
@@ -1285,7 +1281,7 @@ for use in a static (not dynamically updated) multi-source command"
              (out (with-temp-buffer
                     (set-buffer-file-coding-system 'cp1047)
                     (list (apply 'call-process (car cmd) nil (current-buffer) nil (cdr cmd))
-                          (replace-regexp-in-string "" "\n"
+                          (replace-regexp-in-string "\r" "\n"
                                                     (buffer-string))))))
         (if (eq (car out) 0)
             (progn
@@ -1844,7 +1840,10 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
   (let* ((input (or input
                     (and consult-omni-default-autosuggest-command (funcall-interactively consult-omni-default-autosuggest-command))
                     (consult-omni--read-search-string)))
+         (setup (consult-omni--get-source-prop source-name :on-setup))
+         (exit (consult-omni--get-source-prop source-name :on-exit))
          (prompt (or prompt (concat "[" (propertize (format "%s" (consult-omni--func-name source-name)) 'face 'consult-omni-prompt-face) "]" " Search: ")))
+         (_ (if (functionp setup) (funcall setup)))
          (selected (consult-omni--multi-static (list (consult-omni--source-name source-name))
                                                input
                                                args
@@ -1852,6 +1851,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
                                                :sort sort
                                                :history select-hist-var
                                                :require-match require-match))
+         (_ (if (functionp exit) (funcall exit)))
          (match (plist-get (cdr selected) :match))
          (source  (plist-get (cdr selected) :name))
          (selected (cond
@@ -1861,6 +1861,9 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
          (callback-func (and (not no-callback)
                              (or (and match source (consult-omni--get-source-prop source :on-callback))
                                  (and source (consult-omni--get-source-prop source :on-new))))))
+    (unless consult-omni-log-level
+      (consult-omni--kill-hidden-buffers)
+      (consult-omni--kill-url-dead-buffers))
     (cond
      ((and match (functionp callback-func))
       (funcall callback-func selected))
@@ -1873,10 +1876,16 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
 
 Do not use this function directly, use `consult-omni-define-source' macro
 instead. Refer to `consult-omni-define-source' for details on arguments."
+
+
+
   (let* ((consult-async-refresh-delay consult-omni-dynamic-refresh-delay)
          (consult-async-input-throttle consult-omni-dynamic-input-throttle)
          (consult-async-input-debounce consult-omni-dynamic-input-debounce)
+         (setup (consult-omni--get-source-prop source-name :on-setup))
+         (exit (consult-omni--get-source-prop source-name :on-exit))
          (prompt (or prompt (concat "[" (propertize (format "%s" (consult-omni--func-name source-name)) 'face 'consult-omni-prompt-face) "]" " Search: ")))
+         (_ (if (functionp setup) (funcall setup)))
          (selected (consult-omni--multi-dynamic (list (consult-omni--source-name source-name))
                                                 args
                                                 :prompt prompt
@@ -1885,6 +1894,7 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
                                                 :initial (consult--async-split-initial initial)
                                                 :sort sort
                                                 :require-match require-match))
+         (_ (if (functionp exit) (funcall exit)))
          (match (plist-get (cdr selected) :match))
          (source  (plist-get (cdr selected) :name))
          (selected (cond
@@ -1896,6 +1906,9 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
                              (or (and match source (consult-omni--get-source-prop source :on-callback))
                                  (and source (consult-omni--get-source-prop source :on-new))))))
     (add-to-history select-hist-var title)
+    (unless consult-omni-log-level
+      (consult-omni--kill-hidden-buffers)
+      (consult-omni--kill-url-dead-buffers))
     (cond
      ((and match (functionp callback-func))
       (funcall callback-func selected))
@@ -2322,6 +2335,9 @@ here: URL `https://github.com/minad/consult'."
          (callback-func (and (not no-callback)
                              (or (and match source (consult-omni--get-source-prop source :on-callback))
                                  #'consult-omni--default-new))))
+    (unless consult-omni-log-level
+      (consult-omni--kill-hidden-buffers)
+      (consult-omni--kill-url-dead-buffers))
     (cond
      ((and match (functionp callback-func))
       (funcall callback-func selected))
@@ -2378,6 +2394,9 @@ Description of Arguments:
          (callback-func (and (not no-callback)
                              (or (and match source (consult-omni--get-source-prop source :on-callback))
                                  #'consult-omni--default-new))))
+    (unless consult-omni-log-level
+      (consult-omni--kill-hidden-buffers)
+      (consult-omni--kill-url-dead-buffers))
     (cond
      ((and match (functionp callback-func))
       (funcall callback-func selected))
