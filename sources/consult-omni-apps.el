@@ -62,10 +62,10 @@
    (setq consult-omni-apps-paths (remove nil (mapcar (lambda (dir)
                                                        (let ((path (and (stringp dir) (file-exists-p dir) (file-truename (expand-file-name "applications" dir)))))
                                                          (and (stringp path) path)))
-                                                     (list consult-omni-apps-xdg-data-home
-                                                           consult-omni-apps-xdg-data-dirs
+                                                     (append consult-omni-apps-xdg-data-dirs
+                                                             (list consult-omni-apps-xdg-data-home
                                                            "/usr/share"
-                                                           "/usr/local/share"))))
+                                                           "/usr/local/share")))))
    (setq consult-omni-apps-regexp-pattern ".*\\.desktop$")
    (setq consult-omni-apps-open-command-args "gtk-launch")))
 
