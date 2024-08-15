@@ -1281,7 +1281,7 @@ for use in a static (not dynamically updated) multi-source command"
              (out (with-temp-buffer
                     (set-buffer-file-coding-system 'cp1047)
                     (list (apply 'call-process (car cmd) nil (current-buffer) nil (cdr cmd))
-                          (replace-regexp-in-string "" "\n"
+                          (replace-regexp-in-string "\r" "\n"
                                                     (buffer-string))))))
         (if (eq (car out) 0)
             (progn
