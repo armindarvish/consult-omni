@@ -3327,7 +3327,8 @@ Uses `consult-omni-apps-open-command-args' as the main command line program
 If FILE is non-nil, returns a command line for opeing the FILE with APP."
   (append (consult--build-args consult-omni-apps-open-command-args)
           (list (format "%s" app))
-          (if (and file (file-exists-p (file-truename file))) (list (format "%s" file)))))
+          (if (and file (file-exists-p (file-truename file))) (list (format "%s" file)))
+          (list "&")))
 #+end_src
 
 ***** make process
@@ -3339,10 +3340,7 @@ Uses `consult-omni--apps-cmd-args' to get the command line args string.
 If FILE is non-nil, the process will open the FILE in APP."
   (let* ((name (concat "consult-omni-" (file-name-base app)))
          (cmds (consult-omni--apps-cmd-args app file)))
-    (make-process :name name
-                :connection-type 'pipe
-                :command cmds
-                :buffer nil)
+    (call-process-shell-command (string-join cmds " "))
     nil))
 #+end_src
 ***** open with
