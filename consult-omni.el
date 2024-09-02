@@ -351,6 +351,16 @@ cdr of items must be:
 - a search url string with %s for the query
 - an elisp funciton that takes query string")
 
+
+(defvar consult-omni--min-timeout 2
+  "Minimum timeout in seconds for `consult-omni--multi-static'")
+
+(defvar consult-omni--max-timeout 120
+  "Maximum timeout in seconds for `consult-omni--multi-static'")
+
+(defvar consult-omni--slow-warning-message "Give me a few seconds to sort it out in this big mess!"
+  "The message to show when collection takes a long time.")
+
 ;;; Faces
 
 (defface consult-omni-default-face
@@ -1221,7 +1231,7 @@ for use in a static (not dynamically updated) multi-source command"
        (t
         (setq items (funcall fun input args)))))
     (when (and items transform)
-      (setq items (funcall transform items action)))
+      (setq items (funcall transform items input)))
     (and items (consult-omni--multi-propertize items cat idx face))))
 
 (defun consult-omni--multi-static-dynamic-candidates (source idx input &rest args)
@@ -1242,7 +1252,7 @@ for use in a static (not dynamically updated) multi-source command"
                :callback (lambda (response-items)
                            (if response-items
                                (progn
-                                 (when transform (setq response-items (funcall transform response-items action)))
+                                 (when transform (setq response-items (funcall transform response-items input)))
                                  (setq current
                                        (and response-items (consult-omni--multi-propertize
                                                             response-items cat idx face))))
@@ -1344,9 +1354,9 @@ Description of Arguments:
           collection function.
   OPTIONS are similar to options in `consult--multi'."
   (let* ((sources (consult--multi-enabled-sources sources))
-         (candidates
-          (with-timeout (30 nil)
-            (consult--slow-operation "Give me a few seconds. The internet is a big mess!" (consult-omni--multi-candidates-static sources input args))))
+         (timeout (max consult-omni--min-timeout (min (* (length sources) consult-omni-default-timeout) consult-omni--max-timeout)))
+         (candidates (with-timeout ((or timeout 30) nil)
+                       (setq candidates (consult--slow-operation consult-omni--slow-warning-message (consult-omni--multi-candidates-static sources input args)))))
          (selected (if (or (not candidates) (and (listp candidates) (= (length candidates) 0)))
                        (progn (message (concat (propertize "no results were found with the input " 'face 'consult-omni-prompt-face)  (propertize (format "%s" input) 'face 'warning)))
                               nil)
@@ -2410,9 +2420,9 @@ Description of Arguments:
       (consult-omni--kill-hidden-buffers)
       (consult-omni--kill-url-dead-buffers))
     (cond
-     ((and match (functionp callback-func))
+     ((and selected match (functionp callback-func))
       (funcall callback-func selected))
-     ((functionp callback-func)
+     ((and selected (functionp callback-func))
       (setq selected (funcall callback-func selected))))
     selected))
 
