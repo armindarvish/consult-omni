@@ -2598,7 +2598,13 @@ here: URL `https://github.com/minad/consult'."
          (consult-async-input-throttle consult-omni-dynamic-input-throttle)
          (consult-async-input-debounce consult-omni-dynamic-input-debounce)
          (sources (or sources consult-omni-multi-sources))
-         (sources (remove nil (mapcar (lambda (source) (plist-get (cdr (assoc source consult-omni-sources-alist)) :source)) sources)))
+         (sources (remove nil (mapcar (lambda (source)
+                                        (cond
+                                         ((stringp source)
+                                          (consult-omni--get-source-prop source :source))
+                                         ((symbolp source)
+                                          source)))
+                                      sources)))
          (prompt (or prompt (concat "[" (propertize "consult-omni-multi" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
          (selected
           (consult-omni--multi-dynamic
@@ -2663,7 +2669,13 @@ Description of Arguments:
                     (consult-omni--read-search-string)))
          (input (if (stringp input) (substring-no-properties input)))
          (sources (or sources consult-omni-multi-sources))
-         (sources (remove nil (mapcar (lambda (source) (consult-omni--get-source-prop source :source))  sources)))
+         (sources (remove nil (mapcar (lambda (source)
+                                        (cond
+                                         ((stringp source)
+                                          (consult-omni--get-source-prop source :source))
+                                         ((symbolp source)
+                                          source)))
+                                      sources)))
          (prompt (or prompt (concat "[" (propertize "consult-omni-multi-static" 'face 'consult-omni-prompt-face) "]" " Search:  ")))
          (selected (consult-omni--multi-static sources
                                                input
