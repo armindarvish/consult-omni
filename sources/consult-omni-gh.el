@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2024
 ;; Version: 0.1
-;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1") (consult-gh "1.0.0"))
+;; Package-Requires: ((emacs "28.1") (consult "1.4") (consult-omni "0.1") (consult-gh "2.0"))
 ;; Homepage: https://github.com/armindarvish/consult-omni
 ;; Keywords: convenience
 
@@ -20,7 +20,7 @@
 (defun consult-omni--gh-transform (items &optional query)
   "Transforms consult-gh candidates to consult-omni style."
   (remove nil (mapcar (lambda (string)
-                        (car (consult-gh--repo-format string (or query "") t)))
+                        (consult-gh--repo-format string (or query "") t))
                       items)))
 
 (defun consult-omni--gh-preview (cand)
@@ -46,7 +46,7 @@
 
 (defun consult-omni--gh-callback (cand)
   "Callback for `consult-omni-github'."
-  (funcall consult-gh-repo-action (cons cand (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))))
+  (funcall consult-gh-repo-action (cdr (get-text-property 0 'multi-category cand))))
 
 (cl-defun consult-omni--gh-search-repos-builder (input &rest args &key callback &allow-other-keys)
   "Makes builder command line args for “GitHub CLI”."
