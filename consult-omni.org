@@ -2155,8 +2155,6 @@ instead. Refer to `consult-omni-define-source' for details on arguments."
 Do not use this function directly, use `consult-omni-define-source' macro
 instead. Refer to `consult-omni-define-source' for details on arguments."
 
-
-
   (let* ((consult-async-refresh-delay consult-omni-dynamic-refresh-delay)
          (consult-async-input-throttle consult-omni-dynamic-input-throttle)
          (consult-async-input-debounce consult-omni-dynamic-input-debounce)
