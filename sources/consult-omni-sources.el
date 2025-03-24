@@ -56,6 +56,7 @@
         'consult-omni-notes
         'consult-omni-notmuch
         'consult-omni-numi
+        'consult-omni-openalex
         'consult-omni-org-agenda
         'consult-omni-pubmed
         'consult-omni-projects
