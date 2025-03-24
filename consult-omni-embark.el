@@ -397,8 +397,8 @@ Can be:
       (funcall #'browse-url (url-encode-url url))))
       ("insitutions"
        (if-let* ((id (and (stringp cand) (get-text-property 0 :id cand)))
-                  (url (concat consult-omni-openalex-search-url "works?filter=authorships.institutions.id:" id))
-                  (funcall #'browse-url (url-encode-url url))))))))
+                  (url (concat consult-omni-openalex-search-url "works?filter=authorships.institutions.id:" id)))
+                  (funcall #'browse-url (url-encode-url url)))))))
 
 
 (defun consult-omni-embark-openalex-works-by-entity (cand)
