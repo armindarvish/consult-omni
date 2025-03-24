@@ -408,8 +408,8 @@ Can be:
       ("authors"
        (if-let* ((consult-omni-openalex-default-entity "works")
                  (id (and (stringp cand) (get-text-property 0 :id cand)))
-                 (consult-omni-openalex-extra-params `(("entity" . "works")
-                                                       ("filter" . ,(format "authorships.author.id:%s" id))))
+                 (_ (print id))
+                 (consult-omni-openalex-extra-params `(("filter" . ,(format "authorships.author.id:%s" id))))
                  (consult-omni-async-min-input 0)
                  (consult-omni-default-count 25))
            (consult-omni-openalex)))
