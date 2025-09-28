@@ -383,6 +383,9 @@ cdr of items must be either:
 (defvar consult-omni-dictionary-category 'consult-omni-dictionary
   "Category symbol for dictionary search.")
 
+(defvar consult-omni-process-category 'consult-omni-process
+  "Category symbol for process search.")
+
 #+end_src
 
 **** history variables
@@ -469,9 +472,29 @@ This is used in dynamic collection to change grouping.")
   `((t :inherit 'font-lock-variable-use-face))
   "Face used for prompts in minibuffer.")
 
+(defface consult-omni-annotation-1-face
+  `((t :inherit 'font-lock-builtin-face))
+  "Face used for prompts in minibuffer.")
+
+(defface consult-omni-annotation-2-face
+  `((t :inherit 'font-lock-constant-face))
+  "Face used for prompts in minibuffer.")
+
+(defface consult-omni-annotation-3-face
+  `((t :inherit 'font-lock-type-face))
+  "Face used for prompts in minibuffer.")
+
+(defface consult-omni-success-face
+  `((t :inherit 'success))
+  "Face used for sucess indication.")
+
 (defface consult-omni-warning-face
   `((t :inherit 'font-lock-warning-face))
-  "Face used for notes source types in minibuffer.")
+  "Face used for warning indication.")
+
+(defface consult-omni-error-face
+  `((t :inherit 'error))
+  "Face used for error indication.")
 
 (defface consult-omni-engine-title-face
   `((t :inherit 'font-lock-variable-use-face))
@@ -511,7 +534,7 @@ This is used in dynamic collection to change grouping.")
 
 (defface consult-omni-snippet-face
   `((t :inherit 'font-lock-doc-face))
-  "Face used for source annotation in minibuffer.")
+  "Face used for snippet annotation in minibuffer.")
 
 (defface consult-omni-keyword-face
   `((t :inherit 'font-lock-keyword-face))
@@ -519,7 +542,7 @@ This is used in dynamic collection to change grouping.")
 
 (defface consult-omni-comment-face
   `((t :inherit 'font-lock-comment-face))
-  "Face used for source annotation in minibuffer.")
+  "Face used for comment annotation in minibuffer.")
 
 (defface consult-omni-highlight-match-face
   `((t :inherit 'consult-highlight-match))
@@ -3307,6 +3330,11 @@ Gets the preview function from `consult-omni--sources-alist'."
   (if-let* ((doi (and (stringp cand) (get-text-property 0 :doi cand))))
       (funcall #'browse-url (concat "https://doi.org/" doi))))
 
+(defun consult-omni-embark-scholar-copy-doi-as-kill (cand)
+  "Copy the doi of CAND to `kill-ring'."
+(if-let* ((doi (and (stringp cand) (get-text-property 0 :doi cand))))
+    (kill-new doi)))
+
 (defun consult-omni-embark-scholar-copy-authors-as-kill (cand)
   "Copy the authors of CAND to `kill-ring'."
   (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
@@ -3384,13 +3412,34 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
 #+end_src
 *** keymap
 #+begin_src emacs-lisp
+(defvar-keymap consult-omni-embark-scholar-copy-menu-map
+  :doc "Keymap for copy-as-kill menu"
+  :parent nil
+  "a" '("authors" . consult-omni-embark-scholar-copy-authors-as-kill)
+  "d" '("doi" . consult-omni-embark-scholar-copy-doi-as-kill)
+  )
+
+(fset 'consult-omni-embark-scholar-copy-menu-map consult-omni-embark-scholar-copy-menu-map)
+
+(defvar-keymap consult-omni-embark-scholar-insert-menu-map
+  :doc "Keymap for insert menu"
+  :parent nil
+  "a" '("authors" . consult-omni-embark-scholar-insert-authors)
+  "n" '("note" . consult-omni-embark-scholar-insert-note)
+  )
+
+(fset 'consult-omni-embark-scholar-insert-menu-map consult-omni-embark-scholar-insert-menu-map)
+
+
+
 (defvar-keymap consult-omni-embark-scholar-actions-map
   :doc "Keymap for consult-omni-embark-scholar"
   :parent consult-omni-embark-general-actions-map
   "o d" #'consult-omni-embark-scholar-external-browse-doi
-  "w a" #'consult-omni-embark-scholar-copy-authors-as-kill
-  "i a" #'consult-omni-embark-scholar-insert-authors
-  "i n" #'consult-omni-embark-scholar-insert-note)
+  "i" '("insert" . consult-omni-embark-scholar-insert-menu-map)
+  "w" '("kill" . consult-omni-embark-scholar-copy-menu-map))
+
+(fset 'consult-omni-embark-scholar-actions-map consult-omni-embark-scholar-actions-map)
 
 (add-to-list 'embark-keymap-alist '(consult-omni-scholar . consult-omni-embark-scholar-actions-map))
 
@@ -3613,7 +3662,6 @@ Can be:
       ("authors"
        (if-let* ((consult-omni-openalex-default-entity "works")
                  (id (and (stringp cand) (get-text-property 0 :id cand)))
-                 (_ (print id))
                  (consult-omni-openalex-extra-params `(("filter" . ,(format "authorships.author.id:%s" id))))
                  (consult-omni-async-min-input 0)
                  (consult-omni-default-count 25))
@@ -3643,7 +3691,7 @@ Can be:
 ;;; Define Embark Keymaps
 
 (defvar-keymap consult-omni-embark-openalex-actions-map
-  :doc "Keymap for consult-omni-embark-scholar"
+  :doc "Keymap for consult-omni-embark-openalex"
   :parent consult-omni-embark-scholar-actions-map
   "o P" #'consult-omni-embark-openalex-external-browse-pdf
   "o W" #'consult-omni-embark-openalex-external-browse-works-by-entity
@@ -3655,6 +3703,62 @@ Can be:
 
 #+end_src
 
+** Process
+*** actions
+#+begin_src emacs-lisp
+;;; OpenAlex
+;; Embark actions for openalex source
+
+(defun consult-omni-embark-process-kill-process (cand)
+  "Kill the process of CAND."
+  (let* ((process (get-text-property 0 :process cand))
+         (name (get-text-property 0 :title cand))
+         (pid (get-text-property 0 :pid cand)))
+
+    (when (and process
+               (yes-or-no-p (format "Are you sure you want to kill \"%s (pis: %s)\"?" name pid)))
+      (proced-send-signal "KILL" (list process)))))
+
+(defun consult-omni-embark-process-terminate-process (cand)
+  "Terminate the process of CAND."
+  (let* ((process (get-text-property 0 :process cand))
+         (name (get-text-property 0 :title cand))
+         (pid (get-text-property 0 :pid cand)))
+    (when (and process
+               (yes-or-no-p (format "Are you sure you want to terminate \"%s (pid: %s)\"?" name pid)))
+      (proced-send-signal "TERM" (list process)))))
+
+(defun consult-omni-embark-process-send-signal (cand)
+  "Send a signal from `proced-signal-list' to the process of CAND."
+  (let* ((process (get-text-property 0 :process cand))
+         (name (get-text-property 0 :title cand))
+         (pid (get-text-property 0 :pid cand))
+         (sig (consult--read proced-signal-list
+                                :prompt "Select: "
+                                :annotate (lambda (cand) (cdr (assoc cand proced-signal-list)))
+                                :require-match t
+                                :sort nil
+                                :default "TERM")))
+    (when (and process
+               (yes-or-no-p (format "Are you sure you want to send %s to \"%s (pid: %s)\"?" sig name pid))))
+  (proced-send-signal sig (list process))))
+#+end_src
+
+*** keymap
+#+begin_src emacs-lisp
+;;; Define Embark Keymaps
+
+(defvar-keymap consult-omni-embark-process-actions-map
+  :doc "Keymap for consult-omni-embark-process"
+  :parent consult-omni-embark-general-actions-map
+  "k" #'consult-omni-embark-process-kill-process
+  "t" #'consult-omni-embark-process-terminate-process
+  "x" #'consult-omni-embark-process-send-signal)
+
+(add-to-list 'embark-keymap-alist '(consult-omni-process . consult-omni-embark-process-actions-map))
+
+(add-to-list 'embark-default-action-overrides '(consult-omni-process . consult-omni-embark-default-action))
+#+end_src
 ** Provide and Footer
 #+begin_src emacs-lisp
 ;;; Provide `consul-web-embark' module
@@ -3735,6 +3839,7 @@ Can be:
         'consult-omni-openalex
         'consult-omni-org-agenda
         'consult-omni-pubmed
+        'consult-omni-process
         'consult-omni-projects
         'consult-omni-ripgrep
         'consult-omni-ripgrep-all
@@ -3881,7 +3986,14 @@ Uses `consult-omni-apps-open-command-args' as the main command line program
 If FILE is non-nil, returns a command line for opeing the FILE with APP."
   (append (consult--build-args consult-omni-apps-open-command-args)
           (list (shell-quote-argument (format "%s" app)))
-          (if (and file (file-exists-p (file-truename file))) (list (shell-quote-argument (format "%s" file))))
+          (if (or (and file
+                       (file-exists-p (file-truename file)))
+                  (and file
+                       (stringp file)
+                       (or (string-prefix-p "https://" file)
+                           (string-prefix-p "http://" file)
+                           (string-prefix-p "ssh://" file))))
+                  (list (shell-quote-argument (format "%s" file))))
           (list "&")))
 
 #+end_src
@@ -11258,6 +11370,347 @@ well as the function
 ;;; consult-omni-org-agenda.el ends here
 #+end_src
 
+*** Process
+:PROPERTIES:
+:header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-process.el
+:END:
+**** header
+#+begin_src emacs-lisp
+;;; consult-omni-process.el --- Consulting Processes -*- lexical-binding: t -*-
+
+;; Copyright (C) 2024 Armin Darvish
+
+;; Author: Armin Darvish
+;; Maintainer: Armin Darvish
+;; Created: 2024
+;; Version: 0.3
+;; Package-Requires: (
+;;         (emacs "29.4")
+;;         (consult "2.0")
+;;         (consult-omni "0.3"))
+;;
+;; Homepage: https://github.com/armindarvish/consult-omni
+;; Keywords: convenience
+
+;;; Commentary:
+;; consult-omni-projects enables searching projects directly in Emacs
+;; minibuffer using consult-omni.  It uses projects.el as the backend
+;; and provides commands to find projects, switch to them or create new
+;; ones using consult-omni as the frontend.
+
+;;; Code:
+
+(require 'proced)
+(require 'consult-omni)
+
+#+end_src
+**** variables
+***** custom
+#+begin_src emacs-lisp
+(defcustom consult-omni-process-backend "proced"
+  "Backend to use for listing processes.
+
+Can be either:
+  \='proced  uses `proced'
+  \='ps  uses command line program ps"
+  :group 'consult-omni
+  :type '(choice (string :tag "(Default) proced" "proced")
+                 (string :tag "Use ps" "ps")))
+
+(defcustom consult-omni-process-grep-ignore-case t
+  "Whether to ignore case when using “grep” with “ps”."
+  :group 'consult-omni
+  :type 'boolean)
+
+(defcustom consult-omni-process-cpu-indicator "%C"
+  "String to show in annotation for %CPU."
+  :group 'consult-omni
+  :type '(string :tag "(Default) %C" "%C"))
+
+(defcustom consult-omni-process-mem-indicator "%M"
+  "String to show in annotation for %MEM."
+  :group 'consult-omni
+  :type '(string :tag "(Default) %M" "%M"))
+
+
+(defcustom consult-omni-process-medium-cpu-threshold 20
+  "Percent of cpu usage to use warning face.
+
+Above this percent, the cpu annotaiton in `consult-omni-process' is
+formatted with `consult-omni-warning-face'."
+  :group 'consult-omni
+  :type '(integer :tag "(Default) 20" 20))
+
+(defcustom consult-omni-process-high-cpu-threshold 60
+  "Percent of cpu usage to use error face.
+
+Above this percent, the cpu annotaiton in `consult-omni-process' is
+formatted with `consult-omni-error-face'."
+  :group 'consult-omni
+  :type '(integer :tag "(Default) 60" 60))
+
+(defcustom consult-omni-process-medium-memory-threshold 20
+  "Percent of memory usage to use warning face.
+
+Above this percent, the memory annotaiton in `consult-omni-process' is
+formatted with `consult-omni-warning-face'."
+  :group 'consult-omni
+  :type '(integer :tag "(Default) 20" 20))
+
+(defcustom consult-omni-process-high-memory-threshold 60
+  "Percent of memory usage to use error face.
+
+Above this percent, the memory annotaiton in `consult-omni-process' is
+formatted with `consult-omni-error-face'."
+  :group 'consult-omni
+  :type '(integer :tag "(Default) 60" 60))
+
+#+end_src
+
+***** other
+
+**** helper functions
+***** format
+#+begin_src emacs-lisp
+(cl-defun consult-omni--process-format-candidate (&rest args &key source query pid title user cmd state cpu mem rss face
+&allow-other-keys)
+  "Format candidates from `consult-omni-proced' with ARGS.
+
+Description of Arguments:
+
+  SOURCE a string; the source name (e.g. “Proced”)
+  QUERY  a string; the query input from the user
+  PID    an ineger; pid of the process
+  TITLE  a string; command name of the process
+  USER   a string; owener of the process
+  CMD    a string; comamnd arguments of the process
+  STATE  a string; process state code, such as S, R, or T
+  CPU    a float; percents of CPU time used by the process
+  MEM    a float; percents of total physical memory used
+         by process's resident set
+  RSS    a number; resident set size of the process in KB's
+  FACE   the face to apply to TITLE"
+
+  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
+         (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face) nil))
+         (match-str (if (and (stringp query) (not (equal query ".*"))) (consult--split-escaped query) nil))
+         (face (or (consult-omni--get-source-prop source :face) face 'consult-omni-default-face))
+         (pid (if (numberp pid) (number-to-string pid) pid))
+         (pid (if (stringp pid) (propertize pid 'face 'consult-omni-keyword-face)))
+         (cpuface (if (numberp cpu)
+                      (cond
+                       ((> cpu consult-omni-process-high-cpu-threshold) 'consult-omni-error-face)
+                       ((> cpu consult-omni-process-medium-cpu-threshold) 'consult-omni-warning-face)
+                       (t 'consult-omni-success-face))
+                    'default))
+         (cpu (if (numberp cpu) (format "%.0f %s" cpu consult-omni-process-cpu-indicator) cpu))
+         (cpu (if (stringp cpu) (propertize cpu 'face cpuface)))
+         (memface (if (numberp mem)
+                      (cond
+                       ((> mem consult-omni-process-high-memory-threshold) 'consult-omni-error-face)
+                       ((> mem consult-omni-process-medium-memory-threshold) 'consult-omni-warning-face)
+                       (t 'consult-omni-success-face))
+                    'default))
+         (mem (if (numberp mem) (format "%.0f %s" mem consult-omni-process-mem-indicator) mem))
+         (mem (if (stringp mem) (propertize mem 'face memface)))
+         (rss (if (numberp rss) (file-size-human-readable (* rss 1024)) rss))
+         (rss (if (stringp rss) (propertize rss 'face 'consult-omni-annotation-1-face)))
+         (user (if (stringp user) (propertize user 'face 'consult-omni-date-face)))
+         (cmd (if (stringp cmd) (propertize (string-replace "\n" " " cmd) 'face 'consult-omni-path-face)))
+         (title-str (and (stringp title) (propertize title 'face face)))
+         (title-str (and (stringp title-str) (consult-omni--set-string-width title-str (* 3 frame-width-percent))))
+         (cmd-str (and (stringp cmd) (consult-omni--set-string-width cmd (* 5 frame-width-percent) 0)))
+         (state  (and (stringp state) (propertize state 'face 'consult-omni-annotation-3-face)))
+         (str (if title-str (concat title-str
+                                    (and pid (concat "\t" pid))
+                                    (and user (concat "\s\s" user))
+                                    (and cpu (format "\s\s%s" cpu))
+                                    (and mem (format "\s%s" mem))
+                                    (and rss (format "\s%s" rss))
+                                    (and state (concat "\s\s" state))
+                                    (and cmd-str (concat "\s\s" cmd-str))
+                                    (and source (concat "\t" source))))))
+    (if (and str consult-omni-highlight-matches-in-minibuffer)
+        (cond
+         ((listp match-str)
+          (mapc (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
+         ((stringp match-str)
+          (setq str (consult-omni--highlight-match match-str str t)))))
+    str))
+
+#+end_src
+
+
+***** preview
+#+begin_src emacs-lisp
+(defun consult-omni--process-default-preview (cand)
+  "Preview function for CAND from `consult-omni-proced'."
+  (let* ((pid (get-text-property 0 :pid cand))
+         (buff (get-buffer-create "*consult-omni-proced*")))
+      (with-current-buffer buff
+        (proced-mode)
+        (if (assoc 'omni proced-filter-alist)
+            (setf (alist-get 'omni proced-filter-alist)
+                  (list (cons 'pid `(lambda (attr)
+ (equal attr ,pid)))))
+          (add-to-list 'proced-filter-alist (cons 'omni (list (cons 'pid `(lambda (attr)
+ (equal attr ,pid)))))))
+        (setq-local proced-process-alist nil)
+        (setq-local proced-filter 'omni)
+        (setq-local proced-format 'verbose)
+        (proced-update t)
+        (funcall (consult--buffer-preview) 'preview
+                 buff))))
+
+#+end_src
+
+***** callback
+***** new
+**** fetching items/results
+
+***** use ps
+#+begin_src emacs-lisp
+(defun consult-omni-process-ps-list-processes (query &optional user state sort)
+  "Return alist of attributes for system processes matching QUERY."
+  (let* ((ps-cmd (concat "ps -a -x"
+                          (pcase sort
+                            ("cpu" " -r")
+                            ("mem" " -m")
+                            (_ " -r"))
+                          (if user (format "-u %s" user))
+                          " -o user -o pid -o pcpu -o pmem -o vsize -o rss -o state -o stime -o utime -o flags -o ucomm -o command"))
+         (grep-exec (if (executable-find "rg") "rg" "grep"))
+         (grep-cmd (and query (not (string-empty-p query)) (concat (format "%s --color=never" grep-exec) (if consult-omni-process-grep-ignore-case " --ignore-case") (format " \"%s\"" query))))
+         (command (concat ps-cmd (if grep-cmd (concat " | " grep-cmd))))
+         (output (split-string (string-trim (shell-command-to-string command)) "[\r\n]" t "[ \f\t\n\r\v]+")))
+    (when (listp output)
+      (cl-loop for row in (if query output (cdr output))
+               collect
+               (let* ((parts (split-string row " " t))
+                      (user (car parts))
+                      (pid (string-to-number (cadr parts)))
+                      (pcpu (string-to-number (cadr (cdr parts))))
+                      (pmem (string-to-number (cadr (cddr parts))))
+                      (vsize (string-to-number (cadr (cdddr parts))))
+                      (rss (string-to-number (cadr (cddddr parts))))
+                      (state (cadr (cdr (cddddr parts))))
+                      (stime (cadr (cddr (cddddr parts))))
+                      (utime (cadr (cdddr (cddddr parts))))
+                      (flags (cadr (cddddr (cddddr parts))))
+                      (comm (cadr (cdr (cddddr (cddddr parts)))))
+                      (args (mapconcat #'identity (cddr (cdr (cddddr (cddddr parts)))) " ")))
+                 (unless (or (equal args command)
+                             (equal args ps-cmd)
+                             (equal args grep-cmd)
+                             (equal args (concat (format "%s --color=never" grep-exec) (if consult-omni-process-grep-ignore-case " --ignore-case") (format " %s" query)))
+                             (equal args (concat (format "%s -c %s" (getenv "SHELL")
+                                                              command)))
+                             (equal args (concat (format "%s -c %s" explicit-shell-file-name
+                                                              command))))
+                   (cons pid (list (cons 'user user)
+                                   (cons 'pid pid)
+                                   (cons 'comm comm)
+                                   (cons 'pcpu pcpu)
+                                   (cons 'pmem pmem)
+                                   (cons 'vsize vsize)
+                                   (cons 'rss rss)
+                                   (cons 'state state)
+                                   (cons 'stime stime)
+                                   (cons 'utime utime)
+                                   (cons 'flags flags)
+                                   (cons 'args args)))))))))
+#+end_src
+***** use proced
+#+begin_src emacs-lisp
+(defun consult-omni-process-proced-list-processes (query &optional user state sort)
+  "Return alist of attributes for system processes matching QUERY."
+  (let* ((filter-list (append (if (and query (not (string-empty-p query)))
+                                    (list (cons 'comm (format ".*%s.*" query))))
+                                (if user (list (cons 'user (format ".*%s.*" user))))
+                                (if state (list (cons 'state (format  "\\`[%s]\\'" state)))
+                                  (list (cons 'state "\\`[Rr]\\'")))))
+         (sorter (pcase sort
+                   ("cpu" 'pcpu)
+                   ("mem" 'pmem)
+                   (_ 'pcpu))))
+    (proced-sort (proced-filter (proced-process-attributes) filter-list) sorter t)))
+#+end_src
+
+***** fetch items
+#+begin_src emacs-lisp
+(cl-defun consult-omni--process-fetch-results (input &rest args &key callback &allow-other-keys)
+  "Fetch list of processes matching INPUT with ARGS.
+
+CALLBACK is a function used internally to update the list of candidates in
+the minibuffer asynchronously.  It is called with a list of strings, which
+are new annotated candidates \(e.g. as they arrive from an asynchronous
+process\) to be added to the minibuffer completion cnadidates.  See the
+section on REQUEST in documentation for `consult-omni-define-source' as
+well as the function
+`consult-omni--multi-update-dynamic-candidates' for how CALLBACK is used."
+  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+               (completing-ignore-case t)
+               (opts (car-safe opts))
+               (user (plist-get opts :user))
+               (state (plist-get opts :state))
+               (sort (plist-get opts :sort))
+               (processes (pcase consult-omni-process-backend
+                            ("ps" (consult-omni-process-ps-list-processes query user state sort))
+                            ("proced" (consult-omni-process-proced-list-processes query user state sort)))))
+    (when (listp processes)
+    (delq nil (cl-loop for proc in processes
+                       collect (let* ((source "Process")
+                                      (attributes (cdr proc))
+                                      (pid (map-elt attributes 'pid))
+                                      (comm (map-elt attributes 'comm))
+                                      (args (map-elt attributes 'args))
+                                      (user (map-elt attributes 'user))
+                                      (state (map-elt attributes 'state))
+                                      (cpu (map-elt attributes 'pcpu))
+                                      (mem (map-elt attributes 'pmem))
+                                      (rss (map-elt attributes 'rss))
+                                      (decorated (consult-omni--process-format-candidate :source source :query query :pid pid :title comm :user user :cmd args :state state :cpu cpu :mem mem :rss rss)))
+                                 (when (stringp decorated) (add-text-properties 0 1 `(:source ,source :query ,query :pid ,pid :title ,comm :user ,user :cmd ,args :state ,state :cpu ,cpu :mem ,mem :rss ,rss :process ,proc) decorated))
+                                 decorated))))))
+
+#+end_src
+
+**** define source
+#+begin_src emacs-lisp
+;; Define the Proced source
+(consult-omni-define-source "Process"
+                            :narrow-char ?x
+                            :type 'sync
+                            :require-match nil
+                            :category 'consult-omni-process
+                            ;; :face 'consult-omni-default-face
+                            :request #'consult-omni--process-fetch-results
+                            :min-input 0
+                            :on-preview #'consult-omni--process-default-preview
+                            :on-callback #'consult-omni--process-default-preview
+                            :preview-key consult-omni-preview-key
+                            :search-hist 'consult-omni--search-history
+                            :select-hist 'consult-omni--selection-history
+                            :enabled (lambda () (fboundp 'proced-process-attributes))
+                            :group #'consult-omni--group-function
+                            :sort nil
+                            :interactive consult-omni-intereactive-commands-type
+                            :annotate nil)
+
+#+end_src
+**** provide and footer
+#+begin_src emacs-lisp
+;;; provide `consult-omni-process' module
+
+(provide 'consult-omni-process)
+
+(add-to-list 'consult-omni-sources-modules-to-load 'consult-omni-process)
+;;; consult-omni-process.el ends here
+#+end_src
+
+
+
+
 *** Projects
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :lexical t :mkdirp yes :link yes :tangle ./sources/consult-omni-projects.el
@@ -11541,7 +11994,7 @@ well as the function
                                (p-files (and project (project-files project)))
                                (nfiles (and (listp p-files) (length p-files)))
                                (size (and (stringp title) (file-exists-p title) (file-size-human-readable (file-attribute-size (file-attributes title)))))
-                               (decorated (consult-omni--projects-format-candidate :source source :path title  :name name :nfiles nfiles :size size)))
+                               (decorated (consult-omni--projects-format-candidate :source source :query query :path title :name name :nfiles nfiles :size size)))
                           (when (stringp decorated) (add-text-properties 0 1 `(:source ,source :title ,title :query ,query :project ,project :dir ,title :name ,name) decorated))
                           decorated)))))
 

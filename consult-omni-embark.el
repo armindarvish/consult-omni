@@ -142,6 +142,11 @@ Gets the preview function from `consult-omni--sources-alist'."
   (if-let* ((doi (and (stringp cand) (get-text-property 0 :doi cand))))
       (funcall #'browse-url (concat "https://doi.org/" doi))))
 
+(defun consult-omni-embark-scholar-copy-doi-as-kill (cand)
+  "Copy the doi of CAND to `kill-ring'."
+(if-let* ((doi (and (stringp cand) (get-text-property 0 :doi cand))))
+    (kill-new doi)))
+
 (defun consult-omni-embark-scholar-copy-authors-as-kill (cand)
   "Copy the authors of CAND to `kill-ring'."
   (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
@@ -216,13 +221,34 @@ This can be used for making notes for scholar articles."
 Uses `consult-omni-embark-scholar-make-note-func' to make template."
   (insert (funcall consult-omni-embark-scholar-make-note-func cand)))
 
+(defvar-keymap consult-omni-embark-scholar-copy-menu-map
+  :doc "Keymap for copy-as-kill menu"
+  :parent nil
+  "a" '("authors" . consult-omni-embark-scholar-copy-authors-as-kill)
+  "d" '("doi" . consult-omni-embark-scholar-copy-doi-as-kill)
+  )
+
+(fset 'consult-omni-embark-scholar-copy-menu-map consult-omni-embark-scholar-copy-menu-map)
+
+(defvar-keymap consult-omni-embark-scholar-insert-menu-map
+  :doc "Keymap for insert menu"
+  :parent nil
+  "a" '("authors" . consult-omni-embark-scholar-insert-authors)
+  "n" '("note" . consult-omni-embark-scholar-insert-note)
+  )
+
+(fset 'consult-omni-embark-scholar-insert-menu-map consult-omni-embark-scholar-insert-menu-map)
+
+
+
 (defvar-keymap consult-omni-embark-scholar-actions-map
   :doc "Keymap for consult-omni-embark-scholar"
   :parent consult-omni-embark-general-actions-map
   "o d" #'consult-omni-embark-scholar-external-browse-doi
-  "w a" #'consult-omni-embark-scholar-copy-authors-as-kill
-  "i a" #'consult-omni-embark-scholar-insert-authors
-  "i n" #'consult-omni-embark-scholar-insert-note)
+  "i" '("insert" . consult-omni-embark-scholar-insert-menu-map)
+  "w" '("kill" . consult-omni-embark-scholar-copy-menu-map))
+
+(fset 'consult-omni-embark-scholar-actions-map consult-omni-embark-scholar-actions-map)
 
 (add-to-list 'embark-keymap-alist '(consult-omni-scholar . consult-omni-embark-scholar-actions-map))
 
