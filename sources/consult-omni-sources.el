@@ -59,6 +59,7 @@
         'consult-omni-openalex
         'consult-omni-org-agenda
         'consult-omni-pubmed
+        'consult-omni-process
         'consult-omni-projects
         'consult-omni-ripgrep
         'consult-omni-ripgrep-all

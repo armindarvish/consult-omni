@@ -434,7 +434,6 @@ Can be:
       ("authors"
        (if-let* ((consult-omni-openalex-default-entity "works")
                  (id (and (stringp cand) (get-text-property 0 :id cand)))
-                 (_ (print id))
                  (consult-omni-openalex-extra-params `(("filter" . ,(format "authorships.author.id:%s" id))))
                  (consult-omni-async-min-input 0)
                  (consult-omni-default-count 25))
@@ -460,7 +459,7 @@ Can be:
 ;;; Define Embark Keymaps
 
 (defvar-keymap consult-omni-embark-openalex-actions-map
-  :doc "Keymap for consult-omni-embark-scholar"
+  :doc "Keymap for consult-omni-embark-openalex"
   :parent consult-omni-embark-scholar-actions-map
   "o P" #'consult-omni-embark-openalex-external-browse-pdf
   "o W" #'consult-omni-embark-openalex-external-browse-works-by-entity
@@ -469,6 +468,56 @@ Can be:
 (add-to-list 'embark-keymap-alist '(consult-omni-openalex . consult-omni-embark-openalex-actions-map))
 
 (add-to-list 'embark-default-action-overrides '(consult-omni-openalex . consult-omni-embark-default-action))
+
+;;; OpenAlex
+;; Embark actions for openalex source
+
+(defun consult-omni-embark-process-kill-process (cand)
+  "Kill the process of CAND."
+  (let* ((process (get-text-property 0 :process cand))
+         (name (get-text-property 0 :title cand))
+         (pid (get-text-property 0 :pid cand)))
+
+    (when (and process
+               (yes-or-no-p (format "Are you sure you want to kill \"%s (pis: %s)\"?" name pid)))
+      (proced-send-signal "KILL" (list process)))))
+
+(defun consult-omni-embark-process-terminate-process (cand)
+  "Terminate the process of CAND."
+  (let* ((process (get-text-property 0 :process cand))
+         (name (get-text-property 0 :title cand))
+         (pid (get-text-property 0 :pid cand)))
+    (when (and process
+               (yes-or-no-p (format "Are you sure you want to terminate \"%s (pid: %s)\"?" name pid)))
+      (proced-send-signal "TERM" (list process)))))
+
+(defun consult-omni-embark-process-send-signal (cand)
+  "Send a signal from `proced-signal-list' to the process of CAND."
+  (let* ((process (get-text-property 0 :process cand))
+         (name (get-text-property 0 :title cand))
+         (pid (get-text-property 0 :pid cand))
+         (sig (consult--read proced-signal-list
+                                :prompt "Select: "
+                                :annotate (lambda (cand) (cdr (assoc cand proced-signal-list)))
+                                :require-match t
+                                :sort nil
+                                :default "TERM")))
+    (when (and process
+               (yes-or-no-p (format "Are you sure you want to send %s to \"%s (pid: %s)\"?" sig name pid))))
+  (proced-send-signal sig (list process))))
+
+;;; Define Embark Keymaps
+
+(defvar-keymap consult-omni-embark-process-actions-map
+  :doc "Keymap for consult-omni-embark-process"
+  :parent consult-omni-embark-general-actions-map
+  "k" #'consult-omni-embark-process-kill-process
+  "t" #'consult-omni-embark-process-terminate-process
+  "x" #'consult-omni-embark-process-send-signal)
+
+(add-to-list 'embark-keymap-alist '(consult-omni-process . consult-omni-embark-process-actions-map))
+
+(add-to-list 'embark-default-action-overrides '(consult-omni-process . consult-omni-embark-default-action))
 
 ;;; Provide `consul-web-embark' module
 
