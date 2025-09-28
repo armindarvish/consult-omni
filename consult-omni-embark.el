@@ -142,6 +142,11 @@ Gets the preview function from `consult-omni--sources-alist'."
   (if-let* ((doi (and (stringp cand) (get-text-property 0 :doi cand))))
       (funcall #'browse-url (concat "https://doi.org/" doi))))
 
+(defun consult-omni-embark-scholar-copy-doi-as-kill (cand)
+  "Copy the doi of CAND to `kill-ring'."
+(if-let* ((doi (and (stringp cand) (get-text-property 0 :doi cand))))
+    (kill-new doi)))
+
 (defun consult-omni-embark-scholar-copy-authors-as-kill (cand)
   "Copy the authors of CAND to `kill-ring'."
   (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
@@ -185,6 +190,7 @@ This can be used for making notes for scholar articles."
        (if authors (format "\n%s" authors))
        (if journal (format "\nin =%s= " journal))
        (if date (format "published on [%s]\n" date) "\n")
+       "-----"
        "\n*** Notes\n"))
      ((derived-mode-p 'markdown-mode)
       (concat
@@ -215,13 +221,34 @@ This can be used for making notes for scholar articles."
 Uses `consult-omni-embark-scholar-make-note-func' to make template."
   (insert (funcall consult-omni-embark-scholar-make-note-func cand)))
 
+(defvar-keymap consult-omni-embark-scholar-copy-menu-map
+  :doc "Keymap for copy-as-kill menu"
+  :parent nil
+  "a" '("authors" . consult-omni-embark-scholar-copy-authors-as-kill)
+  "d" '("doi" . consult-omni-embark-scholar-copy-doi-as-kill)
+  )
+
+(fset 'consult-omni-embark-scholar-copy-menu-map consult-omni-embark-scholar-copy-menu-map)
+
+(defvar-keymap consult-omni-embark-scholar-insert-menu-map
+  :doc "Keymap for insert menu"
+  :parent nil
+  "a" '("authors" . consult-omni-embark-scholar-insert-authors)
+  "n" '("note" . consult-omni-embark-scholar-insert-note)
+  )
+
+(fset 'consult-omni-embark-scholar-insert-menu-map consult-omni-embark-scholar-insert-menu-map)
+
+
+
 (defvar-keymap consult-omni-embark-scholar-actions-map
   :doc "Keymap for consult-omni-embark-scholar"
   :parent consult-omni-embark-general-actions-map
   "o d" #'consult-omni-embark-scholar-external-browse-doi
-  "w a" #'consult-omni-embark-scholar-copy-authors-as-kill
-  "i a" #'consult-omni-embark-scholar-insert-authors
-  "i n" #'consult-omni-embark-scholar-insert-note)
+  "i" '("insert" . consult-omni-embark-scholar-insert-menu-map)
+  "w" '("kill" . consult-omni-embark-scholar-copy-menu-map))
+
+(fset 'consult-omni-embark-scholar-actions-map consult-omni-embark-scholar-actions-map)
 
 (add-to-list 'embark-keymap-alist '(consult-omni-scholar . consult-omni-embark-scholar-actions-map))
 
@@ -369,6 +396,79 @@ Can be:
 (add-to-list 'embark-keymap-alist '(consult-omni-video . consult-omni-embark-video-actions-map))
 
 (add-to-list 'embark-default-action-overrides '(consult-omni-video . consult-omni-embark-default-action))
+
+;;; OpenAlex
+;; Embark actions for openalex source
+
+(defun consult-omni-embark-openalex-external-browse-pdf (cand)
+  "Open the pdf url of CAND in external browser."
+  (if-let* ((url (and (stringp cand) (get-text-property 0 :pdf-url cand))))
+      (funcall #'browse-url (url-encode-url url))
+    (message "No PDF link Available!")))
+
+(defun consult-omni-embark-openalex-external-browse-works-by-entity (cand)
+  "Open the pdf url of CAND in external browser."
+  (let* ((entity (get-text-property 0 :entity cand)))
+    (pcase entity
+      ("authors"
+       (if-let* ((id (and (stringp cand) (get-text-property 0 :id cand)))
+                 (url (concat consult-omni-openalex-search-url "works?filter=authorships.author.id:" id)))
+      (funcall #'browse-url (url-encode-url url))))
+      ("works"
+       (if-let* ((authors (and (stringp cand) (get-text-property 0 :authors cand)))
+                 (id (consult--read authors
+                                    :prompt "Select One of the Authors:"
+                                    :lookup (apply-partially #'consult--lookup-prop :id)))
+                 (url (concat consult-omni-openalex-search-url "works?filter=authorships.author.id:" id)))
+      (funcall #'browse-url (url-encode-url url))))
+      ("insitutions"
+       (if-let* ((id (and (stringp cand) (get-text-property 0 :id cand)))
+                  (url (concat consult-omni-openalex-search-url "works?filter=authorships.institutions.id:" id)))
+                  (funcall #'browse-url (url-encode-url url)))))))
+
+
+(defun consult-omni-embark-openalex-works-by-entity (cand)
+  "Open the pdf url of CAND in external browser."
+  (let* ((entity (get-text-property 0 :entity cand)))
+    (pcase entity
+      ("authors"
+       (if-let* ((consult-omni-openalex-default-entity "works")
+                 (id (and (stringp cand) (get-text-property 0 :id cand)))
+                 (_ (print id))
+                 (consult-omni-openalex-extra-params `(("filter" . ,(format "authorships.author.id:%s" id))))
+                 (consult-omni-async-min-input 0)
+                 (consult-omni-default-count 25))
+           (consult-omni-openalex)))
+      ("works"
+       (if-let* ((consult-omni-openalex-default-entity "works")
+                 (authors (and (stringp cand) (get-text-property 0 :authors cand)))
+                 (id (consult--read authors
+                                    :prompt "Select One of the Authors:"
+                                    :lookup (apply-partially #'consult--lookup-prop :id)))
+                  (consult-omni-openalex-extra-params `(("filter" . ,(format "authorships.author.id:%s" id))))
+                  (consult-omni-async-min-input 0)
+                  (consult-omni-default-count 25))
+           (consult-omni-openalex)))
+      ("institutions"
+       (if-let* ((consult-omni-openalex-default-entity "works")
+                 (id (and (stringp cand) (get-text-property 0 :id cand)))
+                 (consult-omni-openalex-extra-params `(("filter" . ,(format "authorships.institutions.id:%s" id))))
+                 (consult-omni-async-min-input 0)
+                 (consult-omni-default-count 50))
+           (consult-omni-openalex))))))
+
+;;; Define Embark Keymaps
+
+(defvar-keymap consult-omni-embark-openalex-actions-map
+  :doc "Keymap for consult-omni-embark-scholar"
+  :parent consult-omni-embark-scholar-actions-map
+  "o P" #'consult-omni-embark-openalex-external-browse-pdf
+  "o W" #'consult-omni-embark-openalex-external-browse-works-by-entity
+  "o w" #'consult-omni-embark-openalex-works-by-entity)
+
+(add-to-list 'embark-keymap-alist '(consult-omni-openalex . consult-omni-embark-openalex-actions-map))
+
+(add-to-list 'embark-default-action-overrides '(consult-omni-openalex . consult-omni-embark-default-action))
 
 ;;; Provide `consul-web-embark' module
 
