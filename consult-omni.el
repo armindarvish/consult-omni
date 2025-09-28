@@ -357,6 +357,9 @@ cdr of items must be either:
 (defvar consult-omni-dictionary-category 'consult-omni-dictionary
   "Category symbol for dictionary search.")
 
+(defvar consult-omni-process-category 'consult-omni-process
+  "Category symbol for process search.")
+
 ;;  The following history variables store search histories for
 ;;  different categories.
 
@@ -432,9 +435,29 @@ This is used in dynamic collection to change grouping.")
   `((t :inherit 'font-lock-variable-use-face))
   "Face used for prompts in minibuffer.")
 
+(defface consult-omni-annotation-1-face
+  `((t :inherit 'font-lock-builtin-face))
+  "Face used for prompts in minibuffer.")
+
+(defface consult-omni-annotation-2-face
+  `((t :inherit 'font-lock-constant-face))
+  "Face used for prompts in minibuffer.")
+
+(defface consult-omni-annotation-3-face
+  `((t :inherit 'font-lock-type-face))
+  "Face used for prompts in minibuffer.")
+
+(defface consult-omni-success-face
+  `((t :inherit 'success))
+  "Face used for sucess indication.")
+
 (defface consult-omni-warning-face
   `((t :inherit 'font-lock-warning-face))
-  "Face used for notes source types in minibuffer.")
+  "Face used for warning indication.")
+
+(defface consult-omni-error-face
+  `((t :inherit 'error))
+  "Face used for error indication.")
 
 (defface consult-omni-engine-title-face
   `((t :inherit 'font-lock-variable-use-face))
@@ -474,7 +497,7 @@ This is used in dynamic collection to change grouping.")
 
 (defface consult-omni-snippet-face
   `((t :inherit 'font-lock-doc-face))
-  "Face used for source annotation in minibuffer.")
+  "Face used for snippet annotation in minibuffer.")
 
 (defface consult-omni-keyword-face
   `((t :inherit 'font-lock-keyword-face))
@@ -482,7 +505,7 @@ This is used in dynamic collection to change grouping.")
 
 (defface consult-omni-comment-face
   `((t :inherit 'font-lock-comment-face))
-  "Face used for source annotation in minibuffer.")
+  "Face used for comment annotation in minibuffer.")
 
 (defface consult-omni-highlight-match-face
   `((t :inherit 'consult-highlight-match))

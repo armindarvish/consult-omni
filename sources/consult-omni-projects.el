@@ -233,7 +233,7 @@ well as the function
                                (p-files (and project (project-files project)))
                                (nfiles (and (listp p-files) (length p-files)))
                                (size (and (stringp title) (file-exists-p title) (file-size-human-readable (file-attribute-size (file-attributes title)))))
-                               (decorated (consult-omni--projects-format-candidate :source source :path title  :name name :nfiles nfiles :size size)))
+                               (decorated (consult-omni--projects-format-candidate :source source :query query :path title :name name :nfiles nfiles :size size)))
                           (when (stringp decorated) (add-text-properties 0 1 `(:source ,source :title ,title :query ,query :project ,project :dir ,title :name ,name) decorated))
                           decorated)))))
 
