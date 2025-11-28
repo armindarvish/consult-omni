@@ -32,7 +32,7 @@
   "Preview function for CAND from org-roam files."
   (if cand
       (let* ((title (get-text-property 0 :title cand))
-             (node (org-roam-node-from-title-or-alias title)))
+              (node (get-text-property 0 'node title)))
         (if (org-roam-node-p node)
             (consult--file-action (org-roam-node-file node))))))
 
@@ -40,7 +40,7 @@
   "Preview function for CAND from org headings."
   (if cand
       (let* ((title (get-text-property 0 :title cand))
-             (marker (get-text-property 0 'consult--candidate title)))
+             (marker (get-text-property 0 'org-marker title)))
         (if marker
             (consult--jump marker)))))
 
@@ -56,14 +56,14 @@
 (defun consult-omni--consult-notes-org-roam-note-callback (cand &rest _args)
   "Callback function for CAND from org-roam files."
   (let* ((title (get-text-property 0 :title cand))
-         (node (org-roam-node-from-title-or-alias title)))
+         (node (get-text-property 0 'node title)))
     (org-roam-node-open node)))
 
 (defun consult-omni--consult-notes-org-headings-callback (cand &rest _args)
   "Callback function for CAND from org headings."
   (if cand
       (let* ((title (get-text-property 0 :title cand))
-             (marker (get-text-property 0 'consult--candidate title)))
+             (marker (get-text-property 0 'org-marker title)))
         (if marker
             (let* ((buff (marker-buffer marker))
                    (pos (marker-position marker)))
