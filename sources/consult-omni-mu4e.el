@@ -80,7 +80,7 @@ Description of Arguments:
 
 (defun consult-omni--mu-callback (cand)
   "Callback function for CAND from `consult-omni-mu4e'."
-  (let* ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
+  (let* ((info (cdr (get-text-property 0 'multi-category cand)))
          (msg (plist-get info :msg))
          (query (plist-get info :query))
          (match-str (car (consult--command-split query))))
@@ -111,7 +111,7 @@ well as the function
         (goto-char (point-min))
         (setq messages (remove nil
                                (cl-loop until (eobp)
-                                        collect (let ((msg (ignore-errors (mu4e-message-at-point))))
+                                        collect (let* ((msg (ignore-errors (mu4e-message-at-point))))
                                                   (consult-omni-mu--format-candidate `(,(buffer-substring (point) (line-end-position)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
                                         do (forward-line 1)))))
       (when (and messages callback)
