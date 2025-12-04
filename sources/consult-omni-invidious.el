@@ -28,6 +28,12 @@
 (defvar consult-omni-invidious-server-url "https://api.invidious.io/instances.json"
   "URL to fetch “Invidious” API servers.")
 
+(defvar consult-omni-invidious-watch-url "https://www.youtube.com/watch"
+  "Watch URL of Invidous.")
+
+(defvar consult-omni-invidious-channel-url "https://www.youtube.com/channel/"
+  "Channel URL of YouTube.")
+
 (defun consult-omni--invidious-get-servers (&optional rotate)
   "Get list of Invidious API servers.
 
@@ -130,10 +136,8 @@ well as the function
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
-               (page (plist-get opts :page))
                (type (plist-get opts :type))
                (order (or (plist-get opts :order) (plist-get opts :sort)))
-               (channel (or (plist-get opts :channel) (plist-get opts :user)))
                (subs (or (plist-get opts :subs) (plist-get opts :subscriptions)))
                (searchdate (plist-get opts :date))
                (searchdate (if searchdate (format "%s" searchdate)))
@@ -143,10 +147,6 @@ well as the function
                (duration (if duration (format "%s" duration)))
                (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
-                         consult-omni-default-count))
-               (page (+ (* page count) 1))
                (order  (if (and order (member (format "%s" order) '("date" "rating" "relevance" "upload_date" "views" "view_count"))) (format "%s" order) "relevance"))
                (type (if (and type (member (format "%s" type) '("channel" "playlist" "video" "movie" "show" "all"))) (format "%s" type) "video"))
                (params (delq nil `(("q" . ,(replace-regexp-in-string " " "+" query))
@@ -174,8 +174,7 @@ well as the function
                                                       (channelhandle (gethash "channelHandle" item))
                                                       (title (or (gethash "title" item)
                                                                  (unless (eq channelhandle :null) channelhandle)
-                                                                 (gethash "author" item)
-                                                                 ))
+                                                                 (gethash "author" item)))
                                                       (videos  (gethash "videos" item))
                                                       (videoid (or (gethash "videoId" item)
                                                                    (and videos (gethash "videoId" (car videos)))))
@@ -191,12 +190,12 @@ well as the function
                                                       (url (cond
                                                             ((and playlistid videoid)
                                                              (consult-omni--make-url-string
-                                                              consult-omni-youtube-watch-url
+                                                              consult-omni-invidious-watch-url
                                                               `(("v" . ,videoid)
                                                                 ("list" . ,playlistid))))
-                                                            (playlistid (consult-omni--make-url-string consult-omni-youtube-watch-url `(("list" . ,playlistid))))
-                                                            (videoid (consult-omni--make-url-string consult-omni-youtube-watch-url `(("v" . ,videoid))))
-                                                            (channelid (concat consult-omni-youtube-channel-url channelid))))
+                                                            (playlistid (consult-omni--make-url-string consult-omni-invidious-watch-url `(("list" . ,playlistid))))
+                                                            (videoid (consult-omni--make-url-string consult-omni-invidious-watch-url `(("v" . ,videoid))))
+                                                            (channelid (concat consult-omni-invidious-channel-url channelid))))
                                                       (search-url (consult-omni--make-url-string server-url params))
                                                       (description (gethash "description" item))
                                                       (decorated (consult-omni--invidious-format-candidate :source source :type item-type :query query :title title :snippet description :channeltitle channeltitle :date date :subcount subcount :videocount videocount :viewcount viewcount :length videolength)))

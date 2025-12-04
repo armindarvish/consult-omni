@@ -61,8 +61,7 @@ Can be either a string, or a list of strings."
 (defvar consult-omni-openalex-category 'consult-omni-openalex
   "Category symbol for openalex search.")
 
-(defcustom consult-omni-openalex-extra-args (list)
-  "Category symbol for openalex search.")
+(defvar url-http-end-of-headers)
 
 (defun consult-omni--openalex-parse-buffer ()
   "Json parser used in `consult-omni-openalex'."
@@ -73,18 +72,13 @@ Can be either a string, or a list of strings."
     (goto-char end-of-headers)
     (json-parse-buffer :object-type 'hash-table :array-type 'list :false-object :false :null-object nil)))
 
-(cl-defun consult-omni--openalex-format-works-candidate (&rest args &key source entity query url search-url pdf-url title authors date journal face &allow-other-keys)
+(cl-defun consult-omni--openalex-format-works-candidate (&rest args &key source query pdf-url title authors date journal face &allow-other-keys)
   "Format a candidate from `consult-omni-openalex' with ARGS.
 
 Description of Arguments:
 
   SOURCE     a string; the name to use (e.g. “OpenAlex”)
-  ENTITY     a string; type of entity on OpenAlex
-             (e.g. “works”, “authors”)
   QUERY      a string; query input from the user
-  URL        a string; the url of  candidate
-  SEARCH-URL a string; the web search url
-             \(e.g. https://www.openalex.org/search=%s\)
   PDF-URL    a string; the PDF web url
   TITLE      a string; the title of the result/paper
   AUTHORS    a string or list of strings; the authors of the result/paper
@@ -98,8 +92,8 @@ Description of Arguments:
          (authors (cond
                    ((and authors (listp authors))
                     (if  (length> authors 1)
-                        (concat (first authors) " et. al.")
-                      (first authors)))
+                        (concat (car authors) " et. al.")
+                      (car authors)))
                    ((stringp authors)
                     authors)
                    (t nil)))
@@ -123,18 +117,13 @@ Description of Arguments:
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
 
-(cl-defun consult-omni--openalex-format-authors-candidate (&rest args &key source entity query url search-url title affiliations openalexid h-index i10-index works-count cite-count face &allow-other-keys)
+(cl-defun consult-omni--openalex-format-authors-candidate (&rest args &key source query title affiliations h-index i10-index works-count cite-count face &allow-other-keys)
   "Format an “author” candidate from `consult-omni-openalex' with ARGS.
 
 Description of Arguments:
 
   SOURCE       a string; the name to use (e.g. “OpenAlex”)
-  ENTITY       a string; type of entity on OpenAlex
-                 \(e.g. “works”, “authors”\)
   QUERY        a string; query input from the user
-  URL          a string; the url of  candidate
-  SEARCH-URL   a string; the web search url
-                 \(e.g. https://www.openalex.org/authors?search=%s\)
   TITLE        a string; the name of the author
   AFFILIATIONS a string or list of strings; the affiliations of the author
   OPENALEXID   a string; OpenAlex id
@@ -149,7 +138,7 @@ Description of Arguments:
                         ((and affiliations (listp affiliations))
                          (if  (length> affiliations 1)
                              (mapconcat #'identity affiliations ", ")
-                           (first affiliations)))
+                           (car affiliations)))
                         ((stringp affiliations)
                          affiliations)
                         (t nil)))
@@ -179,18 +168,13 @@ Description of Arguments:
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
 
-(cl-defun consult-omni--openalex-format-sources-candidate (&rest args &key source entity query url search-url title type concepts impact cost face &allow-other-keys)
+(cl-defun consult-omni--openalex-format-sources-candidate (&rest args &key source query title type concepts impact cost face &allow-other-keys)
   "Format a “sources” candidate from `consult-omni-openalex' with ARGS.
 
 Description of Arguments:
 
   SOURCE     a string; the name to use (e.g. “OpenAlex”)
-  ENTITY     a string; type of entity on OpenAlex
-               \(e.g. “works”, “authors”\)
   QUERY      a string; query input from the user
-  URL        a string; the url of  candidate
-  SEARCH-URL a string; the web search url
-               \(e.g. https://www.openalex.org/sources?search=%s\)
   TITLE      a string; the name of the author
   TYPE       a string; the type of source
   CONCEPTS   a string or list of strings; the topic concepts of the source
@@ -203,7 +187,7 @@ Description of Arguments:
                         ((and concepts (listp concepts))
                          (if  (length> concepts 1)
                              (mapconcat #'identity concepts ", ")
-                           (first concepts)))
+                           (car concepts)))
                         ((stringp concepts)
                          concepts)
                         (t nil)))
@@ -231,22 +215,16 @@ Description of Arguments:
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
 
-(cl-defun consult-omni--openalex-format-institutions-candidate (&rest args &key source entity query url search-url title acronym type associations impact works-count cite-count concepts face &allow-other-keys)
+(cl-defun consult-omni--openalex-format-institutions-candidate (&rest args &key source query title acronym type impact works-count cite-count concepts face &allow-other-keys)
   "Format a “sources” candidate from `consult-omni-openalex' with ARGS.
 
 Description of Arguments:
 
   SOURCE       a string; the name to use (e.g. “OpenAlex”)
-  ENTITY       a string; type of entity on OpenAlex
-               \(e.g. “works”, “authors”\)
   QUERY        a string; query input from the user
-  URL          a string; the url of  candidate
-  SEARCH-URL   a string; the web search url
-               \(e.g. https://www.openalex.org/sources?search=%s\)
   TITLE        a string; the name of the author
   ACRONYM      a string; the acronym of the institution
   TYPE         a string; the type of source
-  ASSOCIATIONS a string or list of strings; associcated institutions
   IMPACT       a number; impact factor of the source
   WORKS-COUNT  a number; number of works from the institution
   CITE-COUNT   a number; number of times the intitution is cited
@@ -259,7 +237,7 @@ Description of Arguments:
                     ((and concepts (listp concepts))
                      (if  (length> concepts 1)
                          (mapconcat #'identity concepts ", ")
-                       (first concepts)))
+                       (car concepts)))
                     ((stringp concepts)
                      concepts)
                     (t nil)))
@@ -358,10 +336,10 @@ PARAMS are API parameters sent with query."
                      (gethash "display_name" journal-source)))
        (type (gethash "type" item))
        (search-url (consult-omni--make-url-string (concat consult-omni-openalex-search-url entity) params))
-       (search-url (consult-omni--make-url-string (concat consult-omni-openalex-search-url entity) `(("filter" . ,(format "title_and_abstract.search:%s" query)))))
-       (decorated (consult-omni--openalex-format-works-candidate :source source :entity entity :query query :url url :search-url search-url :pdf-url pdf-url :title title :authors authors :date date :journal journal)))
+       (decorated (consult-omni--openalex-format-works-candidate :source source :query query :pdf-url pdf-url :title title :authors authors :date date :journal journal)))
     (propertize decorated
                 :source source
+                :type type
                 :entity entity
                 :url url
                 :title title
@@ -369,6 +347,7 @@ PARAMS are API parameters sent with query."
                 :pdf-url pdf-url
                 :query query
                 :journal journal
+                :issue issue
                 :volume volume
                 :pages pages
                 :authors authors
@@ -420,8 +399,8 @@ PARAMS are API parameters sent with query."
                  ((stringp affiliations) (list affiliations))
                  (t affiliations)))
        (url openalexid)
-       (search-url (consult-omni--make-url-string (concat consult-omni-openalex-search-url entity) `(("filter" . ,(format "default.search:%s" query)))))
-       (decorated (consult-omni--openalex-format-authors-candidate :source source :entity entity :query query :url url :search-url search-url :title title :affiliations affiliations :h-index h-index :i10-index i10-index :works-count works-count :cite-count cite-count)))
+       (search-url (consult-omni--make-url-string (concat consult-omni-openalex-search-url entity) params))
+       (decorated (consult-omni--openalex-format-authors-candidate :source source :query query :title title :affiliations affiliations :h-index h-index :i10-index i10-index :works-count works-count :cite-count cite-count)))
     (propertize decorated
                 :source source
                 :entity entity
@@ -483,8 +462,8 @@ PARAMS are API parameters sent with query."
        (url openalexid)
        (home-url (gethash "homepage_url" item))
        (type (gethash "type" item))
-       (search-url (consult-omni--make-url-string (concat consult-omni-openalex-search-url entity) `(("filter" . ,(format "default.search:%s" query)))))
-       (decorated (consult-omni--openalex-format-sources-candidate :source source :entity entity :query query :url url :search-url search-url :title title :type type :concepts concepts :impact impact :cost cost)))
+              (search-url (consult-omni--make-url-string (concat consult-omni-openalex-search-url entity) params))
+       (decorated (consult-omni--openalex-format-sources-candidate :source source :query query :title title :type type :concepts concepts :impact impact :cost cost)))
     (propertize decorated
                 :source source
                 :entity entity
@@ -561,11 +540,11 @@ PARAMS are API parameters sent with query."
        (associations (cond
                  ((stringp associations) (list associations))
                  (t associations)))
-       (url openalexid)
-       (search-url (consult-omni--make-url-string (concat consult-omni-openalex-search-url entity) `(("filter" . ,(format "default.search:%s" query)))))
-       (decorated (consult-omni--openalex-format-institutions-candidate :source source :entity entity :query query :url url :search-url search-url :title title :acronym acronym :associations associations :impact impact :works-count works-count :cite-count cite-count :concepts concepts :type type)))
+       (search-url (consult-omni--make-url-string (concat consult-omni-openalex-search-url entity) params))
+       (decorated (consult-omni--openalex-format-institutions-candidate :source source :query query :title title :acronym acronym :impact impact :works-count works-count :cite-count cite-count :concepts concepts :type type)))
     (propertize decorated
                 :source source
+                :type type
                 :entity entity
                 :url url
                 :title title
@@ -573,6 +552,8 @@ PARAMS are API parameters sent with query."
                 :search-url search-url
                 :query query
                 :associations associations
+                :country country
+                :home-url home-url
                 :openalexid openalexid
                 :id id
                 :grid grid
@@ -588,7 +569,7 @@ PARAMS are API parameters sent with query."
   "Callback function for CAND from `consult-omni-openalex'."
   (let* ((url (get-text-property 0 :url cand))
          (openalexurl (get-text-property 0 :openalexid cand)))
-    (funcall consult-omni-default-browse-function (url-encode-url (or url oprnalexurl)))))
+    (funcall consult-omni-default-browse-function (url-encode-url (or url openalexurl)))))
 
 (defun consult-omni--openalex-preview (cand)
   "Preview function for CAND from `consult-omni-openalex'."
@@ -625,7 +606,6 @@ well as the function
                          ("page" . ,(format "%s" page))))
                (_ (when consult-omni-openalex-extra-params (setq params (append params consult-omni-openalex-extra-params))))
                (_ (when filter (setq params (append params `(("filter" . ,(format "%s" filter)))))))
-               (headers `(("Accept" . "application/json")))
                (_ (pcase entity
                     ("sources"
                      (setq params (append params `(("sort" . ,(or sort "cited_by_count:desc"))))))))

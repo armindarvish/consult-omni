@@ -111,7 +111,7 @@ determine if the query should be checked in the dictionary."
   :type '(choice (function :tag "(Default) use “define ” prefix" consult-omni-dict-default-pred-func)
                  (function :tag "Custom Function")))
 
-(cl-defun consult-omni--dict-format-candidates (&rest args &key source query dict def buffer pos idx face &allow-other-keys)
+(cl-defun consult-omni--dict-format-candidates (&rest args &key source query dict def buffer pos face &allow-other-keys)
   "Return a formatted string for Dictionary candidates with ARGS.
 
 Description of Arguments:
@@ -122,10 +122,8 @@ Description of Arguments:
   DEF    a string; definition of current item
   BUFFER a buffer; the current buffer for dictionary
   POS    an integer; position of definition in BUFFER
-  IDX    an integer; index of definition in current definitions
   FACE   a symbol; the face to apply to DEFINITION"
-  (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
-         (source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
+  (let* ((source (if (stringp source) (propertize source 'face 'consult-omni-source-type-face)))
          (match-str (and (stringp query) (not (equal query ".*")) (consult--split-escaped query)))
          (dict (and (stringp dict) (propertize dict 'face 'consult-omni-date-face)))
          (search-url (format consult-omni-dict-external-dictionary-url (url-hexify-string query)))
@@ -174,8 +172,7 @@ without the predicate lead."
 (defun consult-omni--dict-preview (cand)
   "Show a preview buffer of CAND for `consult-omni-dict'."
   (if (listp cand) (setq cand (or (car-safe cand) cand)))
-  (let*  ((query (get-text-property 0 :query cand))
-          (buffer (get-text-property 0 :buffer cand))
+  (let*  ((buffer (get-text-property 0 :buffer cand))
           (pos (get-text-property 0 :pos cand)))
     (when buffer
       (with-current-buffer buffer (when pos (goto-char pos))))
@@ -213,7 +210,7 @@ BUFFER is the buffer for the Emacs dictionary."
       (when-let* ((dict (match-string 1))
                   (def (match-string 2))
                   (line (+ (match-end 1) 2)))
-        (when (or (not maxcount) (and maxcount (< idx maxcount))) (setq annotated-results (append annotated-results (consult-omni--dict-format-candidates :source source :query query :dict dict :def def :pos line :buffer buffer :idx idx))))
+        (when (or (not maxcount) (and maxcount (< idx maxcount))) (setq annotated-results (append annotated-results (consult-omni--dict-format-candidates :source source :query query :dict dict :def def :pos line :buffer buffer))))
         (cl-incf idx)))
     annotated-results))
 
@@ -245,7 +242,6 @@ if MAXCOUNT is non-nil, only find top MAXCOUNT number of definitions."
 	                                                     (description (nth 3 reply-list))
 	                                                     (word (nth 1 reply-list))
                                                              (def)
-                                                             (dict)
                                                              (line))
                                                         (dictionary-display-word-entry dictionary description)
 	                                                (setq reply (dictionary-read-answer))
@@ -254,7 +250,7 @@ if MAXCOUNT is non-nil, only find top MAXCOUNT number of definitions."
                                                         (dictionary-display-word-definition reply word dictionary)
 
                                                         (setq reply (dictionary-read-reply-and-split))
-                                                        (when (or (not maxcount) (and maxcount (< idx maxcount))) (setq annotated-results (append annotated-results (consult-omni--dict-format-candidates :source source :query query :dict dictionary :def def :pos line :buffer buffer :idx idx) )))
+                                                        (when (or (not maxcount) (and maxcount (< idx maxcount))) (setq annotated-results (append annotated-results (consult-omni--dict-format-candidates :source source :query query :dict dictionary :def def :pos line :buffer buffer))))
                                                         (cl-incf idx)))
                                                     (when (> idx 0) (dictionary-post-buffer))))))
               (consult-omni--overlay-match query nil consult-omni-highlight-match-ignore-case)

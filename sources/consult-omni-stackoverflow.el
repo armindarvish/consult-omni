@@ -45,17 +45,14 @@ URL `https://stackapps.com/' for more info."
 (defvar consult-omni-stackoverflow-unanswered-mark "x"
   "Mark for unanswered StackOverflow's questions.")
 
-(cl-defun consult-omni--stackoverflow-format-candidate (&rest args &key source query url search-url title snippet date answered score face &allow-other-keys)
+(cl-defun consult-omni--stackoverflow-format-candidate (&rest args &key source query title date answered score face &allow-other-keys)
   "Format a candidate from “StackOverflow” search with ARGS.
 
 Description of Arguments:
 
   SOURCE     a string; the source name \(e.g. “StackOveflow”\)
   QUERY      a string; query input from the user
-  URL        a string; the URL of the candidate
-  SEARCH-URL a string; the web search URL
   TITLE      a string; the title of the StackOverflow topic
-  SNIPPET    a string; a snippet/description of the StackOverflow topic
   DATE       a string; the date string of the StackOverflow topic
   ANSWERED   a boolean; whether the question is answered on StackOveflow
   SCORE      a number; the score of the question on StackOverflow
@@ -136,7 +133,7 @@ well as the function
                                                       (answered (gethash "is_answered" item))
                                                       (score (gethash "score" item))
                                                       (search-url (concat consult-omni-stackoverflow-search-url "?q=" input))
-                                                      (decorated (consult-omni--stackoverflow-format-candidate :source source :query query :url url :search-url search-url :title title :date date :answered answered :score score)))
+                                                      (decorated (consult-omni--stackoverflow-format-candidate :source source :query query :title title :date date :answered answered :score score)))
                                                    (propertize decorated
                                                                :source source
                                                                :title title
@@ -145,8 +142,7 @@ well as the function
                                                                :query query
                                                                :date date
                                                                :answered answered
-                                                               :score score
-                                                               )))
+                                                               :score score)))
                                                raw-results)))
                                  (when (and annotated-results (functionp callback))
                                    (funcall callback annotated-results))

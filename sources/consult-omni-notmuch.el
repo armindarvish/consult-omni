@@ -144,8 +144,7 @@ components to  `consult-omni--notmuch-format-candidate'."
                                                      :match t
                                                      :headers headers
                                                      :count count
-                                                     :tags tags
-                                                     )))))
+                                                     :tags tags)))))
                                  candidates))))
 
 (defun consult-omni--notmuch-show-transform (candidates &optional query)
@@ -174,16 +173,19 @@ to `consult-omni--notmuch-format-candidate'."
                                                   :search-url nil
                                                   :id id
                                                   :from senders
+                                                  :to to
+                                                  :cc cc
                                                   :date date
-                                                  :match t
+                                                  :match match
                                                   :headers headers
                                                   :count count
-                                                  :tags tags
-                                                  )))
+                                                  :tags tags)))
                                 (setq id nil
                                       headers nil
                                       senders nil
                                       subject nil
+                                      to nil
+                                      cc nil
                                       count nil
                                       date nil
                                       tags nil
@@ -209,7 +211,7 @@ to `consult-omni--notmuch-format-candidate'."
                             nil))
                         candidates))))
 
-(defun consult-omni--notmuch-get-transform-func (&rest args)
+(defun consult-omni--notmuch-get-transform-func (&rest _args)
   "Get the appropriate transform function for notmuch commands with ARGS.
 
 This is needed to get the right function for

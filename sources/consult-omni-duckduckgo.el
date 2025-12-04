@@ -41,17 +41,7 @@ process\) to be added to the minibuffer completion cnadidates.  See the
 section on REQUEST in documentation for `consult-omni-define-source' as
 well as the function
 `consult-omni--multi-update-dynamic-candidates' for how CALLBACK is used."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input))
-               (opts (car-safe opts))
-               (count (plist-get opts :count))
-               (page (plist-get opts :page))
-               (extra-args (seq-difference (append opts args) '(:count count :page page)))
-               (count (or (and count (integerp (read count)) (string-to-number count))
-                          consult-omni-default-count))
-               (page (or (and page (integerp (read page)) (string-to-number page))
-                         consult-omni-default-page))
-               (count (min count 10))
-               (page (+ (* page count) 1))
+  (pcase-let* ((`(,query . _) (consult-omni--split-command input))
                (params `(("q" . ,(replace-regexp-in-string " " "+" query))
                          ("format" . "json")))
                (headers `(("Accept" . "application/json"))))
@@ -72,14 +62,13 @@ well as the function
                                                                   (title (if (and title (stringp title) (string-match "<a href=.*>\\(?1:.*\\)</a>.*" title)) (match-string 1 title) nil))
                                                                   (snippet (format "%s" (gethash "Text" item)))
                                                                   (search-url (consult-omni--make-url-string consult-omni-duckduckgo-search-url params '("format")))
-                                                                  (decorated (if title (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet) nil)))
+                                                                  (decorated (if title (funcall consult-omni-default-format-candidate :source source :query query :url url :title title :snippet snippet) nil)))
                                                                (if decorated (propertize decorated
                                                                                          :source source
                                                                                          :title title
                                                                                          :url url
                                                                                          :search-url search-url
-                                                                                         :query query
-                                                                                         ))))
+                                                                                         :query query))))
                                                            raw-results))))
                                  (when (and annotated-results (functionp callback))
                                    (funcall callback annotated-results))

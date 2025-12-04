@@ -69,7 +69,7 @@ with a leading “=” character."
   :type '(choice (regexp :tag "(Default) formula after =" "^=\\(.*\\)?")
                  (regexp :tag "Any string with digits, operators or brackets" "\\(.*[[:digit:]\/\*\+-=%^&$\(\{\[].*\\)")))
 
-(defun consult-omni--numi-preview (cand)
+(defun consult-omni--numi-preview (_cand)
   "Preview function for CAND from `consult-omni-numi'."
   (ignore))
 
@@ -78,10 +78,8 @@ with a leading “=” character."
   (let ((result  (get-text-property 0 :title cand)))
     (kill-new result)))
 
-(defun consult-omni--numi-filter (candidates &optional query)
-  "Filter CANDIDATES from `consult-omni-numi'.
-
-QUERY is the user input string."
+(defun consult-omni--numi-filter (candidates &optional _query)
+  "Filter CANDIDATES from `consult-omni-numi'."
   (cl-loop for candidate in candidates
            when (not (member candidate '("?" "error")))
            collect candidate))
@@ -107,8 +105,7 @@ process\) to be added to the minibuffer completion cnadidates.  See the
 section on REQUEST in documentation for `consult-omni-define-source' as
 well as the function
 `consult-omni--multi-update-dynamic-candidates' for how CALLBACK is used."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
-               (opts (car-safe opts)))
+  (pcase-let* ((`(,query . _) (consult-omni--split-command input (seq-difference args (list :callback callback)))))
     (funcall #'consult-omni--async-builder (shell-quote-argument query) consult-omni-numi-args)))
 
 ;; Define the Numi source

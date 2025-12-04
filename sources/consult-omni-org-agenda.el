@@ -22,6 +22,11 @@
 ;;; Code:
 
 (require 'consult-omni)
+(require 'org)
+(require 'org-agenda)
+(require 'org-capture)
+(require 'time-date)
+(require 's)
 
 (defcustom consult-omni-org-agenda-number-of-days-around 7
   "Number of days to use for listing agenda items around a date.
@@ -232,7 +237,7 @@ For example to get the date for tommorrow, next week, ..."
          (t query))
       nil)))
 
-(cl-defun consult-omni--org-agenda-format-candidate (&rest args &key source query title buffer todo prio tags filepath snippet sched dead face &allow-other-keys)
+(cl-defun consult-omni--org-agenda-format-candidate (&rest args &key source query title buffer todo prio tags snippet sched dead face &allow-other-keys)
   "Format a candidate for `consult-omni-org-agenda' with ARGS.
 
 Description of Arguments:
@@ -244,7 +249,6 @@ Description of Arguments:
   TODO     a string; todo keyword of the org heading for agenda item
   PRIO     a string; priority level of the org heading for agenda item
   TAGS     a list of strings; tags of the org agenda item
-  FILEPATH a string; filepath of the org agenda item
   SNIPPET  a string; a snippet/description of the agenda item
   SCHED    a string; the scheduled date of the agenda item
   DEAD     a string; the deadline date of the agenda item
@@ -308,7 +312,7 @@ Adopted from `consult-org--headings'."
        (unless (eq buffer (buffer-name))
          (setq buffer (buffer-name)
                org-outline-path-cache nil))
-       (pcase-let* ((`(_ ,level ,todo ,prio ,_hl ,tags) (org-heading-components))
+       (pcase-let* ((`(_ ,_level ,todo ,prio ,hl ,tags) (org-heading-components))
                     (filename (buffer-file-name))
                     (filepath (file-truename filename))
                     (tags (if org-use-tag-inheritance
@@ -325,8 +329,8 @@ Adopted from `consult-org--headings'."
                     (dead (cdr (assoc "DEADLINE" props)))
                     (snippet nil)
                     (transform (or (consult-omni--org-agenda-query-dwim-transform query) query)))
-         (if (string-match-p (or transform (funcall consult-omni-org-agenda-regexp-builder query)) (concat todo " " prio " " _hl " " sched " " dead " " tags))
-             (propertize (consult-omni--org-agenda-format-candidate :source source :query (or transform query) :title title :buffer buffer :todo todo :prio prio :tags tags :filepath filepath :snippet snippet :sched sched :dead dead) :source source :title title :query query :url nil :search-url nil :tags tags :filepath filepath :marker marker))))
+         (if (string-match-p (or transform (funcall consult-omni-org-agenda-regexp-builder query)) (concat todo " " prio " " hl " " sched " " dead " " tags))
+             (propertize (consult-omni--org-agenda-format-candidate :source source :query (or transform query) :title title :buffer buffer :todo todo :prio prio :tags tags :snippet snippet :sched sched :dead dead) :source source :title title :query query :url nil :search-url nil :tags tags :filepath filepath :marker marker))))
      match 'agenda skip)))
 
 (defun consult-omni--org-agenda-preview (cand)

@@ -23,6 +23,7 @@
 ;;; Code:
 
 (require 'consult-omni)
+(require 'consult-omni-doi)
 
 (defcustom consult-omni-scopus-api-key nil
   "Key for Scopus API.
@@ -40,14 +41,13 @@ See URL `https://dev.elsevier.com/documentation/SCOPUSSearchAPI.wadl' for more i
 (defvar consult-omni-scopus-api-url "https://api.elsevier.com/content/search/scopus"
   "API URL for Scopus.")
 
-(cl-defun consult-omni--scopus-format-candidate (&rest args &key source query url search-url title authors date journal doi face &allow-other-keys)
+(cl-defun consult-omni--scopus-format-candidate (&rest args &key source query title authors date journal doi face &allow-other-keys)
   "Format a candidate from `consult-omni-scopus' with ARGS.
 
 Description of Arguments:
 
   SOURCE     a string; the name to use (e.g. “Scopus”)
   QUERY      a string; query input from the user
-  URL        a string; the url of  candidate
   SEARCH-URL a string; the web search url
              \(e.g. https://www.scopus.com/record/display.uri?&eid=%s\)
   TITLE      a string; the title of the result/paper
@@ -62,7 +62,7 @@ Description of Arguments:
          (journal (if (stringp journal) (propertize journal 'face 'consult-omni-domain-face) nil))
          (authors (cond
                    ((and authors (listp authors))
-                    (concat (first authors) ",..., " (car (last authors))))
+                    (concat (car authors) ",..., " (car (last authors))))
                    ((stringp authors)
                     authors)
                    (t nil)))
@@ -76,6 +76,7 @@ Description of Arguments:
                       (if journal (format "\t%s" journal))
                       (if date (format "\s\s%s" date))
                       (if authors (format "\s\s%s" authors))
+                      (if doi (format "\s\s%s" doi))
                       (if source (concat "\t" source)))))
     (if consult-omni-highlight-matches-in-minibuffer
         (cond

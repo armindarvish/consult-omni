@@ -25,6 +25,9 @@
 
 (require 'consult-omni)
 (require 'consult-omni-grep)
+(require 'org-fold)
+(when (featurep 'pdf-tools)
+  (require 'pdf-tools nil t))
 
 ;;; User Options (a.k.a. Custom Variables)
 
@@ -52,8 +55,6 @@ Adopted from `consult--grep-format'."
   (let* ((frame-width-percent (floor (* (frame-width) 0.1)))
          (file "")
          (file-len 0)
-         (file-str)
-         (cand)
          result)
     (save-match-data
       (dolist (str candidates)
@@ -106,7 +107,6 @@ Adopted from `consult--grep-format'."
   (let ((file (get-text-property 0 :file cand))
         (pos (get-text-property 0 :pos cand))
         (page (get-text-property 0 :page cand))
-        (content (get-text-property 0 :content cand))
         (query (get-text-property 0 :query cand)))
     (with-current-buffer (funcall #'consult--file-action file)
       (cond
@@ -148,11 +148,8 @@ well as the function
 `consult-omni--multi-update-dynamic-candidates' for how CALLBACK is used."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
-               (count (plist-get opts :count))
                (dir (plist-get opts :dir))
                (dir (if dir (file-truename (format "%s" dir))))
-               (count (or (and count (integerp (read count)) (string-to-number count))
-                          consult-omni-default-count))
                (default-directory (or dir default-directory))
                (consult-ripgrep-args consult-omni-ripgrep-all-args))
     (funcall (consult-omni--grep-make-builder #'consult--ripgrep-make-builder default-directory) query)))

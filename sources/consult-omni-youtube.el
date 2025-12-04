@@ -21,6 +21,7 @@
 ;;; Code:
 
 (require 'consult-omni)
+(require 'iso8601)
 
 (defcustom consult-omni-youtube-search-key nil
   "Key for “YouTube Data API”.
@@ -141,20 +142,16 @@ well as the function
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
                (count (plist-get opts :count))
-               (page (plist-get opts :page))
                (def (plist-get opts :def))
                (type (plist-get opts :type))
                (vidtype (plist-get opts :vidtype))
                (order (or (plist-get opts :order) (plist-get opts :sort)))
                (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and page (integerp (read page)) (string-to-number page))
-                         consult-omni-default-count))
                (def (if (and def (member (format "%s" def) '("any" "standard" "high"))) (format "%s" def) "any"))
                (type (if (and type (member (format "%s" type) '("channel" "playlist" "video"))) (format "%s" type) "video"))
                (vidtype (if (and vidtype (member (format "%s" vidtype) '("any" "episode" "movie"))) (format "%s" vidtype) "any"))
                (count (min count 10))
-               (page (+ (* page count) 1))
                (order  (if (and order (member (format "%s" order) '("date" "rating" "relevance" "title" "videoCount" "viewCount"))) (format "%s" order) "relevance"))
                (params `(("q" . ,(replace-regexp-in-string " " "+" query))
                          ("part" . "snippet")
@@ -404,25 +401,19 @@ well as the function
 `consult-omni--multi-update-dynamic-candidates' for how CALLBACK is used."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (opts (car-safe opts))
-               (videos (make-vector 1 (list)))
-               (playlists (make-vector 1 (list)))
                (count (plist-get opts :count))
-               (page (plist-get opts :page))
                (def (plist-get opts :def))
                (search-type (plist-get opts :type))
                (vidtype (plist-get opts :vidtype))
                (order (or (plist-get opts :order) (plist-get opts :sort)))
                (count (or (and count (integerp (read count)) (string-to-number count))
                           consult-omni-default-count))
-               (page (or (and page (integerp (read page)) (string-to-number page))
-                         consult-omni-default-count))
                (def (if (and def (member (format "%s" def) '("any" "standard" "high"))) (format "%s" def)))
                (vidtype (if (and vidtype (member (format "%s" vidtype) '("any" "episode" "movie"))) (format "%s" vidtype)))
                (search-type (cond
                              ((or def vidtype) "video")
                              ((and search-type (member (format "%s" search-type) '("channel" "playlist" "video"))) (format "%s" search-type))))
                (count (min count 100))
-               (page (+ (* page count) 1))
                (order  (if (and order (member (format "%s" order) '("date" "rating" "relevance" "title" "videoCount" "viewCount"))) (format "%s" order) "relevance"))
                (params (delq nil `(("q" . ,(replace-regexp-in-string " " "+" query))
                                    ("part" . "snippet")
@@ -456,8 +447,8 @@ well as the function
                                              ("playlist"
                                               (push (gethash "playlistId" (gethash "id" item)) playlistids))
                                              ("channel"
-                                              (push (gethash "channelId" (gethash "id" item)) channelids)))
-                                           )) raw-results)
+                                              (push (gethash "channelId" (gethash "id" item)) channelids)))))
+                                       raw-results)
                                  (when videoids
                                    (consult-omni--youtube-fetch-video-details videoids :callback callback :query query))
                                  (when playlistids

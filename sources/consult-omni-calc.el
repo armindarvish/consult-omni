@@ -23,6 +23,7 @@
 (require 'consult-omni)
 (require 'calc)
 (require 'calc-aent nil t)
+(require 'calc-units nil t)
 
 ;;; User Options (a.k.a. Custom Variables)
 

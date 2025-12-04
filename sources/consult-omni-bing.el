@@ -81,7 +81,7 @@ well as the function
                                                       (url (format "%s" (gethash "url" item)))
                                                       (title (gethash "name" item))
                                                       (snippet (gethash "snippet" item))
-                                                      (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet)))
+                                                      (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :title title :snippet snippet)))
                                                    (propertize decorated
                                                                :source source
                                                                :title title

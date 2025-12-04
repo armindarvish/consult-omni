@@ -160,7 +160,7 @@ Description of Arguments:
   "Make a new Git project at DIR."
   (pcase consult-omni-projects-vc-backend
     ('vc
-     (if (and (featurep 'vc-git) (require 'vc-git nil nil))
+     (if (and (featurep 'vc-git) (require 'vc-git nil t))
          (progn (make-directory dir t)
                 (if-let ((default-directory dir)
                          (cmd (executable-find "git")))
@@ -171,7 +171,7 @@ Description of Arguments:
        (message "vc not available. Change `consult-omni-projects-vc-backend' to use a different backend!"))
      (funcall consult-omni-projects-default-fallback-switch-command dir))
     ('magit
-     (if (and (featurep 'magit) (require 'magit nil nil))
+     (if (and (featurep 'magit) (require 'magit nil t))
          (or (and (file-expand-wildcards (expand-file-name ".git" dir))
                   (y-or-n-p "There is already a .git folder there, do you want to re-initialize?")
                   (funcall-interactively #'magit-init dir))
@@ -221,8 +221,7 @@ process\) to be added to the minibuffer completion cnadidates.  See the
 section on REQUEST in documentation for `consult-omni-define-source' as
 well as the function
 `consult-omni--multi-update-dynamic-candidates' for how CALLBACK is used."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
-               (opts (car-safe opts))
+  (pcase-let* ((`(,query . _) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (projects (cl-remove-if-not (lambda (item) (string-match (format ".*%s.*" query) (car item))) project--list)))
     (delq nil (cl-loop for item in  projects
                        collect (let* ((source "Projects")
@@ -243,7 +242,6 @@ well as the function
                             :type 'sync
                             :require-match nil
                             :category 'project
-                            ;; :face 'consult-omni-files-title-face
                             :on-setup #'project--read-project-list
                             :request #'consult-omni--projects-fetch-results
                             :min-input 0

@@ -89,14 +89,7 @@ well as the function
                                                       (let* ((source "Brave AutoSuggest")
                                                              (word (gethash "query" item))
                                                              (url (concat "https://search.brave.com/search?q="  (replace-regexp-in-string " " "+" word)))
-                                                             (urlobj (and url (url-generic-parse-url url)))
-                                                             (domain (and (url-p urlobj) (url-domain urlobj)))
-                                                             (domain (and (stringp domain)
-                                                                          (propertize domain 'face 'font-lock-variable-name-face)))
-                                                             (path (and (url-p urlobj) (url-filename urlobj)))
-                                                             (path (and (stringp path)
-                                                                        (propertize path 'face 'font-lock-warning-face)))
-                                                             (search-url nil)
+                                                             (search-url url)
                                                              (decorated (propertize word 'face 'consult-omni-default-face)))
                                                         (propertize decorated
                                                                     :source source

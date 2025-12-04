@@ -63,6 +63,7 @@ Similar to `consult-man-args' bur for consult-omni."
                  (title-str (and (stringp title) (consult-omni--set-string-width title (* 6 frame-width-percent))))
                  (str (concat title-str
                               (and desc "\t") desc
+                              (and snippet "\s\s") snippet
                               (and source "\t") source)))
             (if consult-omni-highlight-matches-in-minibuffer
                 (cond
@@ -83,7 +84,7 @@ process\) to be added to the minibuffer completion cnadidates.  See the
 section on REQUEST in documentation for `consult-omni-define-source' as
 well as the function
 `consult-omni--multi-update-dynamic-candidates' for how CALLBACK is used."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
+  (pcase-let* ((`(,query . _) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (consult-man-args consult-omni-man-args))
     (funcall #'consult--man-builder query)))
 

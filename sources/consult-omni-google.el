@@ -107,7 +107,7 @@ well as the function
                                                       (title (format "%s" (gethash "title" item)))
                                                       (snippet (string-trim (format "%s" (gethash "snippet" item))))
                                                       (search-url (consult-omni--make-url-string consult-omni-google-search-url params '("key" "cx" "gl")))
-                                                      (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet)))
+                                                      (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :title title :snippet snippet)))
                                                    (propertize decorated
                                                                :source source
                                                                :title title

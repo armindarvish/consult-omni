@@ -24,8 +24,7 @@
 
 (defun consult-omni--line-multi-preview (cand)
   "Preview function for CAND from `consult-omni-line-multi'."
-  (let* ((marker (car (get-text-property 0 :marker cand)))
-         (query (get-text-property 0 :query cand)))
+  (let* ((marker (car (get-text-property 0 :marker cand))))
     (consult--jump marker)))
 
 (cl-defun consult-omni--line-multi-format-candidate (&rest args &key source query marker title face &allow-other-keys)
@@ -63,7 +62,7 @@ Description of Arguments:
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
 
-(cl-defun consult-omni--line-multi-fetch-results (input &rest args &key callback buffers &allow-other-keys)
+(cl-defun consult-omni--line-multi-fetch-results (input &rest args &key callback &allow-other-keys)
   "Fetch search results for INPUT from `consult-line-multi' with ARGS.
 
 CALLBACK is a function used internally to update the list of candidates in
@@ -73,8 +72,7 @@ process\) to be added to the minibuffer completion cnadidates.  See the
 section on REQUEST in documentation for `consult-omni-define-source' as
 well as the function
 `consult-omni--multi-update-dynamic-candidates' for how CALLBACK is used."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
-               (opts (car-safe opts))
+  (pcase-let* ((`(,query . _) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (buffers (consult--buffer-query :directory (consult--normalize-directory default-directory) :sort 'alpha-current)))
      (consult--line-multi-candidates buffers input (lambda (items)
                                                     (funcall callback
@@ -88,28 +86,8 @@ well as the function
                                                           :title title
                                                           :url nil
                                                           :marker marker
-                                                          :query query
-                                                          )))
+                                                          :query query)))
                                                              items))))))
-
-    ;; (consult-omni--line-multi-candidates query nil callback)))
-    ;;            (items (consult-omni--line-multi-candidates query nil callback))
-    ;;            (annotated-results (mapcar (lambda (item)
-    ;;                                         (let* ((source "buffers text search")
-    ;;                                                (marker  (consult--get-location item))
-    ;;                                                (title (substring-no-properties item 0 -1))
-    ;;                                                (decorated (consult-omni--line-multi-format-candidate :source source :query query :marker marker :title title)))
-    ;;                                           (propertize decorated
-    ;;                                                       :source source
-    ;;                                                       :title title
-    ;;                                                       :url nil
-    ;;                                                       :marker marker
-    ;;                                                       :query query
-    ;;                                                       )))
-    ;;                                       items)))
-    ;; annotated-results)
-
-;; )
 
 ;; Define the Buffers Text Search Source
 (consult-omni-define-source "buffers text search"
