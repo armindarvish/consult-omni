@@ -43,15 +43,7 @@ process\) to be added to the minibuffer completion cnadidates.  See the
 section on REQUEST in documentation for `consult-omni-define-source' as
 well as the function
 `consult-omni--multi-update-dynamic-candidates' for how CALLBACK is used."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
-               (opts (car-safe opts))
-               (count (plist-get opts :count))
-               (page (plist-get opts :page))
-               (count (or (and count (integerp (read count)) (string-to-number count))
-                          consult-omni-default-count))
-               (page (or (and (integerp page) page)
-                         (and page (string-to-number (format "%s" page)))
-                         consult-omni-default-count))
+  (pcase-let* ((`(,query . _) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (params `(("q" . ,query)
                          ("client" . "chrome")))
                (headers '(("Accept" . "application/json"))))
@@ -68,20 +60,12 @@ well as the function
                                                       (let* ((source "Google AutoSuggest")
                                                              (word item)
                                                              (url                                  (concat "https://www.google.com/search?q="  (replace-regexp-in-string " " "+" word)))
-                                                             (urlobj (and url (url-generic-parse-url url)))
-                                                             (domain (and (url-p urlobj) (url-domain urlobj)))
-                                                             (domain (and (stringp domain)
-                                                                          (propertize domain 'face 'font-lock-variable-name-face)))
-                                                             (path (and (url-p urlobj) (url-filename urlobj)))
-                                                             (path (and (stringp path)
-                                                                        (propertize path 'face 'font-lock-warning-face)))
-                                                             (search-url nil)
                                                              (decorated (propertize word 'face 'consult-omni-default-face)))
                                                         (propertize decorated
                                                                     :source source
                                                                     :title word
                                                                     :url url
-                                                                    :search-url search-url
+                                                                    :search-url url
                                                                     :query query)))
                                                     raw-results)))
                                  (funcall callback annotated-results)

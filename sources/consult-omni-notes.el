@@ -71,8 +71,7 @@ This is used when a new candidate is selected (e.g. by `vertico-exit-input'.)"
   "Format CANDIDATES for QUERY from `consult-omni-notes'."
   (cond
    ((and (equal consult-omni-notes-backend-command "rga") (executable-find consult-omni-notes-backend-command))
-    (consult-omni--ripgrep-all-format candidates :source "Notes Search" :query query :regexp-pattern consult-omni-ripgrep-all-match-regexp)
-    )
+    (consult-omni--ripgrep-all-format candidates :source "Notes Search" :query query :regexp-pattern consult-omni-ripgrep-all-match-regexp))
    ((and (or (equal consult-omni-notes-backend-command "rg") (equal consult-omni-notes-backend-command "grep")) (executable-find consult-omni-notes-backend-command))
     (consult-omni--grep-format candidates :source "Notes Search" :query query :regexp-pattern consult--grep-match-regexp))
    (t nil)))
@@ -91,9 +90,8 @@ This is used when a new candidate is selected (e.g. by `vertico-exit-input'.)"
 
 (defun consult-omni--notes-new-capture-org (&optional title)
   "Make a new org note with TITLE."
-  (let ((old-marker org-capture-last-stored-marker))
-    (org-capture-string title)
-    (consult-omni-propertize-by-plist string `(:title ,title :source "Notes Search" :url nil :search-url nil :query ,title :file ,(cadr (org-capture-get :target))) 0 1)))
+   (when (org-capture-string title)
+    (consult-omni-propertize-by-plist title `(:title ,title :source "Notes Search" :url nil :search-url nil :query ,title :file ,(cadr (org-capture-get :target))) 0 1)))
 
 (defun consult-omni--notes-new-capture-org-roam (&optional title)
   "Make new org-roam note with TITLE."
@@ -102,15 +100,17 @@ This is used when a new candidate is selected (e.g. by `vertico-exit-input'.)"
 
 (defun consult-omni--notes-new-create-denote (&optional title)
   "Make a new denote note with TITLE."
-  (if-let* ((_ (push title denote-title-history))
+  (when (featurep 'denote)
+    (require 'denote nil t)
+    (if-let* ((_ (push title denote-title-history))
             (file (denote--command-with-features #'denote nil nil t nil)))
-      (consult-omni-propertize-by-plist title `(:title ,title :source "Notes Search" :url nil :search-url nil :query ,title :file ,(file-truename file)))))
+      (consult-omni-propertize-by-plist title `(:title ,title :source "Notes Search" :url nil :search-url nil :query ,title :file ,(file-truename file))))))
 
 (defun consult-omni--notes-new (cand)
   "New function for new non-existing CAND from `consult-omni-notes'."
   (funcall consult-omni--notes-new-func cand))
 
-(cl-defun consult-omni--notes-builder (input &rest args &key callback &allow-other-keys)
+(cl-defun consult-omni--notes-builder (input &rest args &key _callback &allow-other-keys)
   "Make builder command line with INPUT and ARGS for `consult-omni-notes'.
 
 CALLBACK is a function used internally to update the list of candidates in
@@ -122,12 +122,9 @@ well as the function
 `consult-omni--multi-update-dynamic-candidates' for how CALLBACK is used."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input args))
                (opts (car-safe opts))
-               (count (plist-get opts :count))
                (dir (plist-get opts :dir))
                (dir (if dir (file-truename (format "%s" dir))))
                (dir (or dir consult-omni-notes-files))
-               (count (or (and count (integerp (read count)) (string-to-number count))
-                          consult-omni-default-count))
                (backend-builder (cond
                                  ((and (or (equal consult-omni-notes-backend-command "rga") (equal consult-omni-notes-backend-command "rg")) (executable-find consult-omni-notes-backend-command))
                                   #'consult--ripgrep-make-builder)
@@ -149,7 +146,7 @@ well as the function
                             :on-return #'identity
                             :on-callback #'consult-omni--notes-callback
                             :on-new #'consult-omni--notes-new
-                            :preview-key (or consult-omni-preview-key any)
+                            :preview-key (or consult-omni-preview-key 'any)
                             :search-hist 'consult-omni--search-history
                             :select-hist 'consult-omni--selection-history
                             :group #'consult-omni--group-function

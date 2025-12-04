@@ -44,10 +44,10 @@ Description of Arguments:
          (title-str (propertize title 'face face))
          (title-str (consult-omni--set-string-width title-str (* 4 frame-width-percent)))
          (urlobj (and url (url-generic-parse-url url)))
-         (domain (and (url-p urlobj) (url-domain urlobj)))
          (domain (and (url-p urlobj) (or (url-domain urlobj) (url-host urlobj))))
          (port (and (url-p urlobj) (url-port urlobj)))
-         (domain (if port (format "%s:%s" domain port) (format "%s" domain)))
+         (domain (and domain
+                      (if port (format "%s:%s" domain port) (format "%s" domain))))
          (domain (and (stringp domain) (propertize domain 'face 'consult-omni-domain-face)))
          (path (and (url-p urlobj) (url-filename urlobj)))
          (path (and (stringp path) (propertize path 'face 'consult-omni-path-face)))

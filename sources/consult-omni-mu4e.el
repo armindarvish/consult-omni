@@ -111,8 +111,7 @@ well as the function
         (goto-char (point-min))
         (setq messages (remove nil
                                (cl-loop until (eobp)
-                                        collect (let* ((msg (ignore-errors (mu4e-message-at-point))))
-                                                  (consult-omni-mu--format-candidate `(,(buffer-substring (point) (line-end-position)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
+                                        collect                                                  (consult-omni-mu--format-candidate `(,(buffer-substring (point) (line-end-position)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t)
                                         do (forward-line 1)))))
       (when (and messages callback)
         (funcall callback messages)))))

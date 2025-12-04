@@ -31,15 +31,13 @@
 (defvar consult-omni-wikipedia-api-url "https://wikipedia.org/w/api.php"
   "API URL for Wikipedia.")
 
-(cl-defun consult-omni--wikipedia-format-candidate (&rest args &key source query url search-url title snippet date face &allow-other-keys)
+(cl-defun consult-omni--wikipedia-format-candidate (&rest args &key source query title snippet date face &allow-other-keys)
   "Format a candidate from Wikipedia search with ARGS.
 
 Description of Arguments:
 
   SOURCE     a string; the source name (e.g. “Wikipedia”)
   QUERY      a string; query input from the user
-  URL        a string; the url of  candidate
-  SEARCH-URL a string; the web search url
   TITLE      a string; the title of the result (e.g. a Wikipedia article)
   SNIPPET    a string; a snippet/description of the Wikipedia article
   DATE       a string; the date that the article was last updated
@@ -60,7 +58,7 @@ Description of Arguments:
     (if consult-omni-highlight-matches-in-minibuffer
         (cond
          ((listp match-str)
-          (mapcar (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
+          (mapc (lambda (match) (setq str (consult-omni--highlight-match match str t))) match-str))
          ((stringp match-str)
           (setq str (consult-omni--highlight-match match-str str t)))))
     str))
@@ -113,7 +111,7 @@ well as the function
                                                            (date (format-time-string "%Y-%m-%d" (date-to-time date)))
                                                            (snippet (replace-regexp-in-string "<span.*?>\\|</span>\\|&quot;" "" (format "%s" (gethash "snippet" item))))
                                                            (search-url (concat  consult-omni-wikipedia-search-url "?" "search=" query))
-                                                           (decorated (consult-omni--wikipedia-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet :date date)))
+                                                           (decorated (consult-omni--wikipedia-format-candidate :source source :query query :title title :snippet snippet :date date)))
                                                         (propertize decorated
                                                                     :source source
                                                                     :title title

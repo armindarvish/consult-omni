@@ -39,9 +39,8 @@
 
 (defun consult-omni--doi-to-url (doi)
   "Convert DOI value to target url."
-  (let ((out))
-    (let* ((doi (if doi (format "%s" doi)))
-           (url (concat consult-omni-doiorg-api-url doi)))
+  (let* ((doi (if doi (format "%s" doi)))
+         (url (concat consult-omni-doiorg-api-url doi)))
       (consult-omni--fetch-url url consult-omni-http-retrieve-backend
                                :sync t
                                :encoding 'utf-8
@@ -56,7 +55,7 @@
                                                                                (link (if (equal type "URL") (map-nested-elt item '("data" "value")))))
                                                                          link))
                                                                    raw-results)))))
-                                   result))))))
+                                   result)))))
 
 (cl-defun consult-omni--doiorg-fetch-results (doi &rest args &key callback &allow-other-keys)
   "Fetch target url of DOI with ARGS.
@@ -68,13 +67,12 @@ process\) to be added to the minibuffer completion cnadidates.  See the
 section on REQUEST in documentation for `consult-omni-define-source' as
 well as the function
 `consult-omni--multi-update-dynamic-candidates' for how CALLBACK is used."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command doi (seq-difference args (list :callback callback))))
-               (opts (car-safe opts))
+  (pcase-let* ((`(,query . _) (consult-omni--split-command doi (seq-difference args (list :callback callback))))
                (source "doiorg")
                (url (consult-omni--doi-to-url query))
                (title (if url (format "%s" url) (format "%s - Not Found" query)))
                (search-url (concat consult-omni-doiorg-search-url query))
-               (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title))
+               (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :title title))
                (annotated-results (propertize decorated
                                               :source source
                                               :title title

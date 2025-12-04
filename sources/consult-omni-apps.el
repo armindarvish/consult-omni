@@ -55,6 +55,17 @@
   :group 'consult-omni
   :type 'string)
 
+(defvar consult-omni-apps-xdg-data-home nil
+"XDG data home path.
+
+See the environment variable XDG_DATA_HOME for more info.")
+
+(defvar consult-omni-apps-xdg-data-dirs nil
+"XDG data directories.
+
+See the environment variable XDG_DATA_DIRS for more info.")
+
+
 ;; Set the variables per system type (Linux and MacOS only)
 (pcase system-type
   ('darwin
@@ -110,8 +121,7 @@ If FILE is non-nil, returns a command line for opeing the FILE with APP."
 
 Uses `consult-omni--apps-cmd-args' to get the command line args string.
 If FILE is non-nil, the process will open the FILE in APP."
-  (let* ((name (concat "consult-omni-" (file-name-base app)))
-         (cmds (consult-omni--apps-cmd-args app file)))
+  (let* ((cmds (consult-omni--apps-cmd-args app file)))
     (call-process-shell-command (string-join cmds " "))
     nil))
 
@@ -128,7 +138,7 @@ If APP is nil, `consult-omni-apps-static' is called to select one."
                (format "%s" app)
                (format "%s" (and (file-exists-p file) file)))))
 
-(defun consult-omni--apps-preview (cand)
+(defun consult-omni--apps-preview (_cand)
   "Ignore preview if called on CAND in `consult-omni-apps'."
   (ignore))
 
@@ -268,7 +278,7 @@ regexp pattern “.*QUERY.*”), it is parsed by
 `consult-omni--apps-parse-app-file' and added to the
 `consult-omni-apps-cached-items'"
   (save-match-data
-    (if (and consult-omni-apps-use-cache consult-omni-apps--cached-items)
+    (if (and consult-omni-apps-use-cache consult-omni-apps-cached-items)
         consult-omni-apps-cached-items
       (setq consult-omni-apps-cached-items
             (mapcar (lambda (file)
@@ -276,7 +286,6 @@ regexp pattern “.*QUERY.*”), it is parsed by
                                    (`(,name ,comment ,exec ,visible) (consult-omni--apps-parse-app-file file))
                                    (title (or name (file-name-base file) ""))
                                    (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
-                                   (search-url nil)
                                    (consult-omni-highlight-matches-in-minibuffer nil)
                                    (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
                         (propertize decorated
@@ -293,7 +302,7 @@ regexp pattern “.*QUERY.*”), it is parsed by
                         (cl-remove-if-not (lambda (file) (string-match (concat ".*" query ".*") file nil t)) files)
                       files))))))
 
-(setq consult-omni-apps--cached-items  (consult-omni-apps--cached-items consult-omni-apps-cached-apps ".*"))
+(setq consult-omni-apps-cached-items  (consult-omni-apps--cached-items consult-omni-apps-cached-apps ".*"))
 
 (defun consult-omni--apps-update-cached-items ()
 "Update list of cached app names."
@@ -311,11 +320,7 @@ a new list is generated.
 
 CALLBACK is an internal function used by consult-omni collection mechanism
 to update list of candidates in the minibuffer."
-  (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
-               (opts (car-safe opts))
-               (count (plist-get opts :count))
-               (count (or (and count (integerp (read count)) (string-to-number count))
-                          consult-omni-default-count))
+  (pcase-let* ((`(,query . _) (consult-omni--split-command input (seq-difference args (list :callback callback))))
                (files (consult-omni--apps-get-desktop-apps))
                (case-fold-search t))
     (if (and consult-omni-apps-use-cache query)
@@ -325,7 +330,6 @@ to update list of candidates in the minibuffer."
                              (`(,name ,comment ,exec ,visible) (consult-omni--apps-parse-app-file file))
                              (title (or name (file-name-base file) ""))
                              (app (and (stringp file) (file-exists-p file) (file-name-nondirectory file)))
-                             (search-url nil)
                              (consult-omni-highlight-matches-in-minibuffer nil)
                              (decorated (funcall #'consult-omni--apps-format-candidates :source source :query query :title title :path file :snippet comment :visible visible)))
                   (propertize decorated

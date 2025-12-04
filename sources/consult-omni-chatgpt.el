@@ -74,8 +74,8 @@ Description of Arguments:
         (erase-buffer)
         (if query (insert (format "# User:\n\n %s\n\n" query)))
         (if response (insert (format "# ChatGPT:\n\n %s\n\n" response)))
-        (if (featurep 'mardown-mode)
-            (require 'markdown-mode)
+        (when (featurep 'mardown-mode)
+          (require 'markdown-mode nil t)
           (markdown-mode))
         (point-marker)))))
 

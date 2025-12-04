@@ -169,13 +169,14 @@ Description of Arguments:
                  buff))))
 
 (defun consult-omni-process-ps-list-processes (query &optional user state sort)
-  "Return alist of attributes for system processes matching QUERY."
+  "Return a list of attributes for system processes matching QUERY."
   (let* ((ps-cmd (concat "ps -a -x"
                           (pcase sort
                             ("cpu" " -r")
                             ("mem" " -m")
                             (_ " -r"))
                           (if user (format "-u %s" user))
+                          (if state (format "--state %s" state))
                           " -o user -o pid -o pcpu -o pmem -o vsize -o rss -o state -o stime -o utime -o flags -o ucomm -o command"))
          (grep-exec (if (executable-find "rg") "rg" "grep"))
          (grep-cmd (and query (not (string-empty-p query)) (concat (format "%s --color=never" grep-exec) (if consult-omni-process-grep-ignore-case " --ignore-case") (format " \"%s\"" query))))
@@ -242,7 +243,7 @@ section on REQUEST in documentation for `consult-omni-define-source' as
 well as the function
 `consult-omni--multi-update-dynamic-candidates' for how CALLBACK is used."
   (pcase-let* ((`(,query . ,opts) (consult-omni--split-command input (seq-difference args (list :callback callback))))
-               (completing-ignore-case t)
+               (completion-ignore-case t)
                (opts (car-safe opts))
                (user (plist-get opts :user))
                (state (plist-get opts :state))

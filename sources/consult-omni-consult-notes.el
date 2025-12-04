@@ -94,7 +94,8 @@
   (consult-notes-denote--new-note cand))
 
 ;; make consult-omni sources from consult-notes `consult-notes-org-headings--source'.
-(when consult-notes-org-headings-mode
+(when (and (bound-and-true-p consult-notes-org-headings-mode)
+           (plistp consult-notes-org-headings--source))
   (consult-omni--make-source-from-consult-source (plist-put consult-notes-org-headings--source :name "Consult Notes Org")
                                                  :category 'file
                                                  :type 'sync
@@ -114,7 +115,7 @@
                                                  :interactive consult-omni-intereactive-commands-type))
 
 ;; make consult-omni sources from consult-notes `consult-notes-org-headings--source'.
-(when consult-notes-org-roam-mode
+(when (bound-and-true-p consult-notes-org-roam-mode)
   (cl-loop for source in '(consult-notes-org-roam--refs consult-notes-org-roam--nodes)
            do (let ((name (plist-get (eval source) :name)))
                 (plist-put (eval source) :name (concat "Consult Notes " name))
@@ -136,7 +137,8 @@
                                                                :annotate nil))))
 
 ;; make consult-omni sources from consult-notes `consult-notes-org-headings--source'.
-(when consult-notes-denote-mode
+(when (and (bound-and-true-p consult-notes-denote-mode)
+           (plistp consult-notes-denote--source))
   (consult-omni--make-source-from-consult-source (plist-put consult-notes-denote--source :name "Consult Notes Denote")
                                                  :category 'file
                                                  :type 'sync

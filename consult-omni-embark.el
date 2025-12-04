@@ -30,12 +30,12 @@
 (defcustom consult-omni-embark-default-term  #'eshell
   "Consult-omni default terminal to use in embark actions."
   :group 'consult-omni
-  :type '(choice (function :tag "(Default) eshell" #'eshell)
-                 (function :tag "shell" #'shell)
-                 (function :tag "term" #'term)
-                 (function :tag "ansi-term" #'ansi-term)
-                 (function :tag "vterm" #'vterm)
-                 (function :tag "vterm" #'eat)
+  :type '(choice (function :tag "(Default) eshell" eshell)
+                 (function :tag "shell" shell)
+                 (function :tag "term" term)
+                 (function :tag "ansi-term" ansi-term)
+                 (function :tag "vterm" vterm)
+                 (function :tag "eat" eat)
                  (function :tag "Custom Function" function)))
 
 ;;; Define Embark Action Functions
@@ -225,8 +225,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
   :doc "Keymap for copy-as-kill menu"
   :parent nil
   "a" '("authors" . consult-omni-embark-scholar-copy-authors-as-kill)
-  "d" '("doi" . consult-omni-embark-scholar-copy-doi-as-kill)
-  )
+  "d" '("doi" . consult-omni-embark-scholar-copy-doi-as-kill))
 
 (fset 'consult-omni-embark-scholar-copy-menu-map consult-omni-embark-scholar-copy-menu-map)
 
@@ -234,8 +233,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
   :doc "Keymap for insert menu"
   :parent nil
   "a" '("authors" . consult-omni-embark-scholar-insert-authors)
-  "n" '("note" . consult-omni-embark-scholar-insert-note)
-  )
+  "n" '("note" . consult-omni-embark-scholar-insert-note))
 
 (fset 'consult-omni-embark-scholar-insert-menu-map consult-omni-embark-scholar-insert-menu-map)
 
@@ -310,7 +308,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
   "o f"  #'consult-omni-embark-apps-find-file
   "o o" #'consult-omni-embark-apps-open-filemanager
   "o t" #'consult-omni-embark-apps-open-term
-  "w p" #'consult-omni-embark-apps-copy-path-as-kil)
+  "w p" #'consult-omni-embark-apps-copy-path-as-kill)
 
 (add-to-list 'embark-keymap-alist '(consult-omni-apps . consult-omni-embark-apps-actions-map))
 (add-to-list 'embark-default-action-overrides '(consult-omni-apps . consult-omni-embark-default-action))
@@ -360,6 +358,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
 Can be:
   - an elisp function that takes a URL argument \(e.g. mpv-pay-url\)
   - a string for external command line program"
+  :group 'consult-omni
   :type '(choice (string :tag "(Default) mpv executable command" (executable-find "mpv"))
                  (function :tag "play with mpv package" mpv-play-url)
                  (function :tag "Custom Function")
@@ -503,8 +502,8 @@ Can be:
                                 :sort nil
                                 :default "TERM")))
     (when (and process
-               (yes-or-no-p (format "Are you sure you want to send %s to \"%s (pid: %s)\"?" sig name pid))))
-  (proced-send-signal sig (list process))))
+               (yes-or-no-p (format "Are you sure you want to send %s to \"%s (pid: %s)\"?" sig name pid)))
+  (proced-send-signal sig (list process)))))
 
 ;;; Define Embark Keymaps
 

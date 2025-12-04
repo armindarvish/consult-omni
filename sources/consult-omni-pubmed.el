@@ -39,16 +39,13 @@ See URL `https://www.ncbi.nlm.nih.gov/books/NBK25501/' for more info"
 (defvar consult-omni-pubmed-esummary-api-url "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
   "API URL for PubMed Eutils Entrez Esummary.")
 
-(cl-defun consult-omni-dynamic--pubmed-format-candidate (&rest args &key source query url search-url title authors date journal doi face &allow-other-keys)
+(cl-defun consult-omni-dynamic--pubmed-format-candidate (&rest args &key source query title authors date journal doi face &allow-other-keys)
   "Format candidates from `consult-omni-pubmed' with ARGS.
 
 Description of Arguments:
 
   SOURCE     the name to use (e.g. “PubMed”)
   QUERY      query input from the user
-  URL        the url of  candidate
-  SEARCH-URL the web search url
-             (e.g. https://pubmed.ncbi.nlm.nih.gov/?term=QUERY)
   TITLE      the title of the result/paper (e.g. title of paper)
   AUTHORS    the authors of the result/paper
   DATE       the publish date of the result/paper
@@ -61,7 +58,7 @@ Description of Arguments:
          (journal (if (stringp journal) (propertize journal 'face 'consult-omni-domain-face) nil))
          (authors (cond
                    ((and authors (listp authors))
-                    (concat (first authors) ",..., " (car (last authors))))
+                    (concat (car authors) ",..., " (car (last authors))))
                    ((stringp authors)
                     authors)
                    (t nil)))
@@ -75,6 +72,7 @@ Description of Arguments:
                       (if journal (format "\t%s" journal))
                       (if date (format "\s\s%s" date))
                       (if authors (format "\s\s%s" authors))
+                      (if doi (format "\s\s%s" doi))
                       (if source (concat "\t" source)))))
     (if consult-omni-highlight-matches-in-minibuffer
         (cond
@@ -192,7 +190,7 @@ well as the function
                                                (authors (mapcar (lambda (item) (gethash "name" item)) (gethash "authors" data)))
                                                (ids (gethash "articleids" data))
                                                (doi (car (remove nil (mapcar (lambda (item) (if (equal (gethash "idtype" item) "doi") (gethash "value" item))) ids))))
-                                               (decorated (consult-omni-dynamic--pubmed-format-candidate :source source :query query :url url :search-url search-url :title title :authors authors :date date :journal journal :doi doi)))
+                                               (decorated (consult-omni-dynamic--pubmed-format-candidate :source source :query query search-url :title title :authors authors :date date :journal journal :doi doi)))
                                             (propertize decorated
                                                         :source source
                                                         :url url

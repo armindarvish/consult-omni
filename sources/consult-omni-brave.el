@@ -82,7 +82,7 @@ well as the function
                                                            (title (gethash "title" item))
                                                            (snippet (gethash "description" item))
                                                            (search-url (consult-omni--make-url-string consult-omni-brave-search-url params))
-                                                           (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :search-url search-url :title title :snippet snippet)))
+                                                           (decorated (funcall consult-omni-default-format-candidate :source source :query query :url url :title title :snippet snippet)))
                                                         (propertize decorated
                                                                     :source source
                                                                     :title title
