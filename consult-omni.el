@@ -1543,7 +1543,7 @@ Adopted from `consult--multi-lookup'."
                                      sources))
                    ((seq-find (lambda (src) (plist-get src :default)) sources))
                    ((seq-find (lambda (src) (not (plist-get src :hidden))) sources))
-                   ((aref sources 0))))
+                   ((and (> (length sources) 0) (aref sources 0)))))
              (idx (seq-position sources src))
              (def (and (string-blank-p selected) ;; default candidate
                        (seq-find (lambda (cand) (eq idx (consult--tofu-get cand))) candidates))))
