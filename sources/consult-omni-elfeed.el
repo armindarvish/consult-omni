@@ -154,7 +154,7 @@ well as the function
           (setf (cdr tail) (list entry)
                 tail (cdr tail)
                 count (1+ count))))
-      (when-let ((entries (cdr head)))
+      (when-let* ((entries (cdr head)))
         (consult-omni--elfeed-format-candidate entries query)))))
 
 ;; Define the elfeed source

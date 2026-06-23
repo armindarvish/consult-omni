@@ -1042,7 +1042,7 @@ are killed from the list."
 
 (defun consult-omni-dynamic--split-thingatpt (thing)
   "Return THING at point."
-  (when-let (str (thing-at-point thing t))
+  (when-let* (str (thing-at-point thing t))
       (format "%s" str)))
 
 (defun consult-omni--read-search-string (&optional initial)
@@ -1135,7 +1135,7 @@ and is used to define the grouping for CAND."
        ((member group-by '(:nil :none :no :not))
         nil)
        (group-by
-        (if-let ((group (get-text-property 0 group-by cand)))
+        (if-let* ((group (get-text-property 0 group-by cand)))
             (format "%s" group)
           "N/A"))
        (t
@@ -1229,7 +1229,7 @@ The CALLBACK is called when a CAND is selected.
 When making consult-omni sources, if a CALLBACK is not provided, this
 CALLBACK is used as a fall back option."
   (when (listp cand) (setq cand (car-safe cand)))
-  (if-let ((url (get-text-property 0 :url cand)))
+  (if-let* ((url (get-text-property 0 :url cand)))
       (funcall consult-omni-default-browse-function url)))
 
 (defun consult-omni-external-search (cand &optional engine)
@@ -1256,7 +1256,7 @@ for some examples."
   "Choose a source to use for non-existing CAND."
   (interactive)
   (let* ((sources (cl-remove-duplicates (delq nil (mapcar (lambda (item)
-                                                            (when-let ((new (consult-omni--get-source-prop item :on-new))
+                                                            (when-let* ((new (consult-omni--get-source-prop item :on-new))
                                                                        (name (consult-omni--get-source-prop item :name)))
                                                               (when (not (eq new #'consult-omni--default-new))
                                                                 (cons name new))))
@@ -1521,10 +1521,10 @@ Description of Arguments:
                               :narrow      (consult--multi-narrow sources)
                               :state       (consult--multi-state sources)))))))
     (if (and (listp selected) (plist-member (cdr selected) :match))
-        (when-let (fun (plist-get (cdr selected) :new))
+        (when-let* (fun (plist-get (cdr selected) :new))
           (funcall fun (car selected))
           (plist-put (cdr selected) :match 'new))
-      (when-let (fun (plist-get (cdr selected) :action))
+      (when-let* (fun (plist-get (cdr selected) :action))
         (funcall fun (car selected)))
       (setq selected `(,(car selected) :match t ,@(cdr selected))))
     selected))
@@ -1603,7 +1603,7 @@ Adopted from `consult--multi-enabled-sources'."
    (cl-loop
     for src in sources
     if (when (setq src (if (symbolp src) (symbol-value src) src))
-         (if-let ((pred (plist-get src :enabled)))
+         (if-let* ((pred (plist-get src :enabled)))
            (cond
             ((functionp pred)
              (funcall pred))
@@ -1634,7 +1634,7 @@ Adopted from `consult--multi-candidates'."
 
 Adopted from `consult--multi-annotate'."
   (let ((src (consult--multi-source sources cand)))
-    (if-let ((fun (plist-get src :annotate)))
+    (if-let* ((fun (plist-get src :annotate)))
         (cond
          ((functionp fun)
           (funcall fun (cdr (get-text-property 0 'multi-category cand))))
@@ -1962,10 +1962,10 @@ Description of Arguments:
                    :narrow      (consult--multi-narrow sources)
                    :state       (consult--multi-state sources))))))
     (if (plist-member (cdr selected) :match)
-        (when-let (fun (plist-get (cdr selected) :new))
+        (when-let* (fun (plist-get (cdr selected) :new))
           (funcall fun (car selected))
           (plist-put (cdr selected) :match 'new))
-      (when-let (fun (plist-get (cdr selected) :action))
+      (when-let* (fun (plist-get (cdr selected) :action))
         (funcall fun (car selected)))
       (setq selected `(,(car selected) :match t ,@(cdr selected))))
     selected))

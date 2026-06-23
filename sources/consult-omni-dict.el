@@ -133,7 +133,7 @@ Description of Arguments:
          (items (and items (if (integerp consult-omni-dict-number-of-lines) (seq-take items consult-omni-dict-number-of-lines) items)))
          (first-item t))
     (mapcar (lambda (item)
-              (if-let ((str (propertize item 'face face)))
+              (if-let* ((str (propertize item 'face face)))
                   (progn
                     (if consult-omni-highlight-matches-in-minibuffer
                         (cond
@@ -185,7 +185,7 @@ without the predicate lead."
 
 (defun consult-omni--dict-return (cand)
   "Return definition string of CAND for `consult-omni-dict'."
-  (if-let  ((def (get-text-property 0 :title cand)))
+  (if-let*  ((def (get-text-property 0 :title cand)))
       def
     cand))
 

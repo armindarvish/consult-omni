@@ -1191,7 +1191,7 @@ are killed from the list."
 #+begin_src emacs-lisp
 (defun consult-omni-dynamic--split-thingatpt (thing)
   "Return THING at point."
-  (when-let (str (thing-at-point thing t))
+  (when-let* (str (thing-at-point thing t))
       (format "%s" str)))
 #+end_src
 ***** read search string
@@ -1301,7 +1301,7 @@ and is used to define the grouping for CAND."
        ((member group-by '(:nil :none :no :not))
         nil)
        (group-by
-        (if-let ((group (get-text-property 0 group-by cand)))
+        (if-let* ((group (get-text-property 0 group-by cand)))
             (format "%s" group)
           "N/A"))
        (t
@@ -1416,7 +1416,7 @@ The CALLBACK is called when a CAND is selected.
 When making consult-omni sources, if a CALLBACK is not provided, this
 CALLBACK is used as a fall back option."
   (when (listp cand) (setq cand (car-safe cand)))
-  (if-let ((url (get-text-property 0 :url cand)))
+  (if-let* ((url (get-text-property 0 :url cand)))
       (funcall consult-omni-default-browse-function url)))
 
 #+end_src
@@ -1453,7 +1453,7 @@ for some examples."
   "Choose a source to use for non-existing CAND."
   (interactive)
   (let* ((sources (cl-remove-duplicates (delq nil (mapcar (lambda (item)
-                                                            (when-let ((new (consult-omni--get-source-prop item :on-new))
+                                                            (when-let* ((new (consult-omni--get-source-prop item :on-new))
                                                                        (name (consult-omni--get-source-prop item :name)))
                                                               (when (not (eq new #'consult-omni--default-new))
                                                                 (cons name new))))
@@ -1757,10 +1757,10 @@ Description of Arguments:
                               :narrow      (consult--multi-narrow sources)
                               :state       (consult--multi-state sources)))))))
     (if (and (listp selected) (plist-member (cdr selected) :match))
-        (when-let (fun (plist-get (cdr selected) :new))
+        (when-let* (fun (plist-get (cdr selected) :new))
           (funcall fun (car selected))
           (plist-put (cdr selected) :match 'new))
-      (when-let (fun (plist-get (cdr selected) :action))
+      (when-let* (fun (plist-get (cdr selected) :action))
         (funcall fun (car selected)))
       (setq selected `(,(car selected) :match t ,@(cdr selected))))
     selected))
@@ -1854,7 +1854,7 @@ Adopted from `consult--multi-enabled-sources'."
    (cl-loop
     for src in sources
     if (when (setq src (if (symbolp src) (symbol-value src) src))
-         (if-let ((pred (plist-get src :enabled)))
+         (if-let* ((pred (plist-get src :enabled)))
            (cond
             ((functionp pred)
              (funcall pred))
@@ -1891,7 +1891,7 @@ Adopted from `consult--multi-candidates'."
 
 Adopted from `consult--multi-annotate'."
   (let ((src (consult--multi-source sources cand)))
-    (if-let ((fun (plist-get src :annotate)))
+    (if-let* ((fun (plist-get src :annotate)))
         (cond
          ((functionp fun)
           (funcall fun (cdr (get-text-property 0 'multi-category cand))))
@@ -2259,10 +2259,10 @@ Description of Arguments:
                    :narrow      (consult--multi-narrow sources)
                    :state       (consult--multi-state sources))))))
     (if (plist-member (cdr selected) :match)
-        (when-let (fun (plist-get (cdr selected) :new))
+        (when-let* (fun (plist-get (cdr selected) :new))
           (funcall fun (car selected))
           (plist-put (cdr selected) :match 'new))
-      (when-let (fun (plist-get (cdr selected) :action))
+      (when-let* (fun (plist-get (cdr selected) :action))
         (funcall fun (car selected)))
       (setq selected `(,(car selected) :match t ,@(cdr selected))))
     selected))
@@ -3102,12 +3102,12 @@ Gets the default callback function from `consult-omni--sources-alist'."
 
 (defun consult-omni-embark-insert-title (cand)
   "Insert the title of CAND at point."
-  (if-let ((title (and (stringp cand) (get-text-property 0 :title cand))))
+  (if-let* ((title (and (stringp cand) (get-text-property 0 :title cand))))
       (insert (format " %s " title))))
 
 (defun consult-omni-embark-copy-title-as-kill (cand)
   "Copy the title of CAND to `kill-ring'."
-  (if-let ((title (and (stringp cand) (get-text-property 0 :title cand))))
+  (if-let* ((title (and (stringp cand) (get-text-property 0 :title cand))))
       (kill-new (string-trim title))))
 
 (defun consult-omni-embark-insert-url-link (cand)
@@ -3135,7 +3135,7 @@ Gets the default callback function from `consult-omni--sources-alist'."
 
 (defun consult-omni-embark-copy-url-as-kill (cand)
   "Copy the url of CAND to `kill-ring'."
-  (if-let ((url (and (stringp cand) (get-text-property 0 :url cand))))
+  (if-let* ((url (and (stringp cand) (get-text-property 0 :url cand))))
       (kill-new (format " %s " (string-trim url)))))
 
 (defun consult-omni-embark-external-browse-link (cand)
@@ -3209,12 +3209,12 @@ Gets the preview function from `consult-omni--sources-alist'."
 
 (defun consult-omni-embark-scholar-copy-authors-as-kill (cand)
   "Copy the authors of CAND to `kill-ring'."
-  (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
+  (if-let* ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
       (kill-new (string-trim (format " %s " authors)))))
 
 (defun consult-omni-embark-scholar-insert-authors (cand)
   "Insert the authors of CAND at point."
-  (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
+  (if-let* ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
       (insert (string-trim (mapconcat #'identity authors ", ")))))
 
 (defun consult-omni-embark-scholar-default-note (cand)
@@ -3341,7 +3341,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
 
 (defun consult-omni-embark-apps-open-externally (cand)
   "Open CAND's filepath using system's default application."
-  (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
+  (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand))))
       (pcase system-type
         ('darwin (call-process "open" nil 0 nil path))
         ('cygwin (call-process "cygstart" nil 0 nil path))
@@ -3358,12 +3358,12 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
 
 (defun consult-omni-embark-apps-insert-path (cand)
   "Insert the title of CAND at point."
-  (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
+  (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand))))
       (insert (format " %s " path))))
 
 (defun consult-omni-embark-apps-copy-path-as-kill (cand)
   "Copy the title of CAND to `kill-ring'."
-  (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
+  (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand))))
       (kill-new (format " %s " path))))
 
 #+end_src
@@ -3394,22 +3394,22 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
 
 (defun consult-omni-embark-calc-copy-results-as-kill (cand)
   "Copy the results of the calculator, CAND, to `kill-ring'."
-  (if-let ((results (and (stringp cand) (get-text-property 0 :title cand))))
+  (if-let* ((results (and (stringp cand) (get-text-property 0 :title cand))))
       (kill-new (format " %s " results))))
 
 (defun consult-omni-embark-calc-insert-results (cand)
   "Insert the results of the calculator, CAND, at point."
-  (if-let (results (and (stringp cand) (get-text-property 0 :title cand)))
+  (if-let* (results (and (stringp cand) (get-text-property 0 :title cand)))
       (insert (format " %s " results))))
 
 (defun consult-omni-embark-calc-copy-formula-as-kill (cand)
   "Copy the results of the calculator, CAND, to `kill-ring'."
-  (if-let ((formula (and (stringp cand) (get-text-property 0 :query cand))))
+  (if-let* ((formula (and (stringp cand) (get-text-property 0 :query cand))))
       (kill-new (format " %s " formula))))
 
 (defun consult-omni-embark-calc-insert-formula (cand)
   "Insert the results of the calculator, CAND, at point."
-  (if-let (formula (and (stringp cand) (get-text-property 0 :query cand)))
+  (if-let* (formula (and (stringp cand) (get-text-property 0 :query cand)))
       (insert (format " %s " formula))))
 
 #+end_src
@@ -3459,7 +3459,7 @@ Can be:
                  (list link)))
   (cond
    ((stringp consult-omni-embark-video-default-player)
-    (if-let ((cmd (executable-find consult-omni-embark-video-default-player)))
+    (if-let* ((cmd (executable-find consult-omni-embark-video-default-player)))
         (progn
           (start-process "consult-omni-mpv" nil cmd url)
           (message "Opening with %s ..." consult-omni-embark-video-default-player))
@@ -5095,7 +5095,7 @@ Description of Arguments:
 
 (defun consult-omni--chatgpt-preview (cand)
   "Show a preview buffer with ChatGPT response in CAND."
-  (when-let ((buff (get-buffer "*consult-omni-chatgpt-response*")))
+  (when-let* ((buff (get-buffer "*consult-omni-chatgpt-response*")))
     (kill-buffer buff))
   (if (listp cand) (setq cand (or (car-safe cand) cand)))
   (when-let*  ((query  (get-text-property 0 :query cand))
@@ -5371,7 +5371,7 @@ well as the function
   "Preview function for CAND from `consult-omni--buffer'."
   (if cand
       (let* ((title (get-text-property 0 :title cand)))
-        (when-let ((buff (get-buffer title)))
+        (when-let* ((buff (get-buffer title)))
           (consult--buffer-action buff)))))
 
 #+end_src
@@ -6317,7 +6317,7 @@ Similar to `consult-man-args' bur for consult-omni."
 #+begin_src emacs-lisp
 (defun consult-omni--man-callback (cand)
   "Callback for CAND from `consult-omni-man'."
-  (when-let ((path (get-text-property 0 :path cand)))
+  (when-let* ((path (get-text-property 0 :path cand)))
     (man path)))
 
 #+end_src
@@ -6787,7 +6787,7 @@ Adopted from `consult--grep-format'."
            (and (stringp page) (pdf-view-goto-page (string-to-number page)))
            (when consult-omni-highlight-matches-in-file
              (add-to-history 'search-ring (isearch-string-propertize query))
-             (when-let ((matches (pdf-isearch-search-page query)))
+             (when-let* ((matches (pdf-isearch-search-page query)))
                (setq pdf-isearch-current-matches matches)
                (setq pdf-isearch-current-match (car-safe matches))
                (pdf-isearch-hl-matches pdf-isearch-current-match pdf-isearch-current-matches t)
@@ -7120,7 +7120,7 @@ well as the function
 #+begin_src emacs-lisp
 (defun consult-omni--gh-preview (cand)
   "Preview function for CAND from `consult-omni-github'."
-  (when-let ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
+  (when-let* ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
              (repo (plist-get info :repo))
              (query (plist-get info :query))
              (match-str (consult--build-args query))
@@ -7543,7 +7543,7 @@ Description of Arguments:
          (items (and items (if (integerp consult-omni-dict-number-of-lines) (seq-take items consult-omni-dict-number-of-lines) items)))
          (first-item t))
     (mapcar (lambda (item)
-              (if-let ((str (propertize item 'face face)))
+              (if-let* ((str (propertize item 'face face)))
                   (progn
                     (if consult-omni-highlight-matches-in-minibuffer
                         (cond
@@ -7604,7 +7604,7 @@ without the predicate lead."
 #+begin_src emacs-lisp
 (defun consult-omni--dict-return (cand)
   "Return definition string of CAND for `consult-omni-dict'."
-  (if-let  ((def (get-text-property 0 :title cand)))
+  (if-let*  ((def (get-text-property 0 :title cand)))
       def
     cand))
 
@@ -8195,7 +8195,7 @@ well as the function
           (setf (cdr tail) (list entry)
                 tail (cdr tail)
                 count (1+ count))))
-      (when-let ((entries (cdr head)))
+      (when-let* ((entries (cdr head)))
         (consult-omni--elfeed-format-candidate entries query)))))
 
 #+end_src
@@ -10901,7 +10901,7 @@ For example to get the date for tommorrow, next week, ..."
     (if query
         (cond
          ((string-match "around \\(.*\\)" query)
-          (when-let ((date (consult-omni--org-agenda-query-dwim-transform (concat consult-omni-org-agenda-transform-prefix (match-string 1 query)))))
+          (when-let* ((date (consult-omni--org-agenda-query-dwim-transform (concat consult-omni-org-agenda-transform-prefix (match-string 1 query)))))
             (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-around (or (car-safe date) date) consult-omni-org-agenda-number-of-days-around :day))))
          ((equal query "yesterday") (consult-omni--org-agenda-format-time-string
                                      (consult-omni--org-agenda-previous-day (current-time))))
@@ -11034,7 +11034,7 @@ Adopted from `consult-org--headings'."
                     (filename (buffer-file-name))
                     (filepath (file-truename filename))
                     (tags (if org-use-tag-inheritance
-                              (when-let ((tags (org-get-tags)))
+                              (when-let* ((tags (org-get-tags)))
                                 (concat ":" (string-join tags ":") ":"))
                             tags))
                     (title (org-format-outline-path
@@ -11058,7 +11058,7 @@ Adopted from `consult-org--headings'."
 #+begin_src emacs-lisp
 (defun consult-omni--org-agenda-preview (cand)
   "Preview function for CAND from `consult-omni-org-agenda'."
-  (if-let ((marker (get-text-property 0 :marker cand)))
+  (if-let* ((marker (get-text-property 0 :marker cand)))
       (consult--jump marker)))
 
 #+end_src
@@ -11067,7 +11067,7 @@ Adopted from `consult-org--headings'."
 #+begin_src emacs-lisp
 (defun consult-omni--org-agenda-callback (cand)
   "Callback function for CAND from `consult-omni-org-agenda'."
-  (if-let ((marker (get-text-property 0 :marker cand)))
+  (if-let* ((marker (get-text-property 0 :marker cand)))
       (consult--jump marker)))
 
 #+end_src
@@ -11683,7 +11683,7 @@ Description of Arguments:
     ('vc
      (if (and (featurep 'vc-git) (require 'vc-git nil t))
          (progn (make-directory dir t)
-                (if-let ((default-directory dir)
+                (if-let* ((default-directory dir)
                          (cmd (executable-find "git")))
                     (or (and (file-expand-wildcards (expand-file-name ".git" dir))
                              (y-or-n-p "There is already a .git folder there, do you want to re-initialize?")

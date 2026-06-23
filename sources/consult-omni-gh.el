@@ -35,7 +35,7 @@
 
 (defun consult-omni--gh-preview (cand)
   "Preview function for CAND from `consult-omni-github'."
-  (when-let ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
+  (when-let* ((info (text-properties-at 0 (cdr (get-text-property 0 'multi-category cand))))
              (repo (plist-get info :repo))
              (query (plist-get info :query))
              (match-str (consult--build-args query))

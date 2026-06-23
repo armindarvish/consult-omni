@@ -118,7 +118,7 @@ Adopted from `consult--grep-format'."
            (and (stringp page) (pdf-view-goto-page (string-to-number page)))
            (when consult-omni-highlight-matches-in-file
              (add-to-history 'search-ring (isearch-string-propertize query))
-             (when-let ((matches (pdf-isearch-search-page query)))
+             (when-let* ((matches (pdf-isearch-search-page query)))
                (setq pdf-isearch-current-matches matches)
                (setq pdf-isearch-current-match (car-safe matches))
                (pdf-isearch-hl-matches pdf-isearch-current-match pdf-isearch-current-matches t)

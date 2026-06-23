@@ -26,7 +26,7 @@
   "Preview function for CAND from `consult-omni--buffer'."
   (if cand
       (let* ((title (get-text-property 0 :title cand)))
-        (when-let ((buff (get-buffer title)))
+        (when-let* ((buff (get-buffer title)))
           (consult--buffer-action buff)))))
 
 ;; make a consult-omni source from `consult-source-buffer'

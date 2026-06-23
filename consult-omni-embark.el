@@ -52,12 +52,12 @@ Gets the default callback function from `consult-omni--sources-alist'."
 
 (defun consult-omni-embark-insert-title (cand)
   "Insert the title of CAND at point."
-  (if-let ((title (and (stringp cand) (get-text-property 0 :title cand))))
+  (if-let* ((title (and (stringp cand) (get-text-property 0 :title cand))))
       (insert (format " %s " title))))
 
 (defun consult-omni-embark-copy-title-as-kill (cand)
   "Copy the title of CAND to `kill-ring'."
-  (if-let ((title (and (stringp cand) (get-text-property 0 :title cand))))
+  (if-let* ((title (and (stringp cand) (get-text-property 0 :title cand))))
       (kill-new (string-trim title))))
 
 (defun consult-omni-embark-insert-url-link (cand)
@@ -85,7 +85,7 @@ Gets the default callback function from `consult-omni--sources-alist'."
 
 (defun consult-omni-embark-copy-url-as-kill (cand)
   "Copy the url of CAND to `kill-ring'."
-  (if-let ((url (and (stringp cand) (get-text-property 0 :url cand))))
+  (if-let* ((url (and (stringp cand) (get-text-property 0 :url cand))))
       (kill-new (format " %s " (string-trim url)))))
 
 (defun consult-omni-embark-external-browse-link (cand)
@@ -149,12 +149,12 @@ Gets the preview function from `consult-omni--sources-alist'."
 
 (defun consult-omni-embark-scholar-copy-authors-as-kill (cand)
   "Copy the authors of CAND to `kill-ring'."
-  (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
+  (if-let* ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
       (kill-new (string-trim (format " %s " authors)))))
 
 (defun consult-omni-embark-scholar-insert-authors (cand)
   "Insert the authors of CAND at point."
-  (if-let ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
+  (if-let* ((authors (and (stringp cand) (get-text-property 0 :authors cand))))
       (insert (string-trim (mapconcat #'identity authors ", ")))))
 
 (defun consult-omni-embark-scholar-default-note (cand)
@@ -273,7 +273,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
 
 (defun consult-omni-embark-apps-open-externally (cand)
   "Open CAND's filepath using system's default application."
-  (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
+  (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand))))
       (pcase system-type
         ('darwin (call-process "open" nil 0 nil path))
         ('cygwin (call-process "cygstart" nil 0 nil path))
@@ -290,12 +290,12 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
 
 (defun consult-omni-embark-apps-insert-path (cand)
   "Insert the title of CAND at point."
-  (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
+  (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand))))
       (insert (format " %s " path))))
 
 (defun consult-omni-embark-apps-copy-path-as-kill (cand)
   "Copy the title of CAND to `kill-ring'."
-  (if-let ((path (and (stringp cand) (get-text-property 0 :path cand))))
+  (if-let* ((path (and (stringp cand) (get-text-property 0 :path cand))))
       (kill-new (format " %s " path))))
 
 ;;; Define Embark Keymaps
@@ -318,22 +318,22 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
 
 (defun consult-omni-embark-calc-copy-results-as-kill (cand)
   "Copy the results of the calculator, CAND, to `kill-ring'."
-  (if-let ((results (and (stringp cand) (get-text-property 0 :title cand))))
+  (if-let* ((results (and (stringp cand) (get-text-property 0 :title cand))))
       (kill-new (format " %s " results))))
 
 (defun consult-omni-embark-calc-insert-results (cand)
   "Insert the results of the calculator, CAND, at point."
-  (if-let (results (and (stringp cand) (get-text-property 0 :title cand)))
+  (if-let* (results (and (stringp cand) (get-text-property 0 :title cand)))
       (insert (format " %s " results))))
 
 (defun consult-omni-embark-calc-copy-formula-as-kill (cand)
   "Copy the results of the calculator, CAND, to `kill-ring'."
-  (if-let ((formula (and (stringp cand) (get-text-property 0 :query cand))))
+  (if-let* ((formula (and (stringp cand) (get-text-property 0 :query cand))))
       (kill-new (format " %s " formula))))
 
 (defun consult-omni-embark-calc-insert-formula (cand)
   "Insert the results of the calculator, CAND, at point."
-  (if-let (formula (and (stringp cand) (get-text-property 0 :query cand)))
+  (if-let* (formula (and (stringp cand) (get-text-property 0 :query cand)))
       (insert (format " %s " formula))))
 
 ;;; Define Embark Keymaps
@@ -371,7 +371,7 @@ Can be:
                  (list link)))
   (cond
    ((stringp consult-omni-embark-video-default-player)
-    (if-let ((cmd (executable-find consult-omni-embark-video-default-player)))
+    (if-let* ((cmd (executable-find consult-omni-embark-video-default-player)))
         (progn
           (start-process "consult-omni-mpv" nil cmd url)
           (message "Opening with %s ..." consult-omni-embark-video-default-player))

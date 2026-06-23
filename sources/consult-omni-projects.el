@@ -162,7 +162,7 @@ Description of Arguments:
     ('vc
      (if (and (featurep 'vc-git) (require 'vc-git nil t))
          (progn (make-directory dir t)
-                (if-let ((default-directory dir)
+                (if-let* ((default-directory dir)
                          (cmd (executable-find "git")))
                     (or (and (file-expand-wildcards (expand-file-name ".git" dir))
                              (y-or-n-p "There is already a .git folder there, do you want to re-initialize?")
