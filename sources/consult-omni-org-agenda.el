@@ -193,7 +193,7 @@ For example to get the date for tommorrow, next week, ..."
     (if query
         (cond
          ((string-match "around \\(.*\\)" query)
-          (when-let ((date (consult-omni--org-agenda-query-dwim-transform (concat consult-omni-org-agenda-transform-prefix (match-string 1 query)))))
+          (when-let* ((date (consult-omni--org-agenda-query-dwim-transform (concat consult-omni-org-agenda-transform-prefix (match-string 1 query)))))
             (consult-omni--org-agenda-date-range-regexp (consult-omni--org-agenda-around (or (car-safe date) date) consult-omni-org-agenda-number-of-days-around :day))))
          ((equal query "yesterday") (consult-omni--org-agenda-format-time-string
                                      (consult-omni--org-agenda-previous-day (current-time))))
@@ -316,7 +316,7 @@ Adopted from `consult-org--headings'."
                     (filename (buffer-file-name))
                     (filepath (file-truename filename))
                     (tags (if org-use-tag-inheritance
-                              (when-let ((tags (org-get-tags)))
+                              (when-let* ((tags (org-get-tags)))
                                 (concat ":" (string-join tags ":") ":"))
                             tags))
                     (title (org-format-outline-path
@@ -335,12 +335,12 @@ Adopted from `consult-org--headings'."
 
 (defun consult-omni--org-agenda-preview (cand)
   "Preview function for CAND from `consult-omni-org-agenda'."
-  (if-let ((marker (get-text-property 0 :marker cand)))
+  (if-let* ((marker (get-text-property 0 :marker cand)))
       (consult--jump marker)))
 
 (defun consult-omni--org-agenda-callback (cand)
   "Callback function for CAND from `consult-omni-org-agenda'."
-  (if-let ((marker (get-text-property 0 :marker cand)))
+  (if-let* ((marker (get-text-property 0 :marker cand)))
       (consult--jump marker)))
 
 (defun consult-omni--org-agenda-new (cand)

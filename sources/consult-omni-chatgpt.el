@@ -81,7 +81,7 @@ Description of Arguments:
 
 (defun consult-omni--chatgpt-preview (cand)
   "Show a preview buffer with ChatGPT response in CAND."
-  (when-let ((buff (get-buffer "*consult-omni-chatgpt-response*")))
+  (when-let* ((buff (get-buffer "*consult-omni-chatgpt-response*")))
     (kill-buffer buff))
   (if (listp cand) (setq cand (or (car-safe cand) cand)))
   (when-let*  ((query  (get-text-property 0 :query cand))

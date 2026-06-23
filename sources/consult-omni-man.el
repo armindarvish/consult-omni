@@ -40,7 +40,7 @@ Similar to `consult-man-args' bur for consult-omni."
 
 (defun consult-omni--man-callback (cand)
   "Callback for CAND from `consult-omni-man'."
-  (when-let ((path (get-text-property 0 :path cand)))
+  (when-let* ((path (get-text-property 0 :path cand)))
     (man path)))
 
 (defun consult-omni--man-transform (candidates &optional query)
