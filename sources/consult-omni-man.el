@@ -90,7 +90,7 @@ well as the function
 
 ;; Define the man source
 (consult-omni-define-source "man"
-                            :narrow-char ?m
+                            :narrow-char ?M
                             :category 'consult-man
                             :type 'async
                             :require-match t
