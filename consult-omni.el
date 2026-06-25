@@ -1169,7 +1169,9 @@ the history in consul-omni's minibuffer completion."
         (cl-remove-duplicates
          (append
           (when (region-active-p) (list (concat (consult-omni--get-split-style-character) (buffer-substring (region-beginning) (region-end)))))
-          (mapcar (lambda (thing) (consult-omni-dynamic--split-thingatpt thing))
+          (mapcar (lambda (thing) (let* ((str (consult-omni-dynamic--split-thingatpt thing)))
+                                    (when (stringp str)
+                                      (concat (consult-omni--get-split-style-character) str))))
                   (or things (list 'number 'word 'sexp 'symbol 'url 'filename 'sentence 'line)))
           (when (and isearch-string (not (string-empty-p isearch-string))) (list (concat (consult-omni--get-split-style-character) isearch-string)))))))
 
