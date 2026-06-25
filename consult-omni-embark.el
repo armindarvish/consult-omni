@@ -339,7 +339,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
 
 (defun consult-omni-embark-calc-insert-results (cand)
   "Insert the results of the calculator, CAND, at point."
-  (if-let* (results (and (stringp cand) (get-text-property 0 :title cand)))
+  (if-let* ((results (and (stringp cand) (get-text-property 0 :title cand))))
       (insert (format " %s " results))))
 
 (defun consult-omni-embark-calc-copy-formula-as-kill (cand)
@@ -349,7 +349,7 @@ Uses `consult-omni-embark-scholar-make-note-func' to make template."
 
 (defun consult-omni-embark-calc-insert-formula (cand)
   "Insert the results of the calculator, CAND, at point."
-  (if-let* (formula (and (stringp cand) (get-text-property 0 :query cand)))
+  (if-let* ((formula (and (stringp cand) (get-text-property 0 :query cand))))
       (insert (format " %s " formula))))
 
 ;;; Define Embark Keymaps
