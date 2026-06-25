@@ -1207,7 +1207,7 @@ are killed from the list."
 #+begin_src emacs-lisp
 (defun consult-omni-dynamic--split-thingatpt (thing)
   "Return THING at point."
-  (when-let* (str (thing-at-point thing t))
+  (when-let* ((str (thing-at-point thing t)))
       (format "%s" str)))
 #+end_src
 ***** read search string
@@ -1773,10 +1773,10 @@ Description of Arguments:
                               :narrow      (consult--multi-narrow sources)
                               :state       (consult--multi-state sources)))))))
     (if (and (listp selected) (plist-member (cdr selected) :match))
-        (when-let* (fun (plist-get (cdr selected) :new))
+        (when-let* ((fun (plist-get (cdr selected) :new)))
           (funcall fun (car selected))
           (plist-put (cdr selected) :match 'new))
-      (when-let* (fun (plist-get (cdr selected) :action))
+      (when-let* ((fun (plist-get (cdr selected) :action)))
         (funcall fun (car selected)))
       (setq selected `(,(car selected) :match t ,@(cdr selected))))
     selected))
@@ -2275,10 +2275,10 @@ Description of Arguments:
                    :narrow      (consult--multi-narrow sources)
                    :state       (consult--multi-state sources))))))
     (if (plist-member (cdr selected) :match)
-        (when-let* (fun (plist-get (cdr selected) :new))
+        (when-let* ((fun (plist-get (cdr selected) :new)))
           (funcall fun (car selected))
           (plist-put (cdr selected) :match 'new))
-      (when-let* (fun (plist-get (cdr selected) :action))
+      (when-let* ((fun (plist-get (cdr selected) :action)))
         (funcall fun (car selected)))
       (setq selected `(,(car selected) :match t ,@(cdr selected))))
     selected))
