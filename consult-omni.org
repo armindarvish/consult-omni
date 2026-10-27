@@ -12360,10 +12360,8 @@ well as the function
                                (project (and (stringp path) (file-exists-p path) (project--find-in-directory path)))
                                (title (or (and project (project-root project)) path))
                                (name (or (and project (project-name project)) (file-name-nondirectory path)))
-                               (p-files (and project (project-files project)))
-                               (nfiles (and (listp p-files) (length p-files)))
                                (size (and (stringp title) (file-exists-p title) (file-size-human-readable (file-attribute-size (file-attributes title)))))
-                               (decorated (consult-omni--projects-format-candidate :source source :query query :path title :name name :nfiles nfiles :size size)))
+                               (decorated (consult-omni--projects-format-candidate :source source :query query :path title :name name :size size)))
                           (when (stringp decorated) (add-text-properties 0 1 `(:source ,source :title ,title :query ,query :project ,project :dir ,title :name ,name) decorated))
                           decorated)))))
 
